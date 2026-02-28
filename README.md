@@ -12,8 +12,30 @@
     <img alt="Swift" src="https://img.shields.io/badge/Swift-5.0-FA7343?style=for-the-badge">
     <img alt="UI" src="https://img.shields.io/badge/UI-SwiftUI-111111?style=for-the-badge">
     <img alt="Widgets" src="https://img.shields.io/badge/Widgets-Yes-2D9C5E?style=for-the-badge">
+    <img alt="License" src="https://img.shields.io/badge/License-Proprietary%20(All%20Rights%20Reserved)-B00020?style=for-the-badge">
   </p>
 </div>
+
+---
+
+## License Notice / Лицензионное уведомление
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <strong>English</strong><br>
+      This repository is proprietary. Copying, modifying, building, using, and distributing the code without explicit written permission from the copyright holder is strictly prohibited.
+      <br><br>
+      Full terms: <a href="LICENSE"><code>LICENSE</code></a>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <strong>Русский</strong><br>
+      Этот репозиторий является проприетарным. Копирование, изменение, сборка, использование и распространение кода без явного письменного разрешения правообладателя строго запрещены.
+      <br><br>
+      Полные условия: <a href="LICENSE"><code>LICENSE</code></a>
+    </td>
+  </tr>
+</table>
 
 ---
 
