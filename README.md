@@ -26,13 +26,17 @@
       <strong>English</strong><br>
       This repository is proprietary. Copying, modifying, building, using, and distributing the code without explicit written permission from the copyright holder is strictly prohibited.
       <br><br>
-      Full terms: <a href="LICENSE"><code>LICENSE</code></a>
+      Full terms:
+      <a href="LICENSE"><code>LICENSE (EN)</code></a>,
+      <a href="LICENSE.ru.md"><code>LICENSE.ru.md (RU)</code></a>
     </td>
     <td width="50%" align="left" valign="top">
       <strong>Русский</strong><br>
       Этот репозиторий является проприетарным. Копирование, изменение, сборка, использование и распространение кода без явного письменного разрешения правообладателя строго запрещены.
       <br><br>
-      Полные условия: <a href="LICENSE"><code>LICENSE</code></a>
+      Полные условия:
+      <a href="LICENSE.ru.md"><code>LICENSE.ru.md (RU)</code></a>,
+      <a href="LICENSE"><code>LICENSE (EN)</code></a>
     </td>
   </tr>
 </table>
@@ -102,7 +106,7 @@ Active development. UI quality, performance smoothness, and assistant intelligen
 ### License
 Proprietary software. All rights reserved.  
 Copying, modifying, building, using, and distributing this project are strictly prohibited for third parties without explicit written permission from the copyright holder.  
-See `LICENSE`.
+Full texts: `LICENSE` (English), `LICENSE.ru.md` (Russian).
 
 ---
 
@@ -147,4 +151,4 @@ Lippi - это аккуратное iOS-приложение для продук
 ### Лицензия
 Проприетарное ПО. Все права защищены.  
 Копирование, изменение, сборка, использование и распространение проекта третьими лицами строго запрещены без явного письменного разрешения правообладателя.  
-См. `LICENSE`.
+Полные тексты: `LICENSE.ru.md` (русский), `LICENSE` (английский).
