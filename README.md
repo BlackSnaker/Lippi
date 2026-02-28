@@ -17,6 +17,28 @@
 
 ---
 
+## Screenshots / Скриншоты
+
+<p align="center">
+  <img src="docs/screenshots/01-home.png" alt="Lippi Home" width="220">
+  <img src="docs/screenshots/02-tasks.png" alt="Lippi Tasks" width="220">
+  <img src="docs/screenshots/03-health-breathing.png" alt="Lippi Health Breathing" width="220">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/04-health-analytics.png" alt="Lippi Health Analytics" width="220">
+  <img src="docs/screenshots/05-eyes.png" alt="Lippi Eyes" width="220">
+  <img src="docs/screenshots/06-settings.png" alt="Lippi Settings" width="220">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/07-assistant.png" alt="Lippi Voice Assistant" width="220">
+</p>
+
+<p align="center"><sub>Home · Tasks · Health · Health Analytics · Eyes · Settings · Voice Assistant</sub></p>
+
+---
+
 ## English
 
 ### Product Overview
@@ -94,4 +116,3 @@ Lippi - это аккуратное iOS-приложение для продук
 
 ### Статус
 Проект активно развивается: улучшаются качество интерфейса, плавность работы и интеллект помощника.
-
