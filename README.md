@@ -77,6 +77,11 @@ The goal is simple: help users stay focused, recover faster, and keep a sustaina
 ### Status
 Active development. UI quality, performance smoothness, and assistant intelligence are continuously improved.
 
+### License
+Proprietary software. All rights reserved.  
+No one except the copyright holder may build, use, or distribute this project without explicit written permission.  
+See `LICENSE`.
+
 ---
 
 ## Русский
@@ -116,3 +121,8 @@ Lippi - это аккуратное iOS-приложение для продук
 
 ### Статус
 Проект активно развивается: улучшаются качество интерфейса, плавность работы и интеллект помощника.
+
+### Лицензия
+Проприетарное ПО. Все права защищены.  
+Никто, кроме правообладателя, не может собирать, использовать и распространять проект без явного письменного разрешения.  
+См. `LICENSE`.
