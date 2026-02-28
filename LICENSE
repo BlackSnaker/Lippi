@@ -1,29 +1,105 @@
-LIPPI PROPRIETARY LICENSE
-Version 1.0
-Date: February 28, 2026
+LIPPI PROPRIETARY SOFTWARE LICENSE
+Version 2.0
+Effective Date: February 28, 2026
 
 Copyright (c) 2026 BlackSnaker.
 All rights reserved.
 
-1. Ownership
-This software and all related materials (including source code, assets, design, text, and documentation) are proprietary intellectual property of the copyright holder.
+IMPORTANT: BY ACCESSING, VIEWING, DOWNLOADING, CLONING, STORING, OR
+OTHERWISE INTERACTING WITH THIS SOFTWARE OR ANY PART OF IT, YOU AGREE TO
+THIS LICENSE. IF YOU DO NOT AGREE, YOU MUST NOT USE THIS SOFTWARE.
 
-2. No License Grant
-No license or other rights are granted to any person or organization, except where an explicit written permission is provided by the copyright holder.
+1. Definitions
+1.1 "Software" means the Lippi project and all associated materials, including
+source code, object code, binaries, scripts, assets, UI/UX materials, text,
+data models, documentation, and any other files in this repository.
 
-3. Strict Restrictions
-Without prior written permission from the copyright holder, you may NOT:
-- copy, modify, adapt, merge, translate, reverse engineer, or create derivative works;
-- build, compile, run, package, or otherwise produce executable versions of this software;
-- publish, distribute, sublicense, rent, lease, sell, or transfer this software or any part of it;
-- use this software for personal, educational, research, commercial, or any other purpose.
+1.2 "Copyright Holder" means BlackSnaker, the sole owner of all rights in the
+Software, unless otherwise explicitly stated in writing.
 
-4. Authorized Use
-Only the copyright holder is authorized to build, run, publish, and distribute this software, unless written permission states otherwise.
+1.3 "Use" means any action involving the Software, including access, viewing,
+copying, downloading, storing, editing, compiling, building, running,
+publishing, distributing, or creating derivative works.
 
-5. Violations
-Any unauthorized use is prohibited and may result in legal action under applicable copyright and related laws.
+2. Ownership and Reservation of Rights
+2.1 The Software is proprietary and protected by copyright and other
+applicable intellectual property laws.
 
-6. Contact
-For permissions, contact the copyright holder.
+2.2 All rights not expressly granted in a signed written permission from the
+Copyright Holder are reserved by the Copyright Holder.
 
+3. No License Grant
+3.1 No license is granted to you by default. Access to the repository does not
+grant any right to Use the Software.
+
+3.2 Any permission must be explicit, prior, and in writing, signed by the
+Copyright Holder.
+
+4. Prohibited Actions (Strict)
+Without prior signed written permission from the Copyright Holder, you are
+strictly prohibited from doing any of the following, in whole or in part:
+
+4.1 Copying and Reproduction
+- copy, reproduce, mirror, archive, or otherwise duplicate the Software;
+- save or redistribute source code snippets, files, or substantial portions.
+
+4.2 Modification and Derivative Works
+- modify, adapt, transform, translate, refactor, or alter the Software;
+- create derivative works based on the Software.
+
+4.3 Technical Use
+- compile, build, package, run, execute, benchmark, or test the Software;
+- reverse engineer, decompile, disassemble, or attempt to derive internals.
+
+4.4 Distribution and Publication
+- publish, share, upload, disclose, transmit, sell, license, sublicense,
+lease, rent, transfer, or otherwise make the Software available to any third
+party.
+
+4.5 Commercial and Non-Commercial Use
+- use the Software for personal, academic, research, internal, public, or
+commercial purposes.
+
+5. Authorized Use
+5.1 Only the Copyright Holder may copy, modify, build, run, publish, and
+distribute the Software, unless an exception is expressly granted in writing.
+
+5.2 Any written permission must clearly define scope, duration, and allowed
+actions. Any use outside that scope is prohibited.
+
+6. Contributions
+6.1 No third-party contribution is accepted by default.
+
+6.2 Any unsolicited contribution may be rejected, removed, or retained at the
+Copyright Holder's sole discretion and does not grant any rights to the
+contributor.
+
+7. Termination
+7.1 Any unauthorized Use automatically and immediately terminates any
+permission (if any was granted).
+
+7.2 Upon termination or request, you must immediately cease all Use and
+permanently delete all copies of the Software in your possession or control.
+
+8. Enforcement and Remedies
+8.1 Unauthorized Use constitutes infringement and may lead to legal action.
+
+8.2 The Copyright Holder may seek any remedy available under applicable law,
+including injunctive relief, damages, costs, and attorney fees where allowed.
+
+9. Disclaimer
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+NON-INFRINGEMENT, TO THE MAXIMUM EXTENT PERMITTED BY LAW.
+
+10. Limitation of Liability
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER SHALL NOT BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES ARISING FROM OR RELATED TO THE SOFTWARE.
+
+11. Governing Law
+This license shall be governed by the law applicable in the jurisdiction
+selected by the Copyright Holder, without regard to conflict-of-law rules.
+
+12. Contact
+For permissions or licensing requests, contact the Copyright Holder.

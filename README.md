@@ -79,7 +79,7 @@ Active development. UI quality, performance smoothness, and assistant intelligen
 
 ### License
 Proprietary software. All rights reserved.  
-No one except the copyright holder may build, use, or distribute this project without explicit written permission.  
+Copying, modifying, building, using, and distributing this project are strictly prohibited for third parties without explicit written permission from the copyright holder.  
 See `LICENSE`.
 
 ---
@@ -124,5 +124,5 @@ Lippi - это аккуратное iOS-приложение для продук
 
 ### Лицензия
 Проприетарное ПО. Все права защищены.  
-Никто, кроме правообладателя, не может собирать, использовать и распространять проект без явного письменного разрешения.  
+Копирование, изменение, сборка, использование и распространение проекта третьими лицами строго запрещены без явного письменного разрешения правообладателя.  
 См. `LICENSE`.
