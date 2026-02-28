@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Xcode user data
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Xcode workspace data
+*.xcworkspace/xcuserdata/
+
+# Build artifacts
+build/
+DerivedData/
+
+# SwiftPM
+.build/
+.swiftpm/
+
+# CocoaPods / Carthage / SPM artifacts
+Pods/
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Misc
+*.orig
+org.llvm.clang/

@@ -1,0 +1,912 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		18861C3E2E76E7200008D8A3 /* WidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18861C3D2E76E7190008D8A3 /* WidgetBridge.swift */; };
+		18861C3F2E76E7200008D8A3 /* WidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18861C3D2E76E7190008D8A3 /* WidgetBridge.swift */; };
+		188D1A872E64A9C400EA6B1D /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A862E64A9C400EA6B1D /* WidgetKit.framework */; };
+		188D1A892E64A9C400EA6B1D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A882E64A9C400EA6B1D /* SwiftUI.framework */; };
+		188D1A9A2E64A9C700EA6B1D /* LippiWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 188D1A842E64A9C400EA6B1D /* LippiWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		18DE6F4D2E6DB52200319865 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A862E64A9C400EA6B1D /* WidgetKit.framework */; };
+		18DE6F4E2E6DB52200319865 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A882E64A9C400EA6B1D /* SwiftUI.framework */; };
+		18DE6F5F2E6DB52400319865 /* OrganizerWidgetExt.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		188D1A642E6491BC00EA6B1D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 188D1A4E2E6491BA00EA6B1D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 188D1A552E6491BA00EA6B1D;
+			remoteInfo = Lippi;
+		};
+		188D1A6E2E6491BC00EA6B1D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 188D1A4E2E6491BA00EA6B1D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 188D1A552E6491BA00EA6B1D;
+			remoteInfo = Lippi;
+		};
+		188D1A982E64A9C700EA6B1D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 188D1A4E2E6491BA00EA6B1D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 188D1A832E64A9C400EA6B1D;
+			remoteInfo = LippiWidgetsExtension;
+		};
+		18DE6F5D2E6DB52400319865 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 188D1A4E2E6491BA00EA6B1D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 18DE6F4B2E6DB52200319865;
+			remoteInfo = OrganizerWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		188D1A9F2E64A9C700EA6B1D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				18DE6F5F2E6DB52400319865 /* OrganizerWidgetExt.appex in Embed Foundation Extensions */,
+				188D1A9A2E64A9C700EA6B1D /* LippiWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		18861C3D2E76E7190008D8A3 /* WidgetBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBridge.swift; sourceTree = "<group>"; };
+		188D1A562E6491BA00EA6B1D /* Lippi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lippi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		188D1A632E6491BC00EA6B1D /* LippiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LippiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		188D1A6D2E6491BC00EA6B1D /* LippiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LippiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		188D1A842E64A9C400EA6B1D /* LippiWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LippiWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		188D1A862E64A9C400EA6B1D /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		188D1A882E64A9C400EA6B1D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OrganizerWidgetExt.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		188D1A9B2E64A9C700EA6B1D /* Exceptions for "LippiWidgets" folder in "LippiWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 188D1A832E64A9C400EA6B1D /* LippiWidgetsExtension */;
+		};
+		18DE6F622E6DB52400319865 /* Exceptions for "OrganizerWidget" folder in "OrganizerWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		188D1A582E6491BA00EA6B1D /* Lippi */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Lippi;
+			sourceTree = "<group>";
+		};
+		188D1A662E6491BC00EA6B1D /* LippiTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LippiTests;
+			sourceTree = "<group>";
+		};
+		188D1A702E6491BC00EA6B1D /* LippiUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LippiUITests;
+			sourceTree = "<group>";
+		};
+		188D1A8A2E64A9C400EA6B1D /* LippiWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				188D1A9B2E64A9C700EA6B1D /* Exceptions for "LippiWidgets" folder in "LippiWidgetsExtension" target */,
+			);
+			path = LippiWidgets;
+			sourceTree = "<group>";
+		};
+		18DE6F4F2E6DB52200319865 /* OrganizerWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				18DE6F622E6DB52400319865 /* Exceptions for "OrganizerWidget" folder in "OrganizerWidgetExtension" target */,
+			);
+			path = OrganizerWidget;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		188D1A532E6491BA00EA6B1D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		188D1A602E6491BC00EA6B1D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		188D1A6A2E6491BC00EA6B1D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		188D1A812E64A9C400EA6B1D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				188D1A892E64A9C400EA6B1D /* SwiftUI.framework in Frameworks */,
+				188D1A872E64A9C400EA6B1D /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		18DE6F492E6DB52200319865 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				18DE6F4E2E6DB52200319865 /* SwiftUI.framework in Frameworks */,
+				18DE6F4D2E6DB52200319865 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		188D1A4D2E6491BA00EA6B1D = {
+			isa = PBXGroup;
+			children = (
+				188D1A582E6491BA00EA6B1D /* Lippi */,
+				188D1A662E6491BC00EA6B1D /* LippiTests */,
+				188D1A702E6491BC00EA6B1D /* LippiUITests */,
+				188D1A8A2E64A9C400EA6B1D /* LippiWidgets */,
+				18DE6F4F2E6DB52200319865 /* OrganizerWidget */,
+				188D1A852E64A9C400EA6B1D /* Frameworks */,
+				188D1A572E6491BA00EA6B1D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		188D1A572E6491BA00EA6B1D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				188D1A562E6491BA00EA6B1D /* Lippi.app */,
+				188D1A632E6491BC00EA6B1D /* LippiTests.xctest */,
+				188D1A6D2E6491BC00EA6B1D /* LippiUITests.xctest */,
+				188D1A842E64A9C400EA6B1D /* LippiWidgetsExtension.appex */,
+				18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		188D1A852E64A9C400EA6B1D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				18861C3D2E76E7190008D8A3 /* WidgetBridge.swift */,
+				188D1A862E64A9C400EA6B1D /* WidgetKit.framework */,
+				188D1A882E64A9C400EA6B1D /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		188D1A552E6491BA00EA6B1D /* Lippi */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 188D1A772E6491BC00EA6B1D /* Build configuration list for PBXNativeTarget "Lippi" */;
+			buildPhases = (
+				188D1A522E6491BA00EA6B1D /* Sources */,
+				188D1A532E6491BA00EA6B1D /* Frameworks */,
+				188D1A542E6491BA00EA6B1D /* Resources */,
+				188D1A9F2E64A9C700EA6B1D /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				188D1A992E64A9C700EA6B1D /* PBXTargetDependency */,
+				18DE6F5E2E6DB52400319865 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				188D1A582E6491BA00EA6B1D /* Lippi */,
+			);
+			name = Lippi;
+			packageProductDependencies = (
+			);
+			productName = Lippi;
+			productReference = 188D1A562E6491BA00EA6B1D /* Lippi.app */;
+			productType = "com.apple.product-type.application";
+		};
+		188D1A622E6491BC00EA6B1D /* LippiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 188D1A7A2E6491BC00EA6B1D /* Build configuration list for PBXNativeTarget "LippiTests" */;
+			buildPhases = (
+				188D1A5F2E6491BC00EA6B1D /* Sources */,
+				188D1A602E6491BC00EA6B1D /* Frameworks */,
+				188D1A612E6491BC00EA6B1D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				188D1A652E6491BC00EA6B1D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				188D1A662E6491BC00EA6B1D /* LippiTests */,
+			);
+			name = LippiTests;
+			packageProductDependencies = (
+			);
+			productName = LippiTests;
+			productReference = 188D1A632E6491BC00EA6B1D /* LippiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		188D1A6C2E6491BC00EA6B1D /* LippiUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 188D1A7D2E6491BC00EA6B1D /* Build configuration list for PBXNativeTarget "LippiUITests" */;
+			buildPhases = (
+				188D1A692E6491BC00EA6B1D /* Sources */,
+				188D1A6A2E6491BC00EA6B1D /* Frameworks */,
+				188D1A6B2E6491BC00EA6B1D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				188D1A6F2E6491BC00EA6B1D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				188D1A702E6491BC00EA6B1D /* LippiUITests */,
+			);
+			name = LippiUITests;
+			packageProductDependencies = (
+			);
+			productName = LippiUITests;
+			productReference = 188D1A6D2E6491BC00EA6B1D /* LippiUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		188D1A832E64A9C400EA6B1D /* LippiWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 188D1A9C2E64A9C700EA6B1D /* Build configuration list for PBXNativeTarget "LippiWidgetsExtension" */;
+			buildPhases = (
+				188D1A802E64A9C400EA6B1D /* Sources */,
+				188D1A812E64A9C400EA6B1D /* Frameworks */,
+				188D1A822E64A9C400EA6B1D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				188D1A8A2E64A9C400EA6B1D /* LippiWidgets */,
+			);
+			name = LippiWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = LippiWidgetsExtension;
+			productReference = 188D1A842E64A9C400EA6B1D /* LippiWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 18DE6F632E6DB52400319865 /* Build configuration list for PBXNativeTarget "OrganizerWidgetExtension" */;
+			buildPhases = (
+				18DE6F482E6DB52200319865 /* Sources */,
+				18DE6F492E6DB52200319865 /* Frameworks */,
+				18DE6F4A2E6DB52200319865 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				18DE6F4F2E6DB52200319865 /* OrganizerWidget */,
+			);
+			name = OrganizerWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = OrganizerWidgetExtension;
+			productReference = 18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		188D1A4E2E6491BA00EA6B1D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 2610;
+				TargetAttributes = {
+					188D1A552E6491BA00EA6B1D = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					188D1A622E6491BC00EA6B1D = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 188D1A552E6491BA00EA6B1D;
+					};
+					188D1A6C2E6491BC00EA6B1D = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 188D1A552E6491BA00EA6B1D;
+					};
+					188D1A832E64A9C400EA6B1D = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					18DE6F4B2E6DB52200319865 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+				};
+			};
+			buildConfigurationList = 188D1A512E6491BA00EA6B1D /* Build configuration list for PBXProject "Lippi" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 188D1A4D2E6491BA00EA6B1D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 188D1A572E6491BA00EA6B1D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				188D1A552E6491BA00EA6B1D /* Lippi */,
+				188D1A622E6491BC00EA6B1D /* LippiTests */,
+				188D1A6C2E6491BC00EA6B1D /* LippiUITests */,
+				188D1A832E64A9C400EA6B1D /* LippiWidgetsExtension */,
+				18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		188D1A542E6491BA00EA6B1D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		188D1A612E6491BC00EA6B1D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		188D1A6B2E6491BC00EA6B1D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		188D1A822E64A9C400EA6B1D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		18DE6F4A2E6DB52200319865 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		188D1A522E6491BA00EA6B1D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		188D1A5F2E6491BC00EA6B1D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		188D1A692E6491BC00EA6B1D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		188D1A802E64A9C400EA6B1D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				18861C3E2E76E7200008D8A3 /* WidgetBridge.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		18DE6F482E6DB52200319865 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				18861C3F2E76E7200008D8A3 /* WidgetBridge.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		188D1A652E6491BC00EA6B1D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 188D1A552E6491BA00EA6B1D /* Lippi */;
+			targetProxy = 188D1A642E6491BC00EA6B1D /* PBXContainerItemProxy */;
+		};
+		188D1A6F2E6491BC00EA6B1D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 188D1A552E6491BA00EA6B1D /* Lippi */;
+			targetProxy = 188D1A6E2E6491BC00EA6B1D /* PBXContainerItemProxy */;
+		};
+		188D1A992E64A9C700EA6B1D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 188D1A832E64A9C400EA6B1D /* LippiWidgetsExtension */;
+			targetProxy = 188D1A982E64A9C700EA6B1D /* PBXContainerItemProxy */;
+		};
+		18DE6F5E2E6DB52400319865 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */;
+			targetProxy = 18DE6F5D2E6DB52400319865 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		188D1A752E6491BC00EA6B1D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		188D1A762E6491BC00EA6B1D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		188D1A782E6491BC00EA6B1D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Lippi/Lippi.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = APX26VC984;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleTypeRole = Editor;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLName = Illumionix.Lippi;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLSchemes_0 = lippi;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is used for voice assistant commands.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition is used to process voice assistant commands.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		188D1A792E6491BC00EA6B1D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Lippi/Lippi.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleTypeRole = Editor;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLName = Illumionix.Lippi;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLSchemes_0 = lippi;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is used for voice assistant commands.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition is used to process voice assistant commands.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		188D1A7B2E6491BC00EA6B1D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = APX26VC984;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.LippiTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lippi.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lippi";
+			};
+			name = Debug;
+		};
+		188D1A7C2E6491BC00EA6B1D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.LippiTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lippi.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lippi";
+			};
+			name = Release;
+		};
+		188D1A7E2E6491BC00EA6B1D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = APX26VC984;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.LippiUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Lippi;
+			};
+			name = Debug;
+		};
+		188D1A7F2E6491BC00EA6B1D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.LippiUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Lippi;
+			};
+			name = Release;
+		};
+		188D1A9D2E64A9C700EA6B1D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = LippiWidgets/LippiWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = APX26VC984;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LippiWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LippiWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.LippiWidgetsExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		188D1A9E2E64A9C700EA6B1D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = LippiWidgets/LippiWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LippiWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LippiWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.LippiWidgetsExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		18DE6F602E6DB52400319865 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = OrganizerWidget/OrganizerWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = APX26VC984;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OrganizerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = OrganizerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.OrganizerWidgetExtension;
+				PRODUCT_NAME = OrganizerWidgetExt;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		18DE6F612E6DB52400319865 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = OrganizerWidget/OrganizerWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OrganizerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = OrganizerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.OrganizerWidgetExtension;
+				PRODUCT_NAME = OrganizerWidgetExt;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		188D1A512E6491BA00EA6B1D /* Build configuration list for PBXProject "Lippi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				188D1A752E6491BC00EA6B1D /* Debug */,
+				188D1A762E6491BC00EA6B1D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		188D1A772E6491BC00EA6B1D /* Build configuration list for PBXNativeTarget "Lippi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				188D1A782E6491BC00EA6B1D /* Debug */,
+				188D1A792E6491BC00EA6B1D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		188D1A7A2E6491BC00EA6B1D /* Build configuration list for PBXNativeTarget "LippiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				188D1A7B2E6491BC00EA6B1D /* Debug */,
+				188D1A7C2E6491BC00EA6B1D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		188D1A7D2E6491BC00EA6B1D /* Build configuration list for PBXNativeTarget "LippiUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				188D1A7E2E6491BC00EA6B1D /* Debug */,
+				188D1A7F2E6491BC00EA6B1D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		188D1A9C2E64A9C700EA6B1D /* Build configuration list for PBXNativeTarget "LippiWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				188D1A9D2E64A9C700EA6B1D /* Debug */,
+				188D1A9E2E64A9C700EA6B1D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		18DE6F632E6DB52400319865 /* Build configuration list for PBXNativeTarget "OrganizerWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				18DE6F602E6DB52400319865 /* Debug */,
+				18DE6F612E6DB52400319865 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 188D1A4E2E6491BA00EA6B1D /* Project object */;
+}
