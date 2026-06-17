@@ -1732,7 +1732,7 @@ final class PomodoroManager: ObservableObject {
 
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *), let s = startDate {
-            Task { await PomodoroLiveManager.start(title: title, phase: phase, start: s, end: endDate) }
+            Task { await PomodoroLiveManager.start(title: title, phase: phase, start: s, end: endDate, round: round) }
         }
         #endif
         syncPomodoroWidget()
@@ -1812,8 +1812,11 @@ final class PomodoroManager: ObservableObject {
 struct OrganizerAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         var taskTitle: String
+        var categoryTitle: String
+        var categorySymbol: String
         var startDate: Date
         var dueDate: Date?
+        var isCompleted: Bool
     }
     var taskId: UUID
 }
@@ -1824,9 +1827,23 @@ enum LiveActivityManager {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         let now = Date()
         let attributes = OrganizerAttributes(taskId: task.id)
-        let state = OrganizerAttributes.ContentState(taskTitle: task.title, startDate: now, dueDate: safeEnd(from: now, proposed: task.dueDate))
+        let state = OrganizerAttributes.ContentState(
+            taskTitle: task.title,
+            categoryTitle: task.category.title,
+            categorySymbol: task.category.symbol,
+            startDate: now,
+            dueDate: safeEnd(from: now, proposed: task.dueDate),
+            isCompleted: task.isCompleted
+        )
         let content = ActivityContent(state: state, staleDate: nil)
         _ = try? Activity<OrganizerAttributes>.request(attributes: attributes, content: content, pushType: nil)
+    }
+    static func endTask(_ taskId: UUID) async {
+        for a in Activity<OrganizerAttributes>.activities where a.attributes.taskId == taskId {
+            var state = a.content.state
+            state.isCompleted = true
+            await a.end(ActivityContent(state: state, staleDate: nil), dismissalPolicy: .immediate)
+        }
     }
     static func endAllTasks() async {
         for a in Activity<OrganizerAttributes>.activities {
@@ -1849,10 +1866,10 @@ struct PomodoroAttributes: ActivityAttributes {
 
 @available(iOS 16.2, *)
 enum PomodoroLiveManager {
-    static func start(title: String, phase: PomodoroPhase, start: Date, end: Date?) async {
+    static func start(title: String, phase: PomodoroPhase, start: Date, end: Date?, round: Int = 0) async {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         let attributes = PomodoroAttributes(sessionId: UUID())
-        let state = PomodoroAttributes.ContentState(title: title, phase: phase, startDate: start, endDate: end, round: 0)
+        let state = PomodoroAttributes.ContentState(title: title, phase: phase, startDate: start, endDate: end, round: round)
         let content = ActivityContent(state: state, staleDate: nil)
         _ = try? Activity<PomodoroAttributes>.request(attributes: attributes, content: content, pushType: nil)
     }
@@ -1919,19 +1936,8 @@ struct ContentView: View {
     @StateObject private var dailyReminder = DailyReminderStore()
     @State private var tab: AppTab = .today
     @State private var showVoiceAssistant = false
-    @State private var tabDirection: CGFloat = 1
     @State private var isSwitchingTabs = false
     @State private var tabTransitionTask: Task<Void, Never>?
-
-    private static let tabOrder: [AppTab] = [.today, .tasks, .pomodoro, .break, .health, .eye, .settings]
-
-    private func tabIndex(_ value: AppTab) -> Int {
-        Self.tabOrder.firstIndex(of: value) ?? 0
-    }
-
-    private func transitionDirection(from oldTab: AppTab, to newTab: AppTab) -> CGFloat {
-        tabIndex(newTab) >= tabIndex(oldTab) ? 1 : -1
-    }
 
     @ViewBuilder
     private func screenView(_ tab: AppTab) -> some View {
@@ -1957,26 +1963,19 @@ struct ContentView: View {
 
     private var tabSwitchAnimation: Animation {
         reduceMotion
-        ? .linear(duration: 0.10)
-        : .easeInOut(duration: 0.22)
+        ? .linear(duration: 0.08)
+        : .easeOut(duration: 0.14)
     }
 
     private var screenTransition: AnyTransition {
         guard !reduceMotion else { return .opacity }
-        let offset = 14 * tabDirection
-        return .asymmetric(
-            insertion: .opacity
-                .combined(with: .offset(x: offset, y: 0)),
-            removal: .opacity
-                .combined(with: .offset(x: -offset * 0.5, y: 0))
-        )
+        return .opacity
     }
 
     private func switchTab(to newTab: AppTab) {
         guard newTab != tab else { return }
         guard !isSwitchingTabs else { return }
 
-        tabDirection = transitionDirection(from: tab, to: newTab)
         isSwitchingTabs = true
 
         withAnimation(tabSwitchAnimation) {
@@ -1984,7 +1983,7 @@ struct ContentView: View {
         }
 
         tabTransitionTask?.cancel()
-        let delay: UInt64 = reduceMotion ? 130_000_000 : 240_000_000
+        let delay: UInt64 = reduceMotion ? 90_000_000 : 170_000_000
         tabTransitionTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: delay)
             isSwitchingTabs = false
@@ -2025,6 +2024,55 @@ struct ContentView: View {
         return mode
     }
 
+    private func deepLinkQueryValue(_ name: String, from url: URL) -> String? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        return components.queryItems?
+            .first(where: { $0.name.lowercased() == name.lowercased() })?
+            .value?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func handlePomodoroDeepLink(_ url: URL) {
+        switchTab(to: .pomodoro)
+
+        let action = deepLinkQueryValue("action", from: url)?.lowercased() ?? "open"
+        switch action {
+        case "pause":
+            pomo.pause()
+        case "resume":
+            pomo.resume()
+        case "stop":
+            pomo.stop()
+        case "start":
+            let requestedMinutes = deepLinkQueryValue("minutes", from: url).flatMap(Int.init)
+            let minutes = min(max(requestedMinutes ?? pomo.config.focusMinutes, 1), 180)
+            pomo.config.focusMinutes = minutes
+            pomo.startFocus(customMinutes: minutes)
+        default:
+            break
+        }
+    }
+
+    private func handleTaskDeepLink(_ url: URL) {
+        switchTab(to: .tasks)
+
+        let action = deepLinkQueryValue("action", from: url)?.lowercased() ?? "open"
+        guard action == "done" || action == "complete" else { return }
+
+        let idString = url.pathComponents.dropFirst().first
+        guard let idString, let taskId = UUID(uuidString: idString) else { return }
+
+        if let task = store.tasks.first(where: { $0.id == taskId }), !task.isCompleted {
+            store.toggle(taskId, stats: stats)
+        }
+
+        #if canImport(ActivityKit)
+        if #available(iOS 16.2, *) {
+            Task { await LiveActivityManager.endTask(taskId) }
+        }
+        #endif
+    }
+
     private func handleIncomingURL(_ url: URL) {
         let host = url.host?.lowercased() ?? ""
 
@@ -2048,6 +2096,15 @@ struct ContentView: View {
             case .menu:
                 showVoiceAssistant = true
             }
+
+        case "pomodoro":
+            handlePomodoroDeepLink(url)
+
+        case "tasks":
+            switchTab(to: .tasks)
+
+        case "task":
+            handleTaskDeepLink(url)
 
         default:
             break
@@ -2241,7 +2298,6 @@ struct ContentView: View {
 
             ZStack {
                 screenView(tab)
-                    .id(tab)
                     .padding(.top, 6)
                     .transition(screenTransition)
                     .transaction { tx in
@@ -2444,15 +2500,6 @@ struct AppBackdrop: View {
                             startRadius: 0,
                             endRadius: 280
                         )
-
-                        if !reduceMotion {
-                            RadialGradient(
-                                colors: [themedGlowC.opacity(0.44), .clear],
-                                center: .bottom,
-                                startRadius: 0,
-                                endRadius: 220
-                            )
-                        }
                     } else {
                         RadialGradient(
                             colors: [themedGlowA, .clear],
@@ -2560,6 +2607,11 @@ private struct PomodoroAlarmBanner: View {
                         .stroke(DS.glassStroke(0.18), lineWidth: 1)
                 )
         )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            tint: DS.accent.opacity(0.10),
+            enabled: true
+        )
         .shadow(color: DS.shadow.opacity(0.24), radius: 8, x: 0, y: 4)
     }
 }
@@ -2594,15 +2646,24 @@ struct GlassTabBar: View {
         .padding(.horizontal, simplifiedEffects ? 7 : 8)
         .padding(.vertical, simplifiedEffects ? 7 : 8)
         .background(tabBarBackground)
+        .lippiSystemGlass(
+            in: tabBarShape,
+            tint: DS.accent.opacity(0.12),
+            enabled: !simplifiedEffects
+        )
         .overlay(tabBarOverlay)
         .shadow(color: DS.shadow.opacity(simplifiedEffects ? 0.14 : 0.28), radius: simplifiedEffects ? 6 : 12, x: 0, y: simplifiedEffects ? 3 : 8)
         .animation(reduceMotion ? nil : DS.motionQuick, value: selection)
         .accessibilityElement(children: .contain)
     }
 
+    private var tabBarShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+    }
+
     @ViewBuilder
     private var tabBarBackground: some View {
-        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        let shape = tabBarShape
         if simplifiedEffects {
             shape
                 .fill(DS.glassFill(0.06))
@@ -2655,7 +2716,7 @@ struct GlassTabBar: View {
 
     @ViewBuilder
     private var tabBarOverlay: some View {
-        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        let shape = tabBarShape
         if simplifiedEffects {
             shape
                 .stroke(DS.glassStroke(0.14), lineWidth: 1)
@@ -2714,6 +2775,12 @@ private struct TabButton: View {
             .padding(.vertical, 9)
             .frame(minWidth: 44) // iOS tap target
             .background(pillBackground)
+            .lippiSystemGlass(
+                in: Capsule(style: .continuous),
+                tint: isSelected ? DS.accent.opacity(0.18) : DS.accent.opacity(0.06),
+                interactive: true,
+                enabled: !simplifiedEffects
+            )
             .overlay(pillOverlay)
             .foregroundStyle(isSelected ? Color.white : DS.text(simplifiedEffects ? 0.80 : 0.84))
             .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1 : 0.99))

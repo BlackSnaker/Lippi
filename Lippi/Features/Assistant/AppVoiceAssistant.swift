@@ -1893,6 +1893,10 @@ struct AppVoiceAssistantSheet: View {
                                                 .stroke(DS.glassStroke(0.16), lineWidth: 1)
                                         )
                                 )
+                                .lippiSystemGlass(
+                                    in: Capsule(style: .continuous),
+                                    tint: assistant.state.liquidTones[0].opacity(0.10)
+                                )
                         }
 
                         Text(s("assistant.subtitle"))
@@ -2074,6 +2078,12 @@ struct VoiceAssistantLauncherButton: View {
             Circle()
                 .fill(state.liquidGradient)
                 .frame(width: 56, height: 56)
+                .lippiSystemGlass(
+                    in: Circle(),
+                    tint: state.liquidTones[0].opacity(0.18),
+                    interactive: true,
+                    enabled: !reduceTransparency
+                )
                 .overlay(
                     Circle()
                         .fill(DS.liquidSheen)
@@ -2203,6 +2213,11 @@ private struct LiquidAssistantCore: View {
 
             Circle()
                 .fill(state.liquidGradient)
+                .lippiSystemGlass(
+                    in: Circle(),
+                    tint: state.liquidTones[0].opacity(0.16),
+                    enabled: !reduceTransparency
+                )
                 .overlay(
                     Circle()
                         .fill(
@@ -2306,6 +2321,10 @@ private struct LiquidAssistantBubble: View {
                             .stroke(DS.glassStroke(0.14), lineWidth: 1)
                     )
             )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                tint: tone.opacity(0.10)
+            )
         }
         .frame(maxWidth: .infinity, alignment: isOutgoing ? .trailing : .leading)
     }
@@ -2346,6 +2365,10 @@ private struct LiquidMetaPill: View {
                     Capsule(style: .continuous)
                         .stroke(DS.glassStroke(0.15), lineWidth: 1)
                 )
+        )
+        .lippiSystemGlass(
+            in: Capsule(style: .continuous),
+            tint: tone.opacity(0.12)
         )
     }
 }
@@ -2396,6 +2419,11 @@ private struct LiquidCommandTile: View {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .stroke(DS.glassStroke(0.15), lineWidth: 1)
                     )
+            )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                tint: tone.opacity(0.12),
+                interactive: true
             )
         }
         .buttonStyle(.plain)
@@ -2470,6 +2498,11 @@ private struct LiquidPrimaryVoiceButton: View {
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
                             .stroke(DS.glassStroke(0.17), lineWidth: 1)
                     )
+            )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                tint: tones[0].opacity(0.14),
+                interactive: true
             )
             .scaleEffect(isActive ? 1.01 : 1.0)
         }

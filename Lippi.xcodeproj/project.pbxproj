@@ -75,6 +75,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		18A1B2C32E7A000000000001 /* Exceptions for "Lippi" folder in "Lippi" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 188D1A552E6491BA00EA6B1D /* Lippi */;
+		};
 		188D1A9B2E64A9C700EA6B1D /* Exceptions for "LippiWidgets" folder in "LippiWidgetsExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -94,6 +101,9 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		188D1A582E6491BA00EA6B1D /* Lippi */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				18A1B2C32E7A000000000001 /* Exceptions for "Lippi" folder in "Lippi" target */,
+			);
 			path = Lippi;
 			sourceTree = "<group>";
 		};
@@ -607,12 +617,14 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = APX26VC984;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Lippi/Info.plist;
 				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleTypeRole = Editor;
 				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLName = Illumionix.Lippi;
 				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLSchemes_0 = lippi;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is used for voice assistant commands.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition is used to process voice assistant commands.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -642,12 +654,14 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Lippi/Info.plist;
 				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleTypeRole = Editor;
 				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLName = Illumionix.Lippi;
 				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLSchemes_0 = lippi;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is used for voice assistant commands.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speech recognition is used to process voice assistant commands.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

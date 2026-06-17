@@ -7,5 +7,6 @@ struct LippiWidgets: WidgetBundle {
         NextTaskWidget()
         PomodoroStatusWidget()
         AssistantLauncherWidget()
+        LippiWidgetsLiveActivity()
     }
 }

@@ -239,6 +239,10 @@ struct DS {
             || p.thermalState == .critical
     }
 
+    static var systemGlassEffectsEnabled: Bool {
+        !runtimeConstrained
+    }
+
     static func text(_ opacity: Double = 1.0) -> Color {
         Color(dynamicDark: 0xFFFFFF, light: 0x0F172A, darkAlpha: opacity, lightAlpha: opacity)
     }
@@ -322,6 +326,27 @@ extension View {
 
     func lippiWindowChrome() -> some View {
         self.overlay(LippiWindowChrome())
+    }
+
+    @ViewBuilder
+    func lippiSystemGlass<S: Shape>(
+        in shape: S,
+        tint: Color? = nil,
+        interactive: Bool = false,
+        enabled: Bool = true
+    ) -> some View {
+        if enabled && DS.systemGlassEffectsEnabled {
+            if #available(iOS 26.0, *) {
+                self.glassEffect(
+                    Glass.regular.tint(tint).interactive(interactive),
+                    in: shape
+                )
+            } else {
+                self
+            }
+        } else {
+            self
+        }
     }
 }
 
@@ -518,6 +543,10 @@ struct GlassCard<Content: View>: View {
     private var useFlatEffects: Bool { style == .flat || performanceMode }
     private var useLightEffects: Bool { useFlatEffects || style == .lightweight }
     private var useFullEffects: Bool { style == .full && !performanceMode }
+    private var systemGlassEnabled: Bool { !useFlatEffects }
+    private var systemGlassTint: Color? {
+        useFullEffects ? DS.accent.opacity(0.16) : DS.accent.opacity(0.07)
+    }
     private var cardShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
     }
@@ -527,6 +556,11 @@ struct GlassCard<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(cardBackground.allowsHitTesting(false))
+            .lippiSystemGlass(
+                in: cardShape,
+                tint: systemGlassTint,
+                enabled: systemGlassEnabled
+            )
             .overlay(cardBorder.allowsHitTesting(false))
             .overlay(alignment: .topLeading) {
                 topLine.allowsHitTesting(false)
@@ -730,6 +764,19 @@ struct LippiButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private var simplifiedEffects: Bool { DS.runtimeConstrained || reduceTransparency }
+    private var systemGlassEnabled: Bool { !simplifiedEffects }
+    private var systemGlassTint: Color? {
+        switch kind {
+        case .primary:
+            return DS.accent.opacity(0.18)
+        case .secondary:
+            return DS.accent.opacity(0.09)
+        case .destructive:
+            return Color.red.opacity(0.12)
+        case .ghost:
+            return nil
+        }
+    }
 
     func makeBody(configuration: Configuration) -> some View {
         let pressed = configuration.isPressed
@@ -741,6 +788,12 @@ struct LippiButtonStyle: ButtonStyle {
             .padding(.vertical, compact ? 9 : 12)
             .frame(minHeight: compact ? 34 : 40)
             .background(background(pressed: pressed))
+            .lippiSystemGlass(
+                in: Capsule(style: .continuous),
+                tint: systemGlassTint,
+                interactive: true,
+                enabled: systemGlassEnabled
+            )
             .overlay(borderOverlay(pressed: pressed))
             .overlay(sheenOverlay(pressed: pressed))
             .foregroundStyle(foreground)

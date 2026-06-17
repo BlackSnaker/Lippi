@@ -1,6 +1,7 @@
 import SwiftUI
 #if os(iOS)
 import UIKit
+import QuartzCore
 #endif
 
 // =======================================================
@@ -151,7 +152,10 @@ private struct BreakGameFullscreenView: View {
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
 
     @StateObject private var game = BreakGameModel()
-    @State private var lastTick: Date = .now
+    #if os(iOS)
+    @StateObject private var displayLink = BreakDisplayLinkDriver()
+    #endif
+    @State private var lastTick: TimeInterval = 0
     @State private var viewportWidth: CGFloat = 320
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
@@ -200,25 +204,42 @@ private struct BreakGameFullscreenView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .onAppear {
-            lastTick = .now
+            lastTick = CACurrentMediaTime()
             game.start()
-        }
-        .onReceive(Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()) { now in
-            guard scenePhase == .active else { return }
-            let maxDt: TimeInterval = reduceMotion ? (1.0 / 20.0) : (1.0 / 35.0)
-            let dt = min(max(now.timeIntervalSince(lastTick), 0), maxDt)
-            lastTick = now
-            game.tick(dt: CGFloat(dt), viewportWidth: viewportWidth)
+            startDisplayLink()
         }
         .onChange(of: scenePhase) { _, newValue in
             if newValue != .active {
+                stopDisplayLink()
                 game.pauseIfRunning()
-                lastTick = .now
+                lastTick = CACurrentMediaTime()
+            } else {
+                lastTick = CACurrentMediaTime()
+                startDisplayLink()
             }
         }
         .onDisappear {
+            stopDisplayLink()
             game.stopMovement()
         }
+    }
+
+    private func startDisplayLink() {
+        #if os(iOS)
+        displayLink.onFrame = { now in
+            let maxDt: TimeInterval = reduceMotion ? (1.0 / 20.0) : (1.0 / 35.0)
+            let dt = min(max(now - lastTick, 0), maxDt)
+            lastTick = now
+            game.tick(dt: CGFloat(dt), viewportWidth: viewportWidth)
+        }
+        displayLink.start()
+        #endif
+    }
+
+    private func stopDisplayLink() {
+        #if os(iOS)
+        displayLink.stop()
+        #endif
     }
 
     private var topBar: some View {
@@ -467,6 +488,38 @@ private enum BreakGamePhase {
     case lost
 }
 
+#if os(iOS)
+private final class BreakDisplayLinkDriver: NSObject, ObservableObject {
+    var onFrame: ((TimeInterval) -> Void)?
+    private var displayLink: CADisplayLink?
+
+    func start() {
+        guard displayLink == nil else { return }
+        let link = CADisplayLink(target: self, selector: #selector(step(_:)))
+        if #available(iOS 15.0, *) {
+            link.preferredFrameRateRange = CAFrameRateRange(minimum: 45, maximum: 60, preferred: 60)
+        } else {
+            link.preferredFramesPerSecond = 60
+        }
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    func stop() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    @objc private func step(_ link: CADisplayLink) {
+        onFrame?(link.timestamp)
+    }
+
+    deinit {
+        stop()
+    }
+}
+#endif
+
 private struct BreakPlatform: Identifiable {
     let id: Int
     let rect: CGRect
@@ -489,11 +542,11 @@ private final class BreakGameModel: ObservableObject {
     @Published private(set) var phase: BreakGamePhase = .ready
     @Published private(set) var score: Int = 0
     @Published private(set) var lives: Int = 3
-    @Published private(set) var elapsed: TimeInterval = 0
     @Published private(set) var bestScore: Int = 0
-    @Published private(set) var playerCenter: CGPoint
-    @Published private(set) var cameraX: CGFloat = 0
-    @Published private(set) var collectedCoins: Set<Int> = []
+    private(set) var elapsed: TimeInterval = 0
+    private(set) var playerCenter: CGPoint
+    private(set) var cameraX: CGFloat = 0
+    private(set) var collectedCoins: Set<Int> = []
 
     let worldSize = CGSize(width: 3400, height: 360)
     let finishX: CGFloat = 3310
@@ -592,12 +645,15 @@ private final class BreakGameModel: ObservableObject {
     }
 
     func updateCamera(viewportWidth: CGFloat) {
+        objectWillChange.send()
         cameraX = clampedCameraX(for: viewportWidth)
     }
 
     func tick(dt: CGFloat, viewportWidth: CGFloat) {
         guard phase == .running else { return }
         guard dt > 0 else { return }
+
+        objectWillChange.send()
 
         elapsed += TimeInterval(dt)
 
@@ -761,6 +817,7 @@ private final class BreakGameModel: ObservableObject {
     }
 
     private func reset(toReady: Bool) {
+        objectWillChange.send()
         phase = toReady ? .ready : .running
         score = 0
         lives = 3
