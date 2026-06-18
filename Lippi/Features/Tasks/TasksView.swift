@@ -117,6 +117,11 @@ struct TasksView: View {
                                 .fill(DS.glassFill(0.12))
                                 .overlay(Circle().stroke(DS.glassStroke(0.18), lineWidth: 1))
                         )
+                        .lippiSystemGlass(
+                            in: Circle(),
+                            tint: DS.accent.opacity(0.16),
+                            interactive: true
+                        )
                         .shadow(radius: 16)
                 }
                 .padding(.trailing, 18)
@@ -218,6 +223,11 @@ struct TasksView: View {
                         .padding(.leading, 14)
                 }
         )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: Color(hex: 0x64D2FF).opacity(0.10)
+        )
+        .shadow(color: DS.depthShadow(0.14), radius: 6, x: 0, y: 3)
     }
 
     private func badge(text: String, systemImage: String) -> some View {
@@ -227,6 +237,10 @@ struct TasksView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(DS.glassFill(0.10), in: Capsule())
+            .lippiSystemGlass(
+                in: Capsule(),
+                tint: DS.accent.opacity(0.07)
+            )
             .overlay(Capsule().stroke(DS.glassStroke(0.16), lineWidth: 1))
             .foregroundStyle(DS.text(0.9))
     }
@@ -249,6 +263,10 @@ struct TasksView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(DS.glassFill(0.10), in: Capsule())
+                    .lippiSystemGlass(
+                        in: Capsule(),
+                        tint: DS.accent.opacity(0.06)
+                    )
                     .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
             }
 
@@ -309,6 +327,11 @@ struct TasksView: View {
                         .padding(.leading, 14)
                 }
         )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous),
+            tint: DS.accent.opacity(0.10)
+        )
+        .shadow(color: DS.depthShadow(0.14), radius: 6, x: 0, y: 3)
     }
 
     private func row(_ item: TaskItem) -> some View {
@@ -394,6 +417,10 @@ struct TaskRow: View, Equatable {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(chipFillColor, in: Capsule())
+                    .lippiSystemGlass(
+                        in: Capsule(),
+                        tint: item.category.tint.opacity(0.08)
+                    )
                     .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
                     .foregroundStyle(DS.text(item.isCompleted ? 0.45 : 0.80))
             }
@@ -414,6 +441,11 @@ struct TaskRow: View, Equatable {
                     .foregroundStyle(checkIconStyle)
                     .frame(width: 36, height: 36)
                     .background(miniCardFillColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .lippiSystemGlass(
+                        in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                        tint: item.category.tint.opacity(0.08),
+                        interactive: true
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(DS.glassStroke(0.14), lineWidth: 1)
@@ -450,6 +482,10 @@ struct TaskRow: View, Equatable {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(chipFillColor, in: Capsule())
+                        .lippiSystemGlass(
+                            in: Capsule(),
+                            tint: item.category.tint.opacity(0.08)
+                        )
                         .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
                         .foregroundStyle(DS.text(item.isCompleted ? 0.45 : 0.85))
                 }
@@ -460,6 +496,11 @@ struct TaskRow: View, Equatable {
                         .foregroundStyle(DS.text(0.9))
                         .frame(width: 34, height: 34)
                         .background(miniCardFillColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .lippiSystemGlass(
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                            tint: item.category.tint.opacity(0.08),
+                            interactive: true
+                        )
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(DS.glassStroke(0.14), lineWidth: 1)

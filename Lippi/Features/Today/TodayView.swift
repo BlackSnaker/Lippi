@@ -22,8 +22,32 @@ struct TodayView: View {
     private var doneTasksCount: Int { store.tasks.filter { $0.isCompleted }.count }
     private var totalTasksCount: Int { max(store.tasks.count, 1) }
     private var hasUpcomingTask: Bool { store.upcoming() != nil }
+    private var activeTasks: [TaskItem] { store.tasks.filter { !$0.isCompleted } }
+    private var upcomingTasks: [TaskItem] {
+        activeTasks.sorted { lhs, rhs in
+            let left = lhs.dueDate ?? .distantFuture
+            let right = rhs.dueDate ?? .distantFuture
+            if left != right { return left < right }
+            return lhs.createdAt < rhs.createdAt
+        }
+    }
+    private var overdueTasksCount: Int {
+        activeTasks.filter { task in
+            guard let due = task.dueDate else { return false }
+            return due < Date()
+        }.count
+    }
     private var completionProgress: Double {
         min(max(Double(doneTasksCount) / Double(totalTasksCount), 0), 1)
+    }
+    private var completionPercent: Int { Int((completionProgress * 100).rounded()) }
+    private var nextTask: TaskItem? { store.upcoming() }
+    private var todayStatusText: String {
+        if activeTasksCount == 0 && doneTasksCount > 0 { return s("today.status.clear") }
+        if activeTasksCount == 0 { return s("today.status.empty") }
+        if overdueTasksCount > 0 { return L10n.fmt("today.status.overdue", lang, overdueTasksCount) }
+        if doneTasksCount == 0 { return s("today.status.start") }
+        return L10n.fmt("today.status.progress", lang, completionPercent)
     }
 
     private var quickActionColumns: [GridItem] {
@@ -32,6 +56,20 @@ struct TodayView: View {
             GridItem(.flexible(), spacing: 10, alignment: .top)
         ]
     }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private static let dueFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
 
     private var greetingTitle: String {
         let hour = Calendar.current.component(.hour, from: .now)
@@ -87,10 +125,10 @@ struct TodayView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         headerCard
-                        CountdownCardView()
-                        StatsCardView()
-                        nextTaskCard
                         quickActions
+                        CountdownCardView()
+                        todayPlanCard
+                        StatsCardView()
                     }
                     .padding(20)
                 }
@@ -128,10 +166,10 @@ struct TodayView: View {
 
     // MARK: - Subviews
     private var headerCard: some View {
-        GlassCard(padding: 18, cornerRadius: 28, style: .full) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
+        GlassCard(padding: 18, cornerRadius: 30, style: .full) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .center, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text(Date.now, format: .dateTime.weekday(.wide).day().month())
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(DS.textSecondary)
@@ -145,51 +183,152 @@ struct TodayView: View {
                         Text(s("today.header.subtitle"))
                             .font(.footnote.weight(.medium))
                             .foregroundStyle(DS.textTertiary)
-                            .singleLine()
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.90)
+                            .allowsTightening(true)
+
+                        statusPill
                     }
 
                     Spacer(minLength: 0)
 
-                    VStack(alignment: .trailing, spacing: 8) {
-                        dayProgressBadge
-
-                        Label(
-                            L10n.fmt("today.header.done_count", lang, doneTasksCount),
-                            systemImage: "checkmark.circle.fill"
-                        )
-                            .font(.caption2.weight(.semibold))
-                            .labelStyle(TightLabelStyle())
-                            .foregroundStyle(DS.textSecondary)
-                            .singleLine()
-                    }
+                    dayProgressBadge
                 }
 
-                HStack(spacing: 8) {
-                    heroMetricChip(title: s("today.metric.active"), value: "\(activeTasksCount)", systemImage: "circle")
-                    heroMetricChip(title: s("today.metric.streak"), value: "\(stats.productiveStreak)", systemImage: "flame.fill")
-                    heroMetricChip(title: s("today.metric.done"), value: "\(doneTasksCount)", systemImage: "checkmark.circle.fill")
-                }
-                .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(DS.glassFill(0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(DS.brandSoftGradient)
-                                .opacity(0.42)
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(DS.glassStroke(0.12), lineWidth: 1)
-                )
+                focusSummaryPanel
 
                 HStack(spacing: 8) {
-                    headerChip(s("today.chip.focus"), systemImage: "bolt.fill")
-                    headerChip(s("today.chip.selfcare"), systemImage: "heart.text.square")
+                    heroMetricChip(title: s("today.metric.active"), value: "\(activeTasksCount)", systemImage: "circle", tone: DS.brandA)
+                    heroMetricChip(title: s("today.metric.done"), value: "\(doneTasksCount)", systemImage: "checkmark.circle.fill", tone: Color(hex: 0x30D158))
+                    heroMetricChip(title: s("today.metric.streak"), value: "\(stats.productiveStreak)", systemImage: "flame.fill", tone: Color(hex: 0xFF9F0A))
                 }
             }
         }
+    }
+
+    private var statusPill: some View {
+        Label(todayStatusText, systemImage: statusSymbol)
+            .font(.caption.weight(.semibold))
+            .labelStyle(TightLabelStyle())
+            .foregroundStyle(DS.text(0.84))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(DS.glassFill(0.08))
+                    .overlay(Capsule().fill(statusTone.opacity(0.16)))
+            )
+            .lippiSystemGlass(
+                in: Capsule(style: .continuous),
+                tint: statusTone.opacity(0.09)
+            )
+            .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
+            .singleLine()
+    }
+
+    private var statusSymbol: String {
+        if overdueTasksCount > 0 { return "exclamationmark.circle.fill" }
+        if activeTasksCount == 0 { return "checkmark.seal.fill" }
+        return "sparkles"
+    }
+
+    private var statusTone: Color {
+        if overdueTasksCount > 0 { return Color(hex: 0xFF453A) }
+        if activeTasksCount == 0 { return Color(hex: 0x30D158) }
+        return DS.brandA
+    }
+
+    private var focusSummaryPanel: some View {
+        let task = nextTask
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(DS.glassFill(0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill((task?.category.tint ?? DS.brandA).opacity(0.24))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(DS.glassStroke(0.18), lineWidth: 1)
+                        )
+
+                    Image(safeSystemName: task?.category.symbol ?? "sparkles", fallback: "sparkles")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.text(0.94))
+                }
+                .frame(width: 42, height: 42)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(s("today.focus.title"))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(DS.textTertiary)
+                        .textCase(.uppercase)
+                        .singleLine()
+
+                    Text(task?.title ?? s("today.focus.empty_title"))
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.86)
+
+                    HStack(spacing: 7) {
+                        if let task {
+                            categoryPill(task.category)
+                            dueChip(for: task)
+                        } else {
+                            Label(s("today.focus.empty_hint"), systemImage: "plus.circle")
+                                .font(.caption.weight(.semibold))
+                                .labelStyle(TightLabelStyle())
+                                .foregroundStyle(DS.textSecondary)
+                                .singleLine()
+                        }
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 10) {
+                Button { showAdd = true } label: {
+                    Label(s("today.quick.new"), systemImage: "plus")
+                        .labelStyle(TightLabelStyle())
+                }
+                .buttonStyle(LippiButtonStyle(kind: task == nil ? .primary : .secondary, compact: true))
+
+                #if canImport(ActivityKit)
+                if #available(iOS 16.2, *), let task {
+                    Button {
+                        Task { await LiveActivityManager.startTask(task) }
+                    } label: {
+                        Label(s("today.next.to_island"), systemImage: "wave.3.right")
+                            .labelStyle(TightLabelStyle())
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .primary, compact: true))
+                }
+                #endif
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(DS.glassFill(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(DS.brandSoftGradient)
+                        .opacity(0.36)
+                )
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: (task?.category.tint ?? DS.accent).opacity(0.10)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(DS.glassStroke(0.16), lineWidth: 1)
+        )
     }
 
     private var dayProgressBadge: some View {
@@ -206,8 +345,8 @@ struct TodayView: View {
                 .rotationEffect(.degrees(-90))
 
             VStack(spacing: 1) {
-                Text("\(Int((completionProgress * 100).rounded()))%")
-                    .font(.caption.weight(.bold))
+                Text("\(completionPercent)%")
+                    .font(.headline.weight(.bold))
                     .foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
 
@@ -216,166 +355,275 @@ struct TodayView: View {
                     .foregroundStyle(DS.textTertiary)
             }
         }
-        .frame(width: 64, height: 64)
+        .frame(width: 76, height: 76)
         .padding(4)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(DS.glassFill(0.08))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(DS.brandSoftGradient)
                         .opacity(0.55)
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(DS.glassStroke(0.16), lineWidth: 1)
         )
         .animation(reduceMotion ? nil : DS.motionQuick, value: completionProgress)
     }
 
-    private func heroMetricChip(title: String, value: String, systemImage: String) -> some View {
-        HStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(DS.glassFill(0.12))
-                    .overlay(Circle().stroke(DS.glassStroke(0.18), lineWidth: 1))
+    private func heroMetricChip(title: String, value: String, systemImage: String, tone: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .fill(DS.glassFill(0.12))
+                        .overlay(Circle().fill(tone.opacity(0.20)))
+                        .overlay(Circle().stroke(DS.glassStroke(0.18), lineWidth: 1))
 
-                Image(safeSystemName: systemImage, fallback: systemImage)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(DS.text(0.90))
-            }
-            .frame(width: 22, height: 22)
+                    Image(safeSystemName: systemImage, fallback: systemImage)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(DS.text(0.90))
+                }
+                .frame(width: 24, height: 24)
 
-            VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(DS.textTertiary)
                     .singleLine()
-
-                Text(value)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    .singleLine()
             }
+
+            Text(value)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .singleLine()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(DS.glassFill(0.08))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(DS.brandSoftGradient)
-                        .opacity(0.20)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(tone.opacity(0.10))
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(DS.glassStroke(0.14), lineWidth: 1)
         )
     }
 
-    private func headerChip(_ title: String, systemImage: String) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(.footnote.weight(.semibold))
+    private func categoryPill(_ category: TaskCategory) -> some View {
+        Label(category.title, systemImage: category.symbol)
+            .font(.caption2.weight(.semibold))
             .labelStyle(TightLabelStyle())
             .foregroundStyle(DS.textSecondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(DS.glassFill(0.08), in: Capsule())
-            .overlay(Capsule().stroke(DS.glassStroke(0.16), lineWidth: 1))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+        .background(category.chipFill, in: Capsule())
+        .lippiSystemGlass(
+            in: Capsule(),
+            tint: category.tint.opacity(0.08)
+        )
+        .overlay(Capsule().stroke(category.chipStroke, lineWidth: 1))
+        .singleLine()
     }
 
-    private var nextTaskCard: some View {
-        let next = store.upcoming()
+    private func dueChip(for task: TaskItem) -> some View {
+        Label(dueSummary(for: task), systemImage: task.dueDate == nil ? "calendar" : "clock")
+            .font(.caption2.weight(.semibold))
+            .labelStyle(TightLabelStyle())
+            .foregroundStyle(DS.text(0.78))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+        .background(dueTone(for: task).opacity(0.14), in: Capsule())
+        .lippiSystemGlass(
+            in: Capsule(),
+            tint: dueTone(for: task).opacity(0.08)
+        )
+        .overlay(Capsule().stroke(dueTone(for: task).opacity(0.28), lineWidth: 1))
+        .singleLine()
+    }
+
+    private var todayPlanCard: some View {
+        let preview = Array(upcomingTasks.prefix(3))
+
         return GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
-            HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
                     LippiSectionHeader(
-                    title: s("today.next.title"),
-                    subtitle: s("today.next.subtitle"),
-                    icon: "timer",
-                    accent: DS.accent
-                )
+                        title: s("today.plan.title"),
+                        subtitle: s("today.plan.subtitle"),
+                        icon: "list.bullet.rectangle.portrait",
+                        accent: DS.accent
+                    )
 
-                Spacer()
+                    Spacer()
 
-                #if canImport(ActivityKit)
-                if #available(iOS 16.2, *) {
-                    Button {
-                        if let t = next { Task { await LiveActivityManager.startTask(t) } }
-                    } label: {
-                        Label(s("today.next.to_island"), systemImage: "wave.3.right")
-                            .labelStyle(TightLabelStyle())
-                    }
-                    .buttonStyle(LippiButtonStyle(kind: .primary, compact: true))
-                    .padding(.top, 2)
-                }
-                #endif
-            }
-
-            if let next {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(next.title)
-                        .font(.title3.weight(.semibold))
-                        .singleLine()
-
-                    Label(next.category.title, systemImage: next.category.symbol)
+                    Text(L10n.fmt("today.plan.count", lang, activeTasksCount))
                         .font(.caption2.weight(.semibold))
-                        .labelStyle(TightLabelStyle())
+                        .foregroundStyle(DS.textSecondary)
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(DS.glassFill(0.10), in: Capsule())
-                        .overlay(Capsule().stroke(DS.glassStroke(0.18), lineWidth: 1))
-
-                    if let due = next.dueDate {
-                        Text(due, format: .dateTime.day().month().hour().minute())
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(DS.text(0.75))
-                            .singleLine()
-                    } else {
-                        Text(s("today.next.no_due"))
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(DS.text(0.65))
-                            .singleLine()
-                    }
+                        .padding(.vertical, 6)
+                        .background(DS.glassFill(0.08), in: Capsule())
+                        .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
+                        .singleLine()
+                        .padding(.top, 2)
                 }
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(DS.glassFill(0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(DS.brandSoftGradient)
-                                .opacity(0.22)
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(DS.glassStroke(0.12), lineWidth: 1)
-                )
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
+
+                if preview.isEmpty {
                     HStack(spacing: 10) {
-                        Image(safeSystemName: "sparkles", fallback: "star")
+                        Image(safeSystemName: "checkmark.seal.fill", fallback: "checkmark.circle.fill")
                             .imageScale(.large)
-                            .foregroundStyle(DS.text(0.85))
-                        Text(s("today.next.empty_title"))
-                            .foregroundStyle(DS.text(0.75))
-                            .singleLine()
-                    }
+                            .foregroundStyle(Color(hex: 0x30D158))
 
-                    Button { showAdd = true } label: {
-                        Label(s("today.next.empty_button"), systemImage: "plus")
-                            .labelStyle(TightLabelStyle())
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(s("today.plan.empty_title"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(DS.textPrimary)
+                                .singleLine()
+
+                            Text(s("today.plan.empty_subtitle"))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(DS.textTertiary)
+                                .singleLine()
+                        }
                     }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(taskRowBackground(tone: Color(hex: 0x30D158)))
+                } else {
+                    VStack(spacing: 9) {
+                        ForEach(preview) { task in
+                            planTaskRow(task)
+                        }
+
+                        if upcomingTasks.count > preview.count {
+                            Text(L10n.fmt("today.plan.more", lang, upcomingTasks.count - preview.count))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(DS.textTertiary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.top, 2)
+                        }
+                    }
                 }
-                .padding(.vertical, 6)
             }
         }
+    }
+
+    private func planTaskRow(_ task: TaskItem) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(task.category.chipFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .stroke(task.category.chipStroke, lineWidth: 1)
+                    )
+
+                Image(safeSystemName: task.category.symbol, fallback: "circle.fill")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(DS.text(0.90))
+            }
+            .frame(width: 34, height: 34)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(task.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .singleLine()
+
+                HStack(spacing: 7) {
+                    Text(task.category.title)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DS.textTertiary)
+                        .singleLine()
+
+                    Circle()
+                        .fill(DS.textTertiary)
+                        .frame(width: 3, height: 3)
+
+                    Text(dueSummary(for: task))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(dueTone(for: task))
+                        .singleLine()
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                markTaskDone(task)
+            } label: {
+                Image(safeSystemName: "checkmark", fallback: "checkmark")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(DS.text(0.90))
+                    .frame(width: 30, height: 30)
+                    .background(DS.glassFill(0.10), in: Circle())
+                    .lippiSystemGlass(
+                        in: Circle(),
+                        tint: task.category.tint.opacity(0.08),
+                        interactive: true
+                    )
+                    .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
+            }
+            .buttonStyle(PressScaleStyle(scale: 0.94, opacity: 0.88))
+        }
+        .padding(10)
+        .background(taskRowBackground(tone: task.category.tint))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            tint: task.category.tint.opacity(0.08)
+        )
+    }
+
+    private func taskRowBackground(tone: Color) -> some View {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(DS.glassFill(0.07))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(tone.opacity(0.08))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(DS.glassStroke(0.12), lineWidth: 1)
+            )
+    }
+
+    private func markTaskDone(_ task: TaskItem) {
+        var updated = task
+        updated.isCompleted = true
+        store.update(updated)
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        #endif
+    }
+
+    private func dueSummary(for task: TaskItem) -> String {
+        guard let due = task.dueDate else { return s("today.next.no_due") }
+
+        let calendar = Calendar.current
+        if due < Date() {
+            return L10n.fmt("today.due.overdue", lang, Self.dueFormatter.string(from: due))
+        }
+        if calendar.isDateInToday(due) {
+            return L10n.fmt("today.due.today", lang, Self.timeFormatter.string(from: due))
+        }
+        if calendar.isDateInTomorrow(due) {
+            return L10n.fmt("today.due.tomorrow", lang, Self.timeFormatter.string(from: due))
+        }
+        return Self.dueFormatter.string(from: due)
+    }
+
+    private func dueTone(for task: TaskItem) -> Color {
+        guard let due = task.dueDate else { return DS.textTertiary }
+        if due < Date() { return Color(hex: 0xFF453A) }
+        if Calendar.current.isDateInToday(due) { return Color(hex: 0xFF9F0A) }
+        return task.category.tint
     }
 
     private var quickActions: some View {
@@ -398,6 +646,10 @@ struct TodayView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(DS.glassFill(0.08), in: Capsule())
+                        .lippiSystemGlass(
+                            in: Capsule(),
+                            tint: Color(hex: 0x64D2FF).opacity(0.07)
+                        )
                         .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
                         .padding(.top, 2)
                 }
@@ -487,6 +739,11 @@ struct TodayView: View {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(tone.opacity(0.10))
                     )
+            )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                tint: tone.opacity(0.08),
+                interactive: true
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)

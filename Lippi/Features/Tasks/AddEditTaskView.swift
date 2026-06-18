@@ -114,6 +114,11 @@ struct AddEditTaskView: View {
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 12)
                                     .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .lippiSystemGlass(
+                                        in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                                        tint: Color(hex: 0x30D158).opacity(0.08),
+                                        interactive: true
+                                    )
                                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(DS.glassStroke(0.12)))
                                     .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                                 }
@@ -152,12 +157,21 @@ struct AddEditTaskView: View {
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 6)
                                         .background(DS.glassFill(0.10), in: Capsule())
+                                        .lippiSystemGlass(
+                                            in: Capsule(),
+                                            tint: category.tint.opacity(0.08)
+                                        )
                                         .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
                                         .foregroundStyle(DS.text(0.85))
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 12)
                                 .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .lippiSystemGlass(
+                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                                    tint: category.tint.opacity(0.08),
+                                    interactive: true
+                                )
                                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(DS.glassStroke(0.12)))
                             }
                         }
@@ -202,6 +216,10 @@ struct AddEditTaskView: View {
                         .opacity(0.20)
                         .ignoresSafeArea()
                 )
+                .lippiSystemGlass(
+                    in: Rectangle(),
+                    tint: DS.accent.opacity(0.06)
+                )
             }
         }
     }
@@ -216,6 +234,10 @@ struct AddEditTaskView: View {
                     .foregroundStyle(DS.text(0.92))
                     .frame(width: 44, height: 44)
                     .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .lippiSystemGlass(
+                        in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                        tint: DS.accent.opacity(0.10)
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(DS.glassStroke(0.14), lineWidth: 1)
@@ -255,6 +277,11 @@ struct AddEditTaskView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                tint: Color(hex: 0x64D2FF).opacity(0.08),
+                interactive: true
+            )
             .overlay(RoundedRectangle(cornerRadius: 14).stroke(DS.glassStroke(0.12)))
         }
     }
@@ -281,6 +308,11 @@ struct AddEditTaskView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                tint: Color(hex: 0x64D2FF).opacity(0.08),
+                interactive: true
+            )
             .overlay(RoundedRectangle(cornerRadius: 14).stroke(DS.glassStroke(0.12)))
         }
     }
@@ -302,6 +334,11 @@ struct AddEditTaskView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            tint: Color(hex: 0x30D158).opacity(0.08),
+            interactive: true
+        )
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(DS.glassStroke(0.12)))
     }
 

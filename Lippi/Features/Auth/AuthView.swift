@@ -101,6 +101,10 @@ struct AuthView: View {
                         .foregroundStyle(DS.text(0.95))
                         .frame(width: 44, height: 44)
                         .background(DS.glassFill(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .lippiSystemGlass(
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                            tint: DS.accent.opacity(0.10)
+                        )
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(DS.glassStroke(0.18), lineWidth: 1)
@@ -166,6 +170,11 @@ struct AuthView: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 9)
                             .background(DS.glassFill(lang == option ? 0.15 : 0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .lippiSystemGlass(
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                                tint: (lang == option ? DS.accent : Color(hex: 0x5AC8FA)).opacity(0.08),
+                                interactive: true
+                            )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .stroke(lang == option ? DS.accent.opacity(0.52) : DS.glassStroke(0.14), lineWidth: 1)
@@ -214,6 +223,11 @@ struct AuthView: View {
                                 .background(
                                     Capsule(style: .continuous)
                                         .fill(mode == item ? AnyShapeStyle(DS.brand) : AnyShapeStyle(DS.glassFill(0.08)))
+                                )
+                                .lippiSystemGlass(
+                                    in: Capsule(style: .continuous),
+                                    tint: DS.accent.opacity(mode == item ? 0.16 : 0.07),
+                                    interactive: true
                                 )
                                 .foregroundStyle(mode == item ? Color.white : DS.text(0.85))
                         }

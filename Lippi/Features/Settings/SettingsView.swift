@@ -1965,6 +1965,11 @@ extension View {
                             .opacity(0.20)
                     )
             )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                tint: DS.accent.opacity(0.08),
+                interactive: true
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(DS.glassStroke(0.14), lineWidth: 1)

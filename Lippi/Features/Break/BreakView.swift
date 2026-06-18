@@ -1093,6 +1093,10 @@ private struct BreakHUDChip: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+            tint: DS.accent.opacity(0.07)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(DS.glassStroke(0.14), lineWidth: 1)
@@ -1114,6 +1118,11 @@ private struct HoldMoveButton: View {
                 .foregroundStyle(DS.text(0.92))
                 .frame(width: 44, height: 44)
                 .background(DS.glassFill(isPressed ? 0.18 : 0.11), in: Circle())
+                .lippiSystemGlass(
+                    in: Circle(),
+                    tint: DS.accent.opacity(isPressed ? 0.14 : 0.08),
+                    interactive: true
+                )
                 .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
                 .scaleEffect(isPressed ? 0.96 : 1.0)
 

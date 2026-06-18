@@ -191,8 +191,18 @@ struct AlarmSettingsSection: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.12)))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(DS.glassFill(0.10))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DS.glassTint).opacity(0.30))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DS.brandIridescent).blendMode(.screen).opacity(0.16))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            tint: DS.accent.opacity(0.08),
+            interactive: true
+        )
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
     }
 
     @ViewBuilder
@@ -202,8 +212,17 @@ struct AlarmSettingsSection: View {
             HStack { content() }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.12)))
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(DS.glassFill(0.10))
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(DS.glassTint).opacity(0.28))
+                )
+                .lippiSystemGlass(
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                    tint: DS.accent.opacity(0.07),
+                    interactive: true
+                )
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
         }
         .padding(.horizontal, 4)
     }
@@ -218,7 +237,17 @@ private extension View {
             .textFieldStyle(.plain)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.12)))
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(DS.glassFill(0.10))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DS.glassTint).opacity(0.30))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DS.brandIridescent).blendMode(.screen).opacity(0.16))
+            )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                tint: DS.accent.opacity(0.08),
+                interactive: true
+            )
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
     }
 }

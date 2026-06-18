@@ -721,6 +721,10 @@ private struct HealthMetricChip: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
         .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous),
+            tint: Color(hex: 0x64D2FF).opacity(0.07)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(DS.glassStroke(0.12), lineWidth: 1)

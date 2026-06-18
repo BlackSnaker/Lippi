@@ -65,6 +65,47 @@
 
 ---
 
+## Latest Changes / Последние изменения
+
+<div align="center">
+  <p>
+    <img alt="Update" src="https://img.shields.io/badge/Update-June%2018%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Design" src="https://img.shields.io/badge/Design-Liquid%20Glass-64D2FF?style=for-the-badge">
+    <img alt="Simulator" src="https://img.shields.io/badge/Checked-iPhone%2017%20Simulator-30D158?style=for-the-badge">
+  </p>
+</div>
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Design and interaction update focused on clarity, system feel, and smooth daily use.</strong></p>
+      <ul>
+        <li><strong>More system Liquid Glass everywhere:</strong> cards, buttons, tabs, chips, input fields, task rows, settings, auth, Pomodoro, Health, Eye Health, Break, and assistant surfaces now share a stronger native glass layer.</li>
+        <li><strong>Redesigned Today screen:</strong> clearer daily status, main focus panel, progress badge, quick actions, and compact day-plan rows make the home screen easier to scan.</li>
+        <li><strong>Better information hierarchy:</strong> longer Russian labels now wrap more gracefully, key actions stay closer to the thumb, and status chips make the current day state obvious.</li>
+        <li><strong>Dynamic Island polish:</strong> Pomodoro and task Live Activities use richer glass panels, clearer progress, compact controls, and app-matched visual tones.</li>
+        <li><strong>Performance-minded visuals:</strong> glass effects remain enabled for modern 60 FPS devices, while Low Power Mode, thermal pressure, and Reduce Transparency still get safer lightweight rendering.</li>
+        <li><strong>Verified build:</strong> the app builds successfully for iOS Simulator with the current Xcode toolchain.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Обновление дизайна и взаимодействий с акцентом на читаемость, системность и плавное ежедневное использование.</strong></p>
+      <ul>
+        <li><strong>Больше системного Liquid Glass во всем приложении:</strong> карточки, кнопки, таббар, чипы, поля ввода, строки задач, настройки, вход, Pomodoro, Health, Eye Health, Break и ассистент получили единый более выразительный стеклянный слой.</li>
+        <li><strong>Новый главный экран Today:</strong> понятный статус дня, панель главного фокуса, индикатор прогресса, быстрые действия и компактный план дня помогают быстрее считывать информацию.</li>
+        <li><strong>Лучше иерархия информации:</strong> длинные русские подписи аккуратнее переносятся, важные действия ближе к пальцу, а статусные чипы сразу показывают состояние дня.</li>
+        <li><strong>Полировка Dynamic Island:</strong> Live Activity для Pomodoro и задач получила более богатые стеклянные панели, понятный прогресс, компактные действия и визуальный стиль Lippi.</li>
+        <li><strong>Визуалы с учетом производительности:</strong> glass-эффекты включены для современных 60 FPS устройств, а Low Power Mode, перегрев и Reduce Transparency по-прежнему используют более легкий рендеринг.</li>
+        <li><strong>Проверенная сборка:</strong> приложение успешно собирается для iOS Simulator на текущем Xcode toolchain.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## English
 
 ### Product Overview

@@ -489,6 +489,10 @@ struct AchievementsGrid: View {
                 .frame(maxWidth: .infinity, minHeight: 94, alignment: .topLeading)
                 .padding(12)
                 .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .lippiSystemGlass(
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                    tint: (unlocked ? Color(hex: 0x30D158) : DS.accent).opacity(0.07)
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(DS.glassStroke(0.14), lineWidth: 1)
@@ -544,6 +548,10 @@ private struct TipRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            tint: DS.accent.opacity(0.07)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(DS.glassStroke(0.14), lineWidth: 1)
@@ -967,6 +975,10 @@ struct EyeSettingsView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(DS.glassFill(0.10), in: Capsule())
+            .lippiSystemGlass(
+                in: Capsule(),
+                tint: DS.accent.opacity(0.07)
+            )
             .overlay(Capsule().stroke(DS.glassStroke(0.15), lineWidth: 1))
     }
 
@@ -999,6 +1011,11 @@ struct EyeSettingsView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 13, style: .continuous),
+            tint: DS.accent.opacity(0.07),
+            interactive: true
+        )
         .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
     }
 
@@ -1029,6 +1046,11 @@ struct EyeSettingsView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 13, style: .continuous),
+            tint: DS.accent.opacity(0.07),
+            interactive: true
+        )
         .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
     }
 
@@ -1062,6 +1084,11 @@ struct EyeSettingsView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 13, style: .continuous),
+            tint: DS.accent.opacity(0.07),
+            interactive: true
+        )
         .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
     }
 }

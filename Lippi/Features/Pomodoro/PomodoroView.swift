@@ -77,6 +77,10 @@ struct PomodoroView: View {
                                                         .opacity(0.55)
                                                 )
                                         )
+                                        .lippiSystemGlass(
+                                            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                                            tint: DS.accent.opacity(0.10)
+                                        )
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                                 .stroke(DS.glassStroke(0.14), lineWidth: 1)
@@ -230,6 +234,11 @@ struct PomodoroView: View {
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 10)
                                     .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .lippiSystemGlass(
+                                        in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                                        tint: Color(hex: 0x64D2FF).opacity(0.08),
+                                        interactive: true
+                                    )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                                             .stroke(DS.glassStroke(0.14), lineWidth: 1)
@@ -345,6 +354,10 @@ struct PomodoroView: View {
                     )
             )
             .overlay(Capsule().stroke(DS.glassStroke(0.16), lineWidth: 1))
+            .lippiSystemGlass(
+                in: Capsule(),
+                tint: DS.accent.opacity(0.08)
+            )
             .foregroundStyle(DS.text(0.9))
     }
 
@@ -355,6 +368,10 @@ struct PomodoroView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(DS.glassFill(0.10), in: Capsule())
+            .lippiSystemGlass(
+                in: Capsule(),
+                tint: DS.accent.opacity(0.07)
+            )
             .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
             .foregroundStyle(DS.text(0.85))
     }
