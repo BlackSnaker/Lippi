@@ -26,34 +26,55 @@ struct LippiWidgetsLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PomodoroAttributes.self) { context in
             PomodoroLiveLockScreenView(context: context)
-                .activityBackgroundTint(Color(hex: 0x06101D))
+                .activityBackgroundTint(Color(hex: 0x1A3268))
                 .activitySystemActionForegroundColor(.white)
                 .widgetURL(PomodoroIslandLink.open.url)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    PomodoroIslandPhaseBadge(phase: context.state.phase)
+                    PomodoroIslandPhaseBadge(state: context.state, size: 50)
+                        .offset(y: 12)
                 }
+                .contentMargins(.leading, 6)
+                .contentMargins(.top, 10)
 
                 DynamicIslandExpandedRegion(.trailing) {
                     PomodoroIslandCountdown(state: context.state, compact: false)
+                        .offset(y: 12)
                 }
+                .contentMargins(.trailing, 8)
+                .contentMargins(.top, 8)
 
                 DynamicIslandExpandedRegion(.center) {
-                    PomodoroIslandHeader(state: context.state)
+                    PomodoroIslandTitleBlock(state: context.state)
                 }
+                .contentMargins(.horizontal, 4)
+                .contentMargins(.top, 10)
 
                 DynamicIslandExpandedRegion(.bottom) {
-                    PomodoroIslandGlassPanel(accent: PomodoroIslandCopy.accent(for: context.state.phase)) {
+                    VStack(spacing: 8) {
                         PomodoroIslandProgress(state: context.state)
 
-                        HStack(spacing: 8) {
-                            PomodoroIslandActionLink(.open)
-                            PomodoroIslandActionLink(context.state.phase == .paused ? .resume : .pause)
+                        HStack(spacing: 9) {
+                            PomodoroIslandActionLink(.open, style: .bright)
+                            PomodoroIslandActionLink(context.state.phase == .paused ? .resume : .pause, style: .regular)
                             PomodoroIslandActionLink(.stop, destructive: true)
                         }
                     }
+                    .background(alignment: .top) {
+                        GeometryReader { proxy in
+                            PomodoroIslandExpandedSurface(accent: PomodoroIslandCopy.accent(for: context.state.phase))
+                                .frame(width: max(proxy.size.width + 22, 300), height: 124)
+                                .blendMode(.screen)
+                                .offset(x: -11, y: -84)
+                        }
+                        .allowsHitTesting(false)
+                    }
+                    .offset(y: -8)
                 }
+                .contentMargins(.horizontal, 8)
+                .contentMargins(.bottom, 0)
+                .contentMargins(.top, 0)
             } compactLeading: {
                 PomodoroIslandCompactOrb(phase: context.state.phase)
             } compactTrailing: {
@@ -63,6 +84,8 @@ struct LippiWidgetsLiveActivity: Widget {
             }
             .widgetURL(PomodoroIslandLink.open.url)
             .keylineTint(PomodoroIslandCopy.accent(for: context.state.phase))
+            .contentMargins(.horizontal, 6, for: .expanded)
+            .contentMargins(.vertical, 6, for: .expanded)
         }
     }
 }
@@ -72,7 +95,7 @@ private struct PomodoroLiveLockScreenView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            PomodoroIslandPhaseBadge(phase: context.state.phase)
+            PomodoroIslandPhaseBadge(state: context.state, size: 42)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -108,61 +131,32 @@ private struct PomodoroLiveLockScreenView: View {
     }
 }
 
-private struct PomodoroIslandHeader: View {
+private struct PomodoroIslandTitleBlock: View {
     let state: PomodoroAttributes.ContentState
 
     var body: some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
-                    Text("Lippi")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .lineLimit(1)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(PomodoroIslandCopy.displayTitle(for: state.phase, fallback: state.title))
+                .font(.system(size: 19, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
 
-                    Circle()
-                        .fill(PomodoroIslandCopy.accent(for: state.phase))
-                        .frame(width: 4, height: 4)
-
-                    Text(PomodoroIslandCopy.status(for: state))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(PomodoroIslandCopy.accent(for: state.phase))
-                        .lineLimit(1)
-                }
-
-                Text(state.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-            }
-
-            Spacer(minLength: 0)
+            Text(PomodoroIslandCopy.status(for: state))
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(PomodoroIslandCopy.accent(for: state.phase))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(
-            Capsule(style: .continuous)
-                .fill(.white.opacity(0.08))
-                .overlay(
-                    LinearGradient(
-                        colors: [
-                            .white.opacity(0.20),
-                            PomodoroIslandCopy.accent(for: state.phase).opacity(0.12),
-                            .white.opacity(0.05)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .clipShape(Capsule(style: .continuous))
-                )
-        )
-        .overlay(Capsule(style: .continuous).stroke(.white.opacity(0.15), lineWidth: 1))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
 private struct PomodoroIslandPhaseBadge: View {
-    let phase: PomodoroPhase
+    let state: PomodoroAttributes.ContentState
+    var size: CGFloat = 66
+
+    private var phase: PomodoroPhase { state.phase }
 
     var body: some View {
         ZStack {
@@ -178,24 +172,41 @@ private struct PomodoroIslandPhaseBadge: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 42, height: 42)
-                .shadow(color: PomodoroIslandCopy.accent(for: phase).opacity(0.30), radius: 8, x: 0, y: 3)
+                .frame(width: size, height: size)
+                .shadow(color: PomodoroIslandCopy.accent(for: phase).opacity(0.38), radius: size * 0.18, x: 0, y: size * 0.05)
 
             Circle()
-                .stroke(.white.opacity(0.30), lineWidth: 1)
-                .frame(width: 42, height: 42)
+                .stroke(.white.opacity(0.24), lineWidth: 1)
+                .frame(width: size, height: size)
+
+            Circle()
+                .trim(from: 0, to: min(max(progress, 0.08), 1))
+                .stroke(
+                    PomodoroIslandCopy.accent(for: phase),
+                    style: StrokeStyle(lineWidth: max(3, size * 0.075), lineCap: .butt)
+                )
+                .rotationEffect(.degrees(-88))
+                .frame(width: size + 2, height: size + 2)
 
             Circle()
                 .fill(.white.opacity(0.34))
-                .frame(width: 12, height: 12)
-                .offset(x: -9, y: -10)
+                .frame(width: size * 0.30, height: size * 0.30)
+                .offset(x: -size * 0.18, y: -size * 0.24)
                 .blur(radius: 0.3)
 
             Image(systemName: PomodoroIslandCopy.icon(for: phase))
-                .font(.system(size: 15, weight: .bold))
+                .font(.system(size: max(15, size * 0.36), weight: .bold))
                 .foregroundStyle(.white)
         }
+        .frame(width: size + 4, height: size + 4)
         .accessibilityLabel(PomodoroIslandCopy.accessibilityTitle(for: phase))
+    }
+
+    private var progress: Double {
+        guard let end = state.endDate else { return state.phase == .paused ? 0.72 : 0.12 }
+        let total = max(end.timeIntervalSince(state.startDate), 1)
+        let done = max(Date().timeIntervalSince(state.startDate), 0)
+        return min(max(done / total, 0), 1)
     }
 }
 
@@ -231,34 +242,26 @@ private struct PomodoroIslandCountdown: View {
     var body: some View {
         HStack(spacing: compact ? 0 : 5) {
             if let end = state.endDate, state.phase != .paused {
-                if !compact {
-                    Image(systemName: "timer")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(PomodoroIslandCopy.accent(for: state.phase))
-                }
-
                 Text(end, style: .timer)
                     .monospacedDigit()
-                    .font(compact ? .caption2.weight(.bold) : .system(size: 20, weight: .bold, design: .rounded))
+                    .font(compact ? .caption2.weight(.bold) : .system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
             } else {
                 Image(systemName: state.phase == .paused ? "pause.fill" : "timer")
-                    .font(compact ? .caption.weight(.bold) : .title3.weight(.bold))
+                    .font(compact ? .caption.weight(.bold) : .system(size: 27, weight: .bold, design: .rounded))
                     .foregroundStyle(PomodoroIslandCopy.accent(for: state.phase))
             }
         }
-        .padding(.horizontal, compact ? 0 : 9)
-        .padding(.vertical, compact ? 0 : 6)
+        .padding(.horizontal, compact ? 0 : 2)
+        .padding(.vertical, compact ? 0 : 0)
         .background {
             if !compact {
-                Capsule(style: .continuous)
-                    .fill(.white.opacity(0.08))
-                    .overlay(Capsule(style: .continuous).stroke(.white.opacity(0.15), lineWidth: 1))
+                Color.clear
             }
         }
-        .frame(minWidth: compact ? 28 : 56, alignment: .trailing)
+        .frame(minWidth: compact ? 28 : 82, alignment: .trailing)
     }
 }
 
@@ -269,7 +272,11 @@ private struct PomodoroIslandProgress: View {
         guard let end = state.endDate else { return state.phase == .paused ? 0.5 : 0 }
         let total = max(end.timeIntervalSince(state.startDate), 1)
         let done = max(Date().timeIntervalSince(state.startDate), 0)
-        return min(max(done / total, 0), 1)
+        let measured = min(max(done / total, 0), 1)
+        if state.phase == .shortBreak || state.phase == .longBreak {
+            return max(measured, 0.36)
+        }
+        return measured
     }
 
     var body: some View {
@@ -277,15 +284,14 @@ private struct PomodoroIslandProgress: View {
             let width = max(7, proxy.size.width * progress)
             ZStack(alignment: .leading) {
                 Capsule(style: .continuous)
-                    .fill(.white.opacity(0.12))
+                    .fill(Color(hex: 0x6F82B8).opacity(0.48))
 
                 Capsule(style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
-                                .white.opacity(0.82),
                                 PomodoroIslandCopy.accent(for: state.phase),
-                                Color(hex: 0x64D2FF)
+                                PomodoroIslandCopy.accent(for: state.phase).opacity(0.80)
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
@@ -299,78 +305,131 @@ private struct PomodoroIslandProgress: View {
     }
 }
 
-private struct PomodoroIslandGlassPanel<Content: View>: View {
+private struct PomodoroIslandExpandedSurface: View {
     let accent: Color
-    let content: Content
-
-    init(accent: Color, @ViewBuilder content: () -> Content) {
-        self.accent = accent
-        self.content = content()
-    }
 
     var body: some View {
-        VStack(spacing: 9) {
-            content
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.white.opacity(0.075))
-                .overlay(
-                    LinearGradient(
-                        colors: [.white.opacity(0.18), accent.opacity(0.12), .white.opacity(0.05)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        RoundedRectangle(cornerRadius: 44, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color(hex: 0xD3F8FF).opacity(0.30),
+                        Color(hex: 0x203C82).opacity(0.62),
+                        Color(hex: 0x06194B).opacity(0.80)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.white.opacity(0.15), lineWidth: 1)
-        )
+            )
+            .overlay(
+                RadialGradient(
+                    colors: [
+                        accent.opacity(0.26),
+                        Color(hex: 0x8DDFFF).opacity(0.12),
+                        .clear
+                    ],
+                    center: .topLeading,
+                    startRadius: 0,
+                    endRadius: 190
+                )
+            )
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        .white.opacity(0.34),
+                        .white.opacity(0.08),
+                        .clear
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .blendMode(.screen)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 44, style: .continuous)
+                    .stroke(.white.opacity(0.24), lineWidth: 1)
+            )
+            .shadow(color: Color(hex: 0x7BDFFF).opacity(0.18), radius: 18, x: 0, y: 8)
     }
 }
 
 private struct PomodoroIslandActionLink: View {
+    enum Style {
+        case bright
+        case regular
+    }
+
     let action: PomodoroIslandLink
+    var style: Style = .regular
     var destructive: Bool = false
 
-    init(_ action: PomodoroIslandLink, destructive: Bool = false) {
+    init(_ action: PomodoroIslandLink, style: Style = .regular, destructive: Bool = false) {
         self.action = action
+        self.style = style
         self.destructive = destructive
     }
 
     var body: some View {
         Link(destination: action.url) {
             Label(action.title, systemImage: action.symbol)
-                .font(.caption2.weight(.bold))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
                 .labelStyle(.titleAndIcon)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .foregroundStyle(destructive ? Color(hex: 0xFFB3AD) : .white)
+                .foregroundStyle(destructive ? Color(hex: 0xFF776F) : .white)
                 .padding(.horizontal, 9)
-                .padding(.vertical, 6)
+                .padding(.vertical, 7)
                 .frame(maxWidth: .infinity)
                 .background(
-                    Capsule(style: .continuous)
-                        .fill(destructive ? Color(hex: 0xFF453A).opacity(0.13) : Color(hex: 0x30B0FF).opacity(0.16))
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(buttonFill)
                         .overlay(
                             LinearGradient(
-                                colors: [.white.opacity(0.17), .white.opacity(0.04)],
+                                colors: [.white.opacity(style == .bright ? 0.42 : 0.22), .white.opacity(0.05)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
-                            .clipShape(Capsule(style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                         )
                 )
                 .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(.white.opacity(destructive ? 0.16 : 0.22), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(.white.opacity(style == .bright ? 0.48 : 0.18), lineWidth: 1)
                 )
+                .shadow(color: buttonShadow, radius: style == .bright ? 9 : 5, x: 0, y: 4)
         }
     }
+
+    private var buttonFill: LinearGradient {
+        if destructive {
+            return LinearGradient(
+                colors: [Color(hex: 0x5871A9).opacity(0.50), Color(hex: 0x34466F).opacity(0.62)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+
+        if style == .bright {
+            return LinearGradient(
+                colors: [Color(hex: 0xC8F7FF).opacity(0.62), Color(hex: 0x7BDFFF).opacity(0.34), Color(hex: 0x476C9E).opacity(0.38)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+
+        return LinearGradient(
+            colors: [Color(hex: 0x769DFF).opacity(0.34), Color(hex: 0x405C95).opacity(0.54)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var buttonShadow: Color {
+        if destructive { return Color(hex: 0x1C2D55).opacity(0.32) }
+        if style == .bright { return Color(hex: 0xB7F8FF).opacity(0.24) }
+        return Color(hex: 0x395DA8).opacity(0.24)
+    }
+
 }
 
 private struct PomodoroIslandBackdrop: View {
@@ -444,6 +503,16 @@ private enum PomodoroIslandLink {
 }
 
 private enum PomodoroIslandCopy {
+    static func displayTitle(for phase: PomodoroPhase, fallback: String) -> String {
+        switch phase {
+        case .focus: return fallback.isEmpty ? "Фокус" : fallback
+        case .shortBreak: return "Перерыв"
+        case .longBreak: return "Перерыв"
+        case .paused: return "Пауза"
+        case .stopped: return "Стоп"
+        }
+    }
+
     static func icon(for phase: PomodoroPhase) -> String {
         switch phase {
         case .focus: return "bolt.fill"
