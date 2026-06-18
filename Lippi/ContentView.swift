@@ -2048,6 +2048,8 @@ struct ContentView: View {
             let minutes = min(max(requestedMinutes ?? pomo.config.focusMinutes, 1), 180)
             pomo.config.focusMinutes = minutes
             pomo.startFocus(customMinutes: minutes)
+        case "break", "shortbreak", "short_break":
+            pomo.startShortBreak()
         default:
             break
         }

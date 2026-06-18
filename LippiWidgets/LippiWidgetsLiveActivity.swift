@@ -32,49 +32,24 @@ struct LippiWidgetsLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    PomodoroIslandPhaseBadge(state: context.state, size: 50)
-                        .offset(y: 12)
+                    EmptyView()
                 }
-                .contentMargins(.leading, 6)
-                .contentMargins(.top, 10)
+                .contentMargins(.all, 0)
 
                 DynamicIslandExpandedRegion(.trailing) {
-                    PomodoroIslandCountdown(state: context.state, compact: false)
-                        .offset(y: 12)
+                    EmptyView()
                 }
-                .contentMargins(.trailing, 8)
-                .contentMargins(.top, 8)
+                .contentMargins(.all, 0)
 
                 DynamicIslandExpandedRegion(.center) {
-                    PomodoroIslandTitleBlock(state: context.state)
+                    EmptyView()
                 }
-                .contentMargins(.horizontal, 4)
-                .contentMargins(.top, 10)
+                .contentMargins(.all, 0)
 
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 8) {
-                        PomodoroIslandProgress(state: context.state)
-
-                        HStack(spacing: 9) {
-                            PomodoroIslandActionLink(.open, style: .bright)
-                            PomodoroIslandActionLink(context.state.phase == .paused ? .resume : .pause, style: .regular)
-                            PomodoroIslandActionLink(.stop, destructive: true)
-                        }
-                    }
-                    .background(alignment: .top) {
-                        GeometryReader { proxy in
-                            PomodoroIslandExpandedSurface(accent: PomodoroIslandCopy.accent(for: context.state.phase))
-                                .frame(width: max(proxy.size.width + 22, 300), height: 124)
-                                .blendMode(.screen)
-                                .offset(x: -11, y: -84)
-                        }
-                        .allowsHitTesting(false)
-                    }
-                    .offset(y: -8)
+                    PomodoroIslandReferenceCard(state: context.state)
                 }
-                .contentMargins(.horizontal, 8)
-                .contentMargins(.bottom, 0)
-                .contentMargins(.top, 0)
+                .contentMargins(.all, 0)
             } compactLeading: {
                 PomodoroIslandCompactOrb(phase: context.state.phase)
             } compactTrailing: {
@@ -84,8 +59,7 @@ struct LippiWidgetsLiveActivity: Widget {
             }
             .widgetURL(PomodoroIslandLink.open.url)
             .keylineTint(PomodoroIslandCopy.accent(for: context.state.phase))
-            .contentMargins(.horizontal, 6, for: .expanded)
-            .contentMargins(.vertical, 6, for: .expanded)
+            .contentMargins(.all, 0, for: .expanded)
         }
     }
 }
@@ -305,6 +279,60 @@ private struct PomodoroIslandProgress: View {
     }
 }
 
+private struct PomodoroIslandReferenceCard: View {
+    let state: PomodoroAttributes.ContentState
+
+    var body: some View {
+        ZStack {
+            PomodoroIslandExpandedSurface(accent: PomodoroIslandCopy.accent(for: state.phase))
+                .frame(maxWidth: .infinity)
+                .frame(height: 178)
+                .offset(y: -10)
+
+            VStack(spacing: 7) {
+                HStack(spacing: 14) {
+                    PomodoroIslandPhaseBadge(state: state, size: 52)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(PomodoroIslandCopy.displayTitle(for: state.phase, fallback: state.title))
+                            .font(.system(size: 19, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.76)
+
+                        Text(PomodoroIslandCopy.status(for: state))
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(PomodoroIslandCopy.accent(for: state.phase))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
+                    }
+
+                    Spacer(minLength: 4)
+
+                    PomodoroIslandCountdown(state: state, compact: false)
+                }
+                .padding(.horizontal, 17)
+                .padding(.top, 5)
+
+                PomodoroIslandProgress(state: state)
+                    .padding(.horizontal, 18)
+
+                HStack(spacing: 10) {
+                    PomodoroIslandActionLink(.open, style: .bright)
+                    PomodoroIslandActionLink(state.phase == .paused ? .resume : .pause, style: .regular)
+                    PomodoroIslandActionLink(.stop, destructive: true)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 6)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 126)
+        .padding(.horizontal, 2)
+        .offset(y: -25)
+    }
+}
+
 private struct PomodoroIslandExpandedSurface: View {
     let accent: Color
 
@@ -378,7 +406,7 @@ private struct PomodoroIslandActionLink: View {
                 .minimumScaleFactor(0.8)
                 .foregroundStyle(destructive ? Color(hex: 0xFF776F) : .white)
                 .padding(.horizontal, 9)
-                .padding(.vertical, 7)
+                .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
