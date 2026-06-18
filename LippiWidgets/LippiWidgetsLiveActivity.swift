@@ -147,11 +147,16 @@ private struct PomodoroIslandPhaseBadge: View {
                     )
                 )
                 .frame(width: size, height: size)
+                .pomodoroLiquidGlass(tint: PomodoroIslandCopy.accent(for: phase).opacity(0.24), in: Circle())
                 .shadow(color: PomodoroIslandCopy.accent(for: phase).opacity(0.38), radius: size * 0.18, x: 0, y: size * 0.05)
 
             Circle()
-                .stroke(.white.opacity(0.24), lineWidth: 1)
+                .stroke(.white.opacity(0.34), lineWidth: 1.2)
                 .frame(width: size, height: size)
+
+            Circle()
+                .stroke(PomodoroIslandCopy.accent(for: phase).opacity(0.22), lineWidth: 1)
+                .frame(width: size - 7, height: size - 7)
 
             Circle()
                 .trim(from: 0, to: min(max(progress, 0.08), 1))
@@ -258,21 +263,42 @@ private struct PomodoroIslandProgress: View {
             let width = max(7, proxy.size.width * progress)
             ZStack(alignment: .leading) {
                 Capsule(style: .continuous)
-                    .fill(Color(hex: 0x6F82B8).opacity(0.48))
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(hex: 0xCDEFFF).opacity(0.34),
+                                Color(hex: 0x5F76AF).opacity(0.40),
+                                Color(hex: 0x2E3D6E).opacity(0.44)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(alignment: .top) {
+                        Capsule(style: .continuous)
+                            .fill(.white.opacity(0.20))
+                            .frame(height: 2)
+                    }
 
                 Capsule(style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
+                                Color(hex: 0x31F777),
                                 PomodoroIslandCopy.accent(for: state.phase),
-                                PomodoroIslandCopy.accent(for: state.phase).opacity(0.80)
+                                Color(hex: 0x18B94D)
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .frame(width: width)
-                    .shadow(color: PomodoroIslandCopy.accent(for: state.phase).opacity(0.45), radius: 5, x: 0, y: 0)
+                    .overlay(alignment: .top) {
+                        Capsule(style: .continuous)
+                            .fill(.white.opacity(0.22))
+                            .frame(height: 2)
+                    }
+                    .shadow(color: PomodoroIslandCopy.accent(for: state.phase).opacity(0.62), radius: 8, x: 0, y: 0)
             }
         }
         .frame(height: 7)
@@ -337,47 +363,176 @@ private struct PomodoroIslandExpandedSurface: View {
     let accent: Color
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 44, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color(hex: 0xD3F8FF).opacity(0.30),
-                        Color(hex: 0x203C82).opacity(0.62),
-                        Color(hex: 0x06194B).opacity(0.80)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+        ZStack {
+            RoundedRectangle(cornerRadius: 44, style: .continuous)
+                .fill(Color(hex: 0x102B69).opacity(0.42))
+                .pomodoroLiquidGlass(tint: Color(hex: 0xB9F6FF).opacity(0.22), in: RoundedRectangle(cornerRadius: 44, style: .continuous))
+
+            RoundedRectangle(cornerRadius: 44, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: 0xE5FFFF).opacity(0.36),
+                            Color(hex: 0x5D8DDD).opacity(0.34),
+                            Color(hex: 0x1E3A82).opacity(0.58),
+                            Color(hex: 0x071A4A).opacity(0.76)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
+
+            RadialGradient(
+                colors: [
+                    Color(hex: 0xDFFFFF).opacity(0.50),
+                    Color(hex: 0x9EF4FF).opacity(0.22),
+                    .clear
+                ],
+                center: .topLeading,
+                startRadius: 0,
+                endRadius: 170
             )
-            .overlay(
-                RadialGradient(
-                    colors: [
-                        accent.opacity(0.26),
-                        Color(hex: 0x8DDFFF).opacity(0.12),
-                        .clear
-                    ],
-                    center: .topLeading,
-                    startRadius: 0,
-                    endRadius: 190
-                )
+            .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
+
+            RadialGradient(
+                colors: [
+                    accent.opacity(0.34),
+                    accent.opacity(0.12),
+                    .clear
+                ],
+                center: UnitPoint(x: 0.12, y: 0.42),
+                startRadius: 0,
+                endRadius: 150
             )
-            .overlay(
-                LinearGradient(
-                    colors: [
-                        .white.opacity(0.34),
-                        .white.opacity(0.08),
-                        .clear
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+            .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
+
+            RadialGradient(
+                colors: [
+                    Color(hex: 0x0A1B52).opacity(0.38),
+                    .clear
+                ],
+                center: .bottomTrailing,
+                startRadius: 0,
+                endRadius: 210
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
+
+            RoundedRectangle(cornerRadius: 44, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.30),
+                            .white.opacity(0.07),
+                            .clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .center
+                    )
                 )
                 .blendMode(.screen)
+
+            RoundedRectangle(cornerRadius: 44, style: .continuous)
+                .strokeBorder(.white.opacity(0.38), lineWidth: 1.2)
+
+            RoundedRectangle(cornerRadius: 39, style: .continuous)
+                .strokeBorder(Color(hex: 0x9CEEFF).opacity(0.16), lineWidth: 1)
+                .padding(4)
+
+            Capsule(style: .continuous)
+                .fill(.white.opacity(0.26))
+                .frame(width: 118, height: 18)
+                .blur(radius: 18)
+                .offset(x: -112, y: -58)
+                .blendMode(.screen)
+        }
+        .compositingGroup()
+        .shadow(color: Color(hex: 0x8CEBFF).opacity(0.26), radius: 18, x: 0, y: 7)
+        .shadow(color: Color(hex: 0x071235).opacity(0.38), radius: 24, x: 0, y: 16)
+    }
+}
+
+private struct PomodoroIslandButtonSurface: View {
+    let style: PomodoroIslandActionLink.Style
+    let destructive: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(buttonFill)
+                .pomodoroLiquidGlass(tint: glassTint, in: RoundedRectangle(cornerRadius: 22, style: .continuous), interactive: true)
+
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(buttonFill)
+                .opacity(style == .bright ? 0.78 : 0.58)
+
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(style == .bright ? 0.46 : 0.26),
+                            .white.opacity(0.07),
+                            .clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blendMode(.screen)
+
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(style == .bright ? 0.55 : 0.24), lineWidth: 1)
+        }
+    }
+
+    private var glassTint: Color {
+        if destructive { return Color(hex: 0x637DB8).opacity(0.28) }
+        if style == .bright { return Color(hex: 0xD9FBFF).opacity(0.34) }
+        return Color(hex: 0x9EBBFF).opacity(0.24)
+    }
+
+    private var buttonFill: LinearGradient {
+        if destructive {
+            return LinearGradient(
+                colors: [
+                    Color(hex: 0x617FC2).opacity(0.42),
+                    Color(hex: 0x394F83).opacity(0.56)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 44, style: .continuous)
-                    .stroke(.white.opacity(0.24), lineWidth: 1)
+        }
+
+        if style == .bright {
+            return LinearGradient(
+                colors: [
+                    Color(hex: 0xE4FFFF).opacity(0.64),
+                    Color(hex: 0x9AEFFF).opacity(0.42),
+                    Color(hex: 0x5279AE).opacity(0.38)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            .shadow(color: Color(hex: 0x7BDFFF).opacity(0.18), radius: 18, x: 0, y: 8)
+        }
+
+        return LinearGradient(
+            colors: [
+                Color(hex: 0x8BADFF).opacity(0.40),
+                Color(hex: 0x415D99).opacity(0.58)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func pomodoroLiquidGlass<S: Shape>(tint: Color, in shape: S, interactive: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.tint(tint).interactive(interactive), in: shape)
+        } else {
+            self
+        }
     }
 }
 
@@ -404,60 +559,20 @@ private struct PomodoroIslandActionLink: View {
                 .labelStyle(.titleAndIcon)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .foregroundStyle(destructive ? Color(hex: 0xFF776F) : .white)
+                .foregroundStyle(destructive ? Color(hex: 0xFF7A73) : .white)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(buttonFill)
-                        .overlay(
-                            LinearGradient(
-                                colors: [.white.opacity(style == .bright ? 0.42 : 0.22), .white.opacity(0.05)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(.white.opacity(style == .bright ? 0.48 : 0.18), lineWidth: 1)
-                )
-                .shadow(color: buttonShadow, radius: style == .bright ? 9 : 5, x: 0, y: 4)
+                .background(PomodoroIslandButtonSurface(style: style, destructive: destructive))
+                .shadow(color: buttonShadow, radius: style == .bright ? 10 : 6, x: 0, y: 4)
         }
-    }
-
-    private var buttonFill: LinearGradient {
-        if destructive {
-            return LinearGradient(
-                colors: [Color(hex: 0x5871A9).opacity(0.50), Color(hex: 0x34466F).opacity(0.62)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-
-        if style == .bright {
-            return LinearGradient(
-                colors: [Color(hex: 0xC8F7FF).opacity(0.62), Color(hex: 0x7BDFFF).opacity(0.34), Color(hex: 0x476C9E).opacity(0.38)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-
-        return LinearGradient(
-            colors: [Color(hex: 0x769DFF).opacity(0.34), Color(hex: 0x405C95).opacity(0.54)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 
     private var buttonShadow: Color {
-        if destructive { return Color(hex: 0x1C2D55).opacity(0.32) }
-        if style == .bright { return Color(hex: 0xB7F8FF).opacity(0.24) }
-        return Color(hex: 0x395DA8).opacity(0.24)
+        if destructive { return Color(hex: 0x1C2D55).opacity(0.34) }
+        if style == .bright { return Color(hex: 0xB7F8FF).opacity(0.30) }
+        return Color(hex: 0x395DA8).opacity(0.26)
     }
-
 }
 
 private struct PomodoroIslandBackdrop: View {
