@@ -16,6 +16,7 @@ import UIKit
 struct GoalPlannerView: View {
     @EnvironmentObject private var store: TaskStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage("goal.planner.lastRoadmap") private var savedRoadmap: String = ""
 
@@ -142,11 +143,21 @@ struct GoalPlannerView: View {
     private var roadmapProcessingOverlay: some View {
         ZStack {
             Rectangle()
-                .fill(.black.opacity(0.18))
+                .fill(.black.opacity(reduceTransparency ? 0.28 : 0.12))
                 .background(.ultraThinMaterial)
+                .lippiSystemGlass(
+                    in: Rectangle(),
+                    tint: DS.accent.opacity(0.045),
+                    forceSystemGlass: !reduceTransparency
+                )
                 .ignoresSafeArea()
 
-            GlassCard(padding: 22, cornerRadius: 28, style: .full) {
+            GlassCard(
+                padding: 22,
+                cornerRadius: 28,
+                style: .full,
+                forceSystemGlass: !reduceTransparency
+            ) {
                 VStack(spacing: 18) {
                     processingEmblem
 
@@ -210,7 +221,11 @@ struct GoalPlannerView: View {
                     .symbolEffect(.pulse, options: .repeating)
             }
             .frame(width: 74, height: 74)
-            .lippiSystemGlass(in: Circle(), tint: DS.accent.opacity(0.12))
+            .lippiSystemGlass(
+                in: Circle(),
+                tint: DS.accent.opacity(0.12),
+                forceSystemGlass: !reduceTransparency
+            )
         }
         .frame(width: 74, height: 74)
     }

@@ -339,9 +339,10 @@ extension View {
         in shape: S,
         tint: Color? = nil,
         interactive: Bool = false,
-        enabled: Bool = true
+        enabled: Bool = true,
+        forceSystemGlass: Bool = false
     ) -> some View {
-        if enabled && DS.systemGlassEffectsEnabled {
+        if enabled && (forceSystemGlass || DS.systemGlassEffectsEnabled) {
             if #available(iOS 26.0, *) {
                 self.glassEffect(
                     Glass.regular.tint(tint).interactive(interactive),
@@ -549,6 +550,7 @@ struct GlassCard<Content: View>: View {
     var cornerRadius: CGFloat = DS.radius
     var style: GlassCardStyle = .lightweight
     var animateOnAppear: Bool = false
+    var forceSystemGlass: Bool = false
     @ViewBuilder var content: Content
     @State private var didAppear = false
 
@@ -557,7 +559,9 @@ struct GlassCard<Content: View>: View {
     private var useFlatEffects: Bool { style == .flat || performanceMode }
     private var useLightEffects: Bool { useFlatEffects || style == .lightweight }
     private var useFullEffects: Bool { style == .full && !performanceMode }
-    private var systemGlassEnabled: Bool { !performanceMode }
+    private var systemGlassEnabled: Bool {
+        !reduceTransparency && (!performanceMode || forceSystemGlass)
+    }
     private var systemGlassTint: Color? {
         if useFullEffects { return DS.accent.opacity(0.18) }
         if isFlatStyle { return DS.accent.opacity(0.055) }
@@ -575,7 +579,8 @@ struct GlassCard<Content: View>: View {
             .lippiSystemGlass(
                 in: cardShape,
                 tint: systemGlassTint,
-                enabled: systemGlassEnabled
+                enabled: systemGlassEnabled,
+                forceSystemGlass: forceSystemGlass
             )
             .overlay(cardBorder.allowsHitTesting(false))
             .overlay(alignment: .topLeading) {
