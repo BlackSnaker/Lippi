@@ -7,13 +7,18 @@ import UIKit
 // MARK: - Animated Apple-like Backdrop (без Canvas/Timeline)
 // =======================================================
 struct AnimatedAppleBackdrop: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var animate = false
+
+    private var reducedEffects: Bool { DS.performanceEffectsReduced || reduceMotion || reduceTransparency }
 
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
             let maxSide = max(w, h)
+            let phase = animate && !reducedEffects
 
             ZStack {
                 // База: глубокий вертикальный градиент
@@ -29,10 +34,10 @@ struct AnimatedAppleBackdrop: View {
                                        startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
                     .frame(width: maxSide * 1.2, height: maxSide * 1.2)
-                    .blur(radius: 80)
-                    .offset(x: animate ?  w * 0.25 : -w * 0.15,
-                            y: animate ? -h * 0.10 :  h * 0.15)
-                    .blendMode(.plusLighter)
+                    .blur(radius: reducedEffects ? 42 : 72)
+                    .offset(x: phase ?  w * 0.25 : -w * 0.15,
+                            y: phase ? -h * 0.10 :  h * 0.15)
+                    .blendMode(reducedEffects ? .screen : .plusLighter)
 
                 Circle()
                     .fill(
@@ -40,21 +45,23 @@ struct AnimatedAppleBackdrop: View {
                                        startPoint: .bottomTrailing, endPoint: .topLeading)
                     )
                     .frame(width: maxSide * 1.4, height: maxSide * 1.4)
-                    .blur(radius: 90)
-                    .offset(x: animate ? -w * 0.20 :  w * 0.30,
-                            y: animate ?  h * 0.20 : -h * 0.10)
-                    .blendMode(.plusLighter)
+                    .blur(radius: reducedEffects ? 46 : 78)
+                    .offset(x: phase ? -w * 0.20 :  w * 0.30,
+                            y: phase ?  h * 0.20 : -h * 0.10)
+                    .blendMode(reducedEffects ? .screen : .plusLighter)
 
-                Circle()
-                    .fill(
-                        LinearGradient(colors: [Color(hex: 0xFF6BD6), .clear],
-                                       startPoint: .topTrailing, endPoint: .bottomLeading)
-                    )
-                    .frame(width: maxSide, height: maxSide)
-                    .blur(radius: 100)
-                    .offset(x: animate ?  w * 0.05 : -w * 0.10,
-                            y: animate ?  h * 0.15 : -h * 0.20)
-                    .blendMode(.plusLighter)
+                if !reducedEffects {
+                    Circle()
+                        .fill(
+                            LinearGradient(colors: [Color(hex: 0xFF6BD6), .clear],
+                                           startPoint: .topTrailing, endPoint: .bottomLeading)
+                        )
+                        .frame(width: maxSide, height: maxSide)
+                        .blur(radius: 86)
+                        .offset(x: phase ?  w * 0.05 : -w * 0.10,
+                                y: phase ?  h * 0.15 : -h * 0.20)
+                        .blendMode(.plusLighter)
+                }
 
                 // Едва заметная диагональная «волна»
                 Rectangle()
@@ -70,6 +77,7 @@ struct AnimatedAppleBackdrop: View {
             }
             .ignoresSafeArea()
             .onAppear {
+                guard !reducedEffects else { return }
                 withAnimation(.easeInOut(duration: 12).repeatForever(autoreverses: true)) {
                     animate = true
                 }
@@ -93,4 +101,3 @@ extension View {
         }
     }
 }
-

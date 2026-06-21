@@ -62,6 +62,7 @@ struct SettingsView: View {
         case all
         case account
         case focus
+        case ai
         case health
         case data
 
@@ -72,6 +73,7 @@ struct SettingsView: View {
             case .all: return "square.grid.2x2.fill"
             case .account: return "person.crop.circle.fill"
             case .focus: return "timer"
+            case .ai: return "cpu.fill"
             case .health: return "heart.text.square.fill"
             case .data: return "externaldrive.fill"
             }
@@ -92,6 +94,7 @@ struct SettingsView: View {
         case pomodoro
         case daily
         case countdown
+        case ai
         case eye
         case voice
         case data
@@ -118,6 +121,7 @@ struct SettingsView: View {
         case .all: return .hero
         case .account: return .account
         case .focus: return .quick
+        case .ai: return .ai
         case .health: return .eye
         case .data: return .data
         }
@@ -144,6 +148,10 @@ struct SettingsView: View {
                 items.insert(SettingsJumpItem(anchor: .live, title: s("settings.live.title"), icon: "wave.3.right.circle.fill"), at: 1)
             }
             return items
+        case .ai:
+            return [
+                SettingsJumpItem(anchor: .ai, title: s("settings.ollama.title"), icon: "desktopcomputer")
+            ]
         case .health:
             return [
                 SettingsJumpItem(anchor: .eye, title: s("settings.eye.title"), icon: "eye.circle.fill"),
@@ -166,6 +174,10 @@ struct SettingsView: View {
 
     private func shouldShowHealthScopeCards() -> Bool {
         selectedScope == .all || selectedScope == .health
+    }
+
+    private func shouldShowAIScopeCards() -> Bool {
+        selectedScope == .all || selectedScope == .ai
     }
 
     private func shouldShowDataScopeCards() -> Bool {
@@ -202,6 +214,10 @@ struct SettingsView: View {
                                     .id(SettingsAnchor.daily)
                                 countdownCard
                                     .id(SettingsAnchor.countdown)
+                            }
+                            if shouldShowAIScopeCards() {
+                                OllamaSettingsCard()
+                                    .id(SettingsAnchor.ai)
                             }
                             if shouldShowHealthScopeCards() {
                                 eyeGymCard

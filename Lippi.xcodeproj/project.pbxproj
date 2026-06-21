@@ -75,19 +75,19 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		18A1B2C32E7A000000000001 /* Exceptions for "Lippi" folder in "Lippi" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 188D1A552E6491BA00EA6B1D /* Lippi */;
-		};
 		188D1A9B2E64A9C700EA6B1D /* Exceptions for "LippiWidgets" folder in "LippiWidgetsExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = 188D1A832E64A9C400EA6B1D /* LippiWidgetsExtension */;
+		};
+		18A1B2C32E7A000000000001 /* Exceptions for "Lippi" folder in "Lippi" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 188D1A552E6491BA00EA6B1D /* Lippi */;
 		};
 		18DE6F622E6DB52400319865 /* Exceptions for "OrganizerWidget" folder in "OrganizerWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;

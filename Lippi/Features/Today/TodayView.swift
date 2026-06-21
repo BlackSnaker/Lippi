@@ -13,11 +13,12 @@ struct TodayView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var showAdd = false
+    @State private var showGoalPlanner = false
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
 
-    private var performanceMode: Bool { DS.runtimeConstrained || reduceTransparency }
+    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
     private var activeTasksCount: Int { store.tasks.filter { !$0.isCompleted }.count }
     private var doneTasksCount: Int { store.tasks.filter { $0.isCompleted }.count }
     private var totalTasksCount: Int { max(store.tasks.count, 1) }
@@ -125,6 +126,7 @@ struct TodayView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         headerCard
+                        smartGoalsEntry
                         quickActions
                         CountdownCardView()
                         todayPlanCard
@@ -158,6 +160,12 @@ struct TodayView: View {
             .sheet(isPresented: $showAdd) {
                 AddEditTaskView { store.add($0) }
                     .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showGoalPlanner) {
+                GoalPlannerView()
+                    .environmentObject(store)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
         }
         // ✅ Убираем системный фон NavigationStack “на всякий”
@@ -204,6 +212,58 @@ struct TodayView: View {
                 }
             }
         }
+    }
+
+    private var smartGoalsEntry: some View {
+        Button {
+            showGoalPlanner = true
+        } label: {
+            GlassCard(padding: 16, cornerRadius: 24, style: .full) {
+                HStack(alignment: .center, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(DS.glassFill(0.12))
+                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(DS.brandSoftGradient).opacity(0.50))
+                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.18), lineWidth: 1))
+
+                        Image(safeSystemName: "wand.and.stars", fallback: "sparkles")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(DS.text(0.96))
+                    }
+                    .frame(width: 48, height: 48)
+                    .lippiSystemGlass(
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                        tint: DS.accent.opacity(0.14),
+                        interactive: true
+                    )
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(s("goals.entry.title"))
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(DS.textPrimary)
+                            .singleLine()
+
+                        Text(s("goals.entry.subtitle"))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.86)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Image(safeSystemName: "arrow.up.forward", fallback: "chevron.right")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.text(0.90))
+                        .frame(width: 38, height: 38)
+                        .background(DS.glassFill(0.10), in: Circle())
+                        .lippiSystemGlass(in: Circle(), tint: DS.accent.opacity(0.09), interactive: true)
+                        .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
+                        .padding(.trailing, 46)
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private var statusPill: some View {

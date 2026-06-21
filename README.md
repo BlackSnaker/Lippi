@@ -69,8 +69,9 @@
 
 <div align="center">
   <p>
-    <img alt="Update" src="https://img.shields.io/badge/Update-June%2018%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Update" src="https://img.shields.io/badge/Update-June%2021%2C%202026-0A84FF?style=for-the-badge">
     <img alt="Design" src="https://img.shields.io/badge/Design-Liquid%20Glass-64D2FF?style=for-the-badge">
+    <img alt="AI" src="https://img.shields.io/badge/AI-Ollama%20on%20Mac-30D158?style=for-the-badge">
     <img alt="Simulator" src="https://img.shields.io/badge/Checked-iPhone%2017%20Simulator-30D158?style=for-the-badge">
   </p>
 </div>
@@ -79,26 +80,30 @@
   <tr>
     <td width="50%" align="left" valign="top">
       <h3>English</h3>
-      <p><strong>Design and interaction update focused on clarity, system feel, and smooth daily use.</strong></p>
+      <p><strong>A complete interaction, visual, and local-AI update focused on trustworthy planning and smooth daily use.</strong></p>
       <ul>
-        <li><strong>More system Liquid Glass everywhere:</strong> cards, buttons, tabs, chips, input fields, task rows, settings, auth, Pomodoro, Health, Eye Health, Break, and assistant surfaces now share a stronger native glass layer.</li>
-        <li><strong>Redesigned Today screen:</strong> clearer daily status, main focus panel, progress badge, quick actions, and compact day-plan rows make the home screen easier to scan.</li>
-        <li><strong>Better information hierarchy:</strong> longer Russian labels now wrap more gracefully, key actions stay closer to the thumb, and status chips make the current day state obvious.</li>
-        <li><strong>Dynamic Island polish:</strong> Pomodoro and task Live Activities use richer glass panels, clearer progress, compact controls, and app-matched visual tones.</li>
-        <li><strong>Performance-minded visuals:</strong> glass effects remain enabled for modern 60 FPS devices, while Low Power Mode, thermal pressure, and Reduce Transparency still get safer lightweight rendering.</li>
-        <li><strong>Verified build:</strong> the app builds successfully for iOS Simulator with the current Xcode toolchain.</li>
+        <li><strong>Smart Goals:</strong> a new entry point on the Today screen turns a goal, available time, constraints, and preferred pace into a phased roadmap and the first Lippi tasks.</li>
+        <li><strong>Evidence-first planning:</strong> Lippi selects up to two relevant open references from a curated catalog, retrieves concise excerpts in parallel, and shows every source in the roadmap. The user’s goal is never sent to those public sources.</li>
+        <li><strong>Grounded local AI:</strong> the planner distinguishes known facts, assumptions, and clarifying questions. It blocks invented metrics, testimonials, demand, revenue, and guaranteed outcomes; duplicate milestones are removed defensively.</li>
+        <li><strong>Mac-first Ollama provider:</strong> Smart Goals can use a local Ollama server over the home network before falling back to the system model. Settings include endpoint, model, enablement, and a connection check.</li>
+        <li><strong>More capable compact model:</strong> the Mac configuration now defaults to <code>qwen3:1.7b</code>, with deterministic JSON-oriented settings, repeat protection, and a practical response timeout.</li>
+        <li><strong>Transparent, readable roadmap UI:</strong> success criteria, first actions, assumptions, questions worth clarifying, evidence cards, milestones, habits, and risks now have distinct Liquid Glass sections.</li>
+        <li><strong>Liquid Glass and performance polish:</strong> Today, settings, inputs, navigation, task states, Dynamic Island activities, and assistant surfaces use stronger system glass while performance-aware rendering, lighter transitions, and safe observer cleanup keep interaction responsive.</li>
+        <li><strong>Localization and verification:</strong> Russian and English copy covers Smart Goals and Ollama. The project includes tests for Ollama configuration, Russian planning translation, and evidence-source selection, and was verified on iPhone 17 Simulator.</li>
       </ul>
     </td>
     <td width="50%" align="left" valign="top">
       <h3>Русский</h3>
-      <p><strong>Обновление дизайна и взаимодействий с акцентом на читаемость, системность и плавное ежедневное использование.</strong></p>
+      <p><strong>Полное обновление взаимодействий, визуального стиля и локального ИИ с акцентом на достоверное планирование и плавное ежедневное использование.</strong></p>
       <ul>
-        <li><strong>Больше системного Liquid Glass во всем приложении:</strong> карточки, кнопки, таббар, чипы, поля ввода, строки задач, настройки, вход, Pomodoro, Health, Eye Health, Break и ассистент получили единый более выразительный стеклянный слой.</li>
-        <li><strong>Новый главный экран Today:</strong> понятный статус дня, панель главного фокуса, индикатор прогресса, быстрые действия и компактный план дня помогают быстрее считывать информацию.</li>
-        <li><strong>Лучше иерархия информации:</strong> длинные русские подписи аккуратнее переносятся, важные действия ближе к пальцу, а статусные чипы сразу показывают состояние дня.</li>
-        <li><strong>Полировка Dynamic Island:</strong> Live Activity для Pomodoro и задач получила более богатые стеклянные панели, понятный прогресс, компактные действия и визуальный стиль Lippi.</li>
-        <li><strong>Визуалы с учетом производительности:</strong> glass-эффекты включены для современных 60 FPS устройств, а Low Power Mode, перегрев и Reduce Transparency по-прежнему используют более легкий рендеринг.</li>
-        <li><strong>Проверенная сборка:</strong> приложение успешно собирается для iOS Simulator на текущем Xcode toolchain.</li>
+        <li><strong>Умные цели:</strong> новый вход с главного экрана превращает цель, доступное время, ограничения и желаемый темп в поэтапную дорожную карту и первые задачи Lippi.</li>
+        <li><strong>Планирование с опорой на источники:</strong> Lippi выбирает до двух подходящих открытых материалов из проверенного каталога, параллельно получает короткие выдержки и показывает каждый источник внутри маршрута. Текст цели пользователя в эти публичные источники не отправляется.</li>
+        <li><strong>Достоверный локальный ИИ:</strong> планировщик разделяет известные факты, допущения и вопросы для уточнения. Он запрещает выдумывать метрики, отзывы, спрос, выручку и гарантированные результаты, а повторяющиеся этапы дополнительно отсекаются.</li>
+        <li><strong>Ollama на Mac - первый провайдер:</strong> Умные цели могут обращаться к локальному серверу Ollama в домашней сети до системной модели Apple. В настройках есть адрес, модель, включение и проверка подключения.</li>
+        <li><strong>Более способная компактная модель:</strong> по умолчанию используется <code>qwen3:1.7b</code> с настройками для предсказуемого JSON, защитой от повторов и практичным таймаутом ответа.</li>
+        <li><strong>Прозрачная и читаемая дорожная карта:</strong> критерии успеха, первые действия, допущения, вопросы, карточки оснований, этапы, привычки и риски разделены на понятные Liquid Glass-блоки.</li>
+        <li><strong>Liquid Glass и производительность:</strong> Today, настройки, поля ввода, навигация, состояния задач, активности Dynamic Island и ассистент получили более выразительное системное стекло; облегчённые переходы, адаптивный рендеринг и безопасная очистка observer-ов поддерживают отзывчивость интерфейса.</li>
+        <li><strong>Локализация и проверка:</strong> Smart Goals и Ollama получили русский и английский тексты. Добавлены тесты конфигурации Ollama, перевода целей с русского и выбора источников; релиз проверен на iPhone 17 Simulator.</li>
       </ul>
     </td>
   </tr>

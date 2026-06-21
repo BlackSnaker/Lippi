@@ -1938,6 +1938,7 @@ struct ContentView: View {
     @State private var showVoiceAssistant = false
     @State private var isSwitchingTabs = false
     @State private var tabTransitionTask: Task<Void, Never>?
+    @State private var taskCompletionObserver: NSObjectProtocol?
 
     @ViewBuilder
     private func screenView(_ tab: AppTab) -> some View {
@@ -1974,7 +1975,6 @@ struct ContentView: View {
 
     private func switchTab(to newTab: AppTab) {
         guard newTab != tab else { return }
-        guard !isSwitchingTabs else { return }
 
         isSwitchingTabs = true
 
@@ -1983,7 +1983,7 @@ struct ContentView: View {
         }
 
         tabTransitionTask?.cancel()
-        let delay: UInt64 = reduceMotion ? 90_000_000 : 170_000_000
+        let delay: UInt64 = reduceMotion ? 60_000_000 : 110_000_000
         tabTransitionTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: delay)
             isSwitchingTabs = false
@@ -2310,7 +2310,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .safeAreaInset(edge: .bottom) {
-            GlassTabBar(selection: tabSelectionBinding, isInteractionEnabled: !isSwitchingTabs, lang: lang)
+            GlassTabBar(selection: tabSelectionBinding, isInteractionEnabled: true, lang: lang)
                 .padding(.horizontal, 14)
                 .padding(.bottom, 10)
         }
@@ -2372,10 +2372,12 @@ struct ContentView: View {
         .onAppear {
             NotificationManager.shared.requestAuthorization()
             pomo.stats = stats
-            NotificationCenter.default.addObserver(forName: .taskCompletionChanged, object: nil, queue: .main) { note in
-                guard let id = note.userInfo?["taskId"] as? UUID,
-                      let completed = note.userInfo?["completed"] as? Bool else { return }
-                if completed { stats.recordTaskDone(taskId: id) } else { stats.undoTaskDone(taskId: id) }
+            if taskCompletionObserver == nil {
+                taskCompletionObserver = NotificationCenter.default.addObserver(forName: .taskCompletionChanged, object: nil, queue: .main) { note in
+                    guard let id = note.userInfo?["taskId"] as? UUID,
+                          let completed = note.userInfo?["completed"] as? Bool else { return }
+                    if completed { stats.recordTaskDone(taskId: id) } else { stats.undoTaskDone(taskId: id) }
+                }
             }
             stats.purge(olderThan: 365)
             #if canImport(ActivityKit)
@@ -2407,6 +2409,10 @@ struct ContentView: View {
         }
         .onDisappear {
             tabTransitionTask?.cancel()
+            if let taskCompletionObserver {
+                NotificationCenter.default.removeObserver(taskCompletionObserver)
+                self.taskCompletionObserver = nil
+            }
             voiceAssistant.cancelListening()
         }
     }
@@ -2425,7 +2431,7 @@ struct AppBackdrop: View {
     @AppStorage(AppTheme.storageKey) private var themeRaw: String = AppTheme.defaultTheme.rawValue
     var renderMode: RenderMode = .auto
 
-    private var performanceMode: Bool { DS.runtimeConstrained || reduceTransparency }
+    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
     private var activeTheme: AppTheme { AppTheme(rawValue: themeRaw) ?? AppTheme.defaultTheme }
     private var palette: AppThemePalette { activeTheme.palette }
     private var shouldRender: Bool { renderMode == .force || !hasGlobalBackdrop }
@@ -2633,7 +2639,7 @@ struct GlassTabBar: View {
     let lang: AppLang
     @Namespace private var tabSelectionNamespace
 
-    private var simplifiedEffects: Bool { DS.runtimeConstrained || reduceTransparency }
+    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency }
 
     var body: some View {
         HStack(spacing: simplifiedEffects ? 4 : 6) {
@@ -2755,9 +2761,7 @@ private struct TabButton: View {
     var body: some View {
         Button {
             guard isInteractionEnabled else { return }
-            #if os(iOS)
-            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-            #endif
+            DS.hapticSoft()
             selection = tab
         } label: {
             HStack(spacing: 6) {

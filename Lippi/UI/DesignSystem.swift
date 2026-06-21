@@ -222,7 +222,11 @@ struct DS {
     // Haptics fallback
     static func hapticSoft() {
         #if os(iOS)
+        #if targetEnvironment(simulator)
+        return
+        #else
         UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        #endif
         #endif
     }
 
@@ -233,8 +237,16 @@ struct DS {
             || p.thermalState == .critical
     }
 
+    static var performanceEffectsReduced: Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return runtimeConstrained
+        #endif
+    }
+
     static var systemGlassEffectsEnabled: Bool {
-        !runtimeConstrained
+        !performanceEffectsReduced
     }
 
     static func text(_ opacity: Double = 1.0) -> Color {
@@ -357,7 +369,7 @@ private struct LippiWindowChrome: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    private var simplified: Bool { DS.runtimeConstrained || reduceTransparency }
+    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency }
 
     var body: some View {
         GeometryReader { proxy in
@@ -419,7 +431,7 @@ struct LippiSectionHeader: View {
     var icon: String
     var accent: Color = DS.accent
 
-    private var simplified: Bool { DS.runtimeConstrained || reduceTransparency }
+    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency }
 
     var body: some View {
         HStack(alignment: .center, spacing: 11) {
@@ -540,7 +552,7 @@ struct GlassCard<Content: View>: View {
     @ViewBuilder var content: Content
     @State private var didAppear = false
 
-    private var performanceMode: Bool { DS.runtimeConstrained || reduceTransparency }
+    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
     private var isFlatStyle: Bool { style == .flat }
     private var useFlatEffects: Bool { style == .flat || performanceMode }
     private var useLightEffects: Bool { useFlatEffects || style == .lightweight }
@@ -769,7 +781,7 @@ struct LippiButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    private var simplifiedEffects: Bool { DS.runtimeConstrained || reduceTransparency }
+    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency }
     private var systemGlassEnabled: Bool { !simplifiedEffects }
     private var systemGlassTint: Color? {
         switch kind {
@@ -1088,20 +1100,20 @@ struct AnimatedBackground: View {
     @Environment(\.displayScale) private var displayScale
 
     // Тюнинг производительности
-    private let targetFPS: Double = 16
-    private let globalBlurCap: CGFloat = 36
+    private let targetFPS: Double = 12
+    private let globalBlurCap: CGFloat = 28
     private let blobEdgeSoftness: CGFloat = 0.72
 
-    // Low Power Mode (жёстко режем нагрузку, если включён)
-    private var lowPower: Bool { DS.runtimeConstrained }
-    private var effectiveFPS: Double { lowPower ? 10 : targetFPS }
-    private var enableGlowBlend: Bool { !lowPower && !reduceMotion } // plusLighter дорогой при скролле
+    // In Simulator/Low Power/thermal pressure we keep the look, but stop live redraws.
+    private var reducedEffects: Bool { DS.performanceEffectsReduced }
+    private var effectiveFPS: Double { reducedEffects ? 8 : targetFPS }
+    private var enableGlowBlend: Bool { !reducedEffects && !reduceMotion } // plusLighter дорогой при скролле
 
     var body: some View {
         ZStack {
             DS.bgBase
 
-            if reduceMotion {
+            if reduceMotion || reducedEffects {
                 // Статическая версия (без Timeline)
                 Canvas(opaque: false, colorMode: .linear, rendersAsynchronously: true) { ctx, size in
                     let w = size.width, h = size.height, m = max(w, h)
@@ -1115,7 +1127,7 @@ struct AnimatedBackground: View {
                         let w = size.width, h = size.height, m = max(w, h)
 
                         // Глобальный blur один раз (с понижением в Low Power)
-                        let blurBase = m * (lowPower ? 0.018 : 0.028)
+                        let blurBase = m * 0.024
                         let blur = min(globalBlurCap, blurBase)
                         if blur > 0 { ctx.addFilter(.blur(radius: blur)) }
 
@@ -1143,7 +1155,7 @@ struct AnimatedBackground: View {
                 center: .center
             )
             .blendMode(.screen)
-            .opacity(scheme == .dark ? (lowPower ? 0.40 : 0.55) : (lowPower ? 0.32 : 0.42))
+            .opacity(scheme == .dark ? (reducedEffects ? 0.38 : 0.55) : (reducedEffects ? 0.30 : 0.42))
         }
         .overlay(vignette)
         .saturation(scheme == .dark ? 1.02 : 0.98)
@@ -1172,7 +1184,7 @@ struct AnimatedBackground: View {
         // Квантуем позицию (стабильнее на ретине/скролле)
         let q: CGFloat = max(0.75, 1.0 / displayScale)
 
-        if lowPower || reduceMotion {
+        if reducedEffects || reduceMotion {
             drawBlob(
                 in: &ctx,
                 color: DS.bgGlowA,
