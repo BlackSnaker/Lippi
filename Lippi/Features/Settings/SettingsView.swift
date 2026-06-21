@@ -628,7 +628,11 @@ struct SettingsView: View {
                 actionRow(icon: "xmark.circle.fill",
                           title: s("settings.live.end_all_title"),
                           subtitle: s("settings.live.end_all_subtitle")) {
-                    Task { await LiveActivityManager.endAllTasks(); await PomodoroLiveManager.endAll() }
+                    Task {
+                        await LiveActivityManager.endAllTasks()
+                        await PomodoroLiveManager.endAll()
+                        await GoalRoadmapLiveActivityManager.endAll()
+                    }
                 }
 
                 softDivider()

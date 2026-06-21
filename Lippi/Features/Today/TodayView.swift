@@ -13,7 +13,7 @@ struct TodayView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var showAdd = false
-    @State private var showGoalPlanner = false
+    @Binding var showGoalPlanner: Bool
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
@@ -160,12 +160,6 @@ struct TodayView: View {
             .sheet(isPresented: $showAdd) {
                 AddEditTaskView { store.add($0) }
                     .presentationDetents([.medium, .large])
-            }
-            .sheet(isPresented: $showGoalPlanner) {
-                GoalPlannerView()
-                    .environmentObject(store)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
             }
         }
         // ✅ Убираем системный фон NavigationStack “на всякий”

@@ -884,20 +884,51 @@ struct GoalPlannerView: View {
             intensity: intensity
         )
 
+        await startRoadmapLiveActivity(for: input.goal)
+
         do {
-            let result = try await engine.buildAIRoadmap(input: input, lang: lang)
+            let result = try await engine.buildAIRoadmap(input: input, lang: lang) { stage in
+                await updateRoadmapLiveActivity(stage)
+            }
             roadmap = result
             generationIssue = nil
             saveRoadmap(result)
+            await finishRoadmapLiveActivity(.ready)
 
             #if os(iOS)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             #endif
         } catch let error as GoalPlannerEngineError {
             handleGenerationFailure(error, input: input)
+            await finishRoadmapLiveActivity(error.shouldBuildDraftFallback ? .draftReady : .failed)
         } catch {
             handleGenerationFailure(.generationFailed(error.localizedDescription), input: input)
+            await finishRoadmapLiveActivity(.draftReady)
         }
+    }
+
+    private func startRoadmapLiveActivity(for goalTitle: String) async {
+        #if canImport(ActivityKit)
+        if #available(iOS 16.2, *) {
+            await GoalRoadmapLiveActivityManager.start(goalTitle: goalTitle, lang: lang)
+        }
+        #endif
+    }
+
+    private func updateRoadmapLiveActivity(_ stage: GoalRoadmapActivityStage) async {
+        #if canImport(ActivityKit)
+        if #available(iOS 16.2, *) {
+            await GoalRoadmapLiveActivityManager.update(stage, lang: lang)
+        }
+        #endif
+    }
+
+    private func finishRoadmapLiveActivity(_ outcome: GoalRoadmapActivityOutcome) async {
+        #if canImport(ActivityKit)
+        if #available(iOS 16.2, *) {
+            await GoalRoadmapLiveActivityManager.finish(outcome, lang: lang)
+        }
+        #endif
     }
 
     @MainActor
@@ -1231,19 +1262,27 @@ private struct FoundationGoalInput {
 }
 
 struct GoalRoadmapEngine {
-    func buildAIRoadmap(input: GoalPlannerInput, lang: AppLang) async throws -> GoalRoadmap {
+    func buildAIRoadmap(
+        input: GoalPlannerInput,
+        lang: AppLang,
+        onStage: @escaping (GoalRoadmapActivityStage) async -> Void = { _ in }
+    ) async throws -> GoalRoadmap {
+        await onStage(.research)
         let evidence = await OpenRoadmapRetriever().research(for: input)
         let configuration = OllamaConfiguration.stored
         var macProviderIssue: OllamaProviderError?
 
         if configuration.isEnabled {
             do {
-                return try await generateOllamaRoadmap(
+                await onStage(.planning)
+                let roadmap = try await generateOllamaRoadmap(
                     input: input,
                     lang: lang,
                     configuration: configuration,
                     evidence: evidence
                 )
+                await onStage(.checking)
+                return roadmap
             } catch let error as OllamaProviderError {
                 macProviderIssue = error
             } catch {
@@ -1252,7 +1291,10 @@ struct GoalRoadmapEngine {
         }
 
         do {
-            return try await generateFoundationModelsRoadmap(input: input, lang: lang, evidence: evidence)
+            await onStage(.planning)
+            let roadmap = try await generateFoundationModelsRoadmap(input: input, lang: lang, evidence: evidence)
+            await onStage(.checking)
+            return roadmap
         } catch let error as GoalPlannerEngineError {
             if let macProviderIssue {
                 throw GoalPlannerEngineError.providersUnavailable(macProviderIssue.message(lang: lang))

@@ -1935,6 +1935,7 @@ struct ContentView: View {
     @StateObject private var countdown = CountdownStore()
     @StateObject private var dailyReminder = DailyReminderStore()
     @State private var tab: AppTab = .today
+    @State private var showGoalPlanner = false
     @State private var showVoiceAssistant = false
     @State private var isSwitchingTabs = false
     @State private var tabTransitionTask: Task<Void, Never>?
@@ -1943,7 +1944,7 @@ struct ContentView: View {
     @ViewBuilder
     private func screenView(_ tab: AppTab) -> some View {
         switch tab {
-        case .today:    TodayView()
+        case .today:    TodayView(showGoalPlanner: $showGoalPlanner)
         case .tasks:    TasksView()
         case .pomodoro: PomodoroView()
         case .break:    BreakView()
@@ -2082,7 +2083,11 @@ struct ContentView: View {
         case "done":
             #if canImport(ActivityKit)
             if #available(iOS 16.2, *) {
-                Task { await LiveActivityManager.endAllTasks(); await PomodoroLiveManager.endAll() }
+                Task {
+                    await LiveActivityManager.endAllTasks()
+                    await PomodoroLiveManager.endAll()
+                    await GoalRoadmapLiveActivityManager.endAll()
+                }
             }
             #endif
 
@@ -2104,6 +2109,10 @@ struct ContentView: View {
 
         case "tasks":
             switchTab(to: .tasks)
+
+        case "goals":
+            switchTab(to: .today)
+            showGoalPlanner = true
 
         case "task":
             handleTaskDeepLink(url)
@@ -2398,6 +2407,12 @@ struct ContentView: View {
         .sheet(isPresented: $showVoiceAssistant) {
             AppVoiceAssistantSheet(assistant: voiceAssistant, lang: lang)
                 .presentationDetents([.fraction(0.72), .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showGoalPlanner) {
+            GoalPlannerView()
+                .environmentObject(store)
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .onReceive(NotificationCenter.default.publisher(for: .suggestEyeExercise)) { _ in
