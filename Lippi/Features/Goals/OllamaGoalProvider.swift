@@ -74,6 +74,7 @@ enum OllamaProviderError: Error {
     case transport
     case server(status: Int)
     case malformedResponse
+    case incompleteRoadmap
     case modelMissing
 
     func message(lang: AppLang) -> String {
@@ -92,6 +93,8 @@ enum OllamaProviderError: Error {
             return L10n.fmt("ollama.error.server", lang, status)
         case .malformedResponse:
             return L10n.tr("ollama.error.malformed", lang)
+        case .incompleteRoadmap:
+            return L10n.tr("ollama.error.incomplete_plan", lang)
         case .modelMissing:
             return L10n.tr("ollama.error.model_missing", lang)
         }
@@ -182,7 +185,7 @@ private struct GenerateRequest: Encodable {
     let prompt: String
     let stream = false
     let think = false
-    let format = "json"
+    let format = OllamaRoadmapSchema.response
     private let options = GenerateOptions()
 
     private struct GenerateOptions: Encodable {
@@ -196,6 +199,91 @@ private struct GenerateRequest: Encodable {
             case numPredict = "num_predict"
             case repeatPenalty = "repeat_penalty"
             case repeatLastN = "repeat_last_n"
+        }
+    }
+}
+
+private enum OllamaRoadmapSchema {
+    static let response: OllamaJSONSchema = .object(
+        properties: [
+            "title": .string,
+            "summary": .string,
+            "confidence": .number,
+            "successCriteria": .array(items: .string, minItems: 2, maxItems: 2),
+            "firstActions": .array(items: .string, minItems: 2, maxItems: 2),
+            "assumptions": .array(items: .string, minItems: 0, maxItems: 3),
+            "clarifyingQuestions": .array(items: .string, minItems: 0, maxItems: 3),
+            "milestones": .array(items: milestone, minItems: 3, maxItems: 4),
+            "habits": .array(items: support, minItems: 1, maxItems: 2),
+            "risks": .array(items: risk, minItems: 1, maxItems: 2)
+        ],
+        required: [
+            "title", "summary", "confidence", "successCriteria", "firstActions", "assumptions",
+            "clarifyingQuestions", "milestones", "habits", "risks"
+        ]
+    )
+
+    private static let milestone: OllamaJSONSchema = .object(
+        properties: [
+            "title": .string,
+            "timeframe": .string,
+            "target": .string,
+            "tasks": .array(items: .string, minItems: 1, maxItems: 3),
+            "category": .stringEnum(["work", "study", "health", "rest", "home", "other"])
+        ],
+        required: ["title", "timeframe", "target", "tasks", "category"]
+    )
+
+    private static let support: OllamaJSONSchema = .object(
+        properties: ["title": .string, "detail": .string],
+        required: ["title", "detail"]
+    )
+
+    private static let risk: OllamaJSONSchema = .object(
+        properties: ["title": .string, "mitigation": .string],
+        required: ["title", "mitigation"]
+    )
+}
+
+private indirect enum OllamaJSONSchema: Encodable {
+    case string
+    case number
+    case stringEnum([String])
+    case array(items: OllamaJSONSchema, minItems: Int?, maxItems: Int?)
+    case object(properties: [String: OllamaJSONSchema], required: [String])
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case properties
+        case required
+        case items
+        case minItems = "minItems"
+        case maxItems = "maxItems"
+        case enumValues = "enum"
+        case additionalProperties
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case .string:
+            try container.encode("string", forKey: .type)
+        case .number:
+            try container.encode("number", forKey: .type)
+        case .stringEnum(let values):
+            try container.encode("string", forKey: .type)
+            try container.encode(values, forKey: .enumValues)
+        case .array(let items, let minItems, let maxItems):
+            try container.encode("array", forKey: .type)
+            try container.encode(items, forKey: .items)
+            try container.encodeIfPresent(minItems, forKey: .minItems)
+            try container.encodeIfPresent(maxItems, forKey: .maxItems)
+        case .object(let properties, let required):
+            try container.encode("object", forKey: .type)
+            try container.encode(properties, forKey: .properties)
+            try container.encode(required, forKey: .required)
+            try container.encode(false, forKey: .additionalProperties)
         }
     }
 }

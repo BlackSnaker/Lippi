@@ -1200,7 +1200,7 @@ struct GoalRoadmapEngine {
         )
         guard let payload = parsePayload(repair),
               let roadmap = payload.roadmap(source: .ollama, input: input, lang: lang, evidence: evidence) else {
-            throw OllamaProviderError.malformedResponse
+            throw OllamaProviderError.incompleteRoadmap
         }
         return roadmap
     }
