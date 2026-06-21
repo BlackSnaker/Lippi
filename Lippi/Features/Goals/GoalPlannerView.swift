@@ -68,6 +68,12 @@ struct GoalPlannerView: View {
                 }
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
+
+                if isGenerating {
+                    roadmapProcessingOverlay
+                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                        .zIndex(2)
+                }
             }
             .navigationTitle(s("goals.nav_title"))
             .navigationBarTitleDisplayMode(.large)
@@ -131,6 +137,115 @@ struct GoalPlannerView: View {
                 }
             }
         }
+    }
+
+    private var roadmapProcessingOverlay: some View {
+        ZStack {
+            Rectangle()
+                .fill(.black.opacity(0.18))
+                .background(.ultraThinMaterial)
+                .ignoresSafeArea()
+
+            GlassCard(padding: 22, cornerRadius: 28, style: .full) {
+                VStack(spacing: 18) {
+                    processingEmblem
+
+                    VStack(spacing: 6) {
+                        Text(s("goals.processing.title"))
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(DS.textPrimary)
+                            .multilineTextAlignment(.center)
+
+                        Text(s("goals.processing.subtitle"))
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(DS.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                        let activeStep = Int(timeline.date.timeIntervalSinceReferenceDate / 1.15) % processingSteps.count
+
+                        VStack(alignment: .leading, spacing: 11) {
+                            ForEach(Array(processingSteps.enumerated()), id: \.offset) { index, step in
+                                processingStepRow(step, isActive: index == activeStep, isComplete: index < activeStep)
+                            }
+                        }
+                    }
+
+                    Text(s("goals.processing.notice"))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(DS.textTertiary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .frame(maxWidth: 360)
+            .padding(24)
+            .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(s("goals.processing.title"))
+        .accessibilityAddTraits(.isModal)
+    }
+
+    private var processingEmblem: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+            let fraction = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.45) / 1.45
+
+            ZStack {
+                Circle()
+                    .stroke(DS.accent.opacity(0.18), lineWidth: 7)
+
+                Circle()
+                    .trim(from: 0.08, to: 0.72)
+                    .stroke(
+                        DS.accent,
+                        style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(fraction * 360))
+
+                Image(safeSystemName: "sparkles", fallback: "wand.and.stars")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(DS.textPrimary)
+                    .symbolEffect(.pulse, options: .repeating)
+            }
+            .frame(width: 74, height: 74)
+            .lippiSystemGlass(in: Circle(), tint: DS.accent.opacity(0.12))
+        }
+        .frame(width: 74, height: 74)
+    }
+
+    private var processingSteps: [(title: String, icon: String)] {
+        [
+            (s("goals.processing.sources"), "books.vertical.fill"),
+            (s("goals.processing.route"), "point.topleft.down.curvedto.point.bottomright.up"),
+            (s("goals.processing.check"), "checklist.checked")
+        ]
+    }
+
+    private func processingStepRow(_ step: (title: String, icon: String), isActive: Bool, isComplete: Bool) -> some View {
+        let tone = isActive || isComplete ? DS.accent : DS.textTertiary
+
+        return HStack(spacing: 10) {
+            Image(safeSystemName: isComplete ? "checkmark.circle.fill" : step.icon, fallback: "circle")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(tone)
+                .frame(width: 20)
+
+            Text(step.title)
+                .font(.subheadline.weight(isActive ? .semibold : .medium))
+                .foregroundStyle(isActive ? DS.textPrimary : DS.textSecondary)
+
+            Spacer(minLength: 0)
+
+            if isActive {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(DS.accent)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityLabel(step.title)
     }
 
     private var inputCard: some View {
