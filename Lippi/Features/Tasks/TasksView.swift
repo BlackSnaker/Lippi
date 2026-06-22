@@ -52,22 +52,32 @@ struct TasksView: View {
         let doneItems = partition.done
         let activeCount = activeItems.count
         let doneCount = doneItems.count
+        let overdueCount = activeItems.filter { item in
+            guard let due = item.dueDate else { return false }
+            return due < .now
+        }.count
+        let dueTodayCount = activeItems.filter { item in
+            guard let due = item.dueDate else { return false }
+            return Calendar.current.isDateInToday(due) && due >= .now
+        }.count
 
         NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
-                // ✅ Фон внутри NavigationStack (иначе системный фон может перекрыть градиент)
+            ZStack {
                 tasksBackdrop
 
                 List {
-                    // Верхняя “стеклянная” панель управления
                     Section {
-                        controlPanel(activeCount: activeCount, doneCount: doneCount)
-                            .listRowInsets(.init(top: 10, leading: 16, bottom: 10, trailing: 16))
+                        taskOverview(
+                            activeCount: activeCount,
+                            doneCount: doneCount,
+                            overdueCount: overdueCount,
+                            dueTodayCount: dueTodayCount
+                        )
+                            .listRowInsets(.init(top: 8, leading: 16, bottom: 10, trailing: 16))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
                     }
 
-                    // Контент
                     if activeItems.isEmpty && doneItems.isEmpty {
                         emptyState
                             .listRowInsets(.init(top: 18, leading: 16, bottom: 18, trailing: 16))
@@ -95,7 +105,6 @@ struct TasksView: View {
                         }
                     }
 
-                    // ✅ Нижний воздух, чтобы последнее не пряталось под TabBar
                     Color.clear
                         .frame(height: 84)
                         .listRowSeparator(.hidden)
@@ -105,33 +114,11 @@ struct TasksView: View {
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
                 .transaction { $0.animation = nil }
-
-                // FAB — удобно большим пальцем
-                Button { showAdd = true } label: {
-                    Image(safeSystemName: "plus", fallback: "plus")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(DS.text())
-                        .frame(width: 52, height: 52)
-                        .background(
-                            Circle()
-                                .fill(DS.glassFill(0.12))
-                                .overlay(Circle().stroke(DS.glassStroke(0.18), lineWidth: 1))
-                        )
-                        .lippiSystemGlass(
-                            in: Circle(),
-                            tint: DS.accent.opacity(0.16),
-                            interactive: true
-                        )
-                        .shadow(radius: 16)
-                }
-                .padding(.trailing, 18)
-                .padding(.bottom, 18)
             }
             .navigationTitle(s("tasks.nav_title"))
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(.clear, for: .navigationBar)
             .toolbar {
-                // Оставляем аккуратный тулбар — но основная панель управления уже в списке
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAdd = true } label: {
                         Image(safeSystemName: "plus.circle.fill", fallback: "plus")
@@ -157,131 +144,107 @@ struct TasksView: View {
 
     // MARK: - Pieces
 
-    private func controlPanel(activeCount: Int, doneCount: Int) -> some View {
-        VStack(alignment: .leading, spacing: 11) {
-            HStack(alignment: .top, spacing: 10) {
-                LippiSectionHeader(
-                    title: s("tasks.control.summary"),
-                    subtitle: s("tasks.control.subtitle"),
-                    icon: "tray.full.fill",
-                    accent: Color(hex: 0x64D2FF)
-                )
+    private func taskOverview(
+        activeCount: Int,
+        doneCount: Int,
+        overdueCount: Int,
+        dueTodayCount: Int
+    ) -> some View {
+        GlassCard(padding: 16, cornerRadius: 24, style: .full) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(s("tasks.overview.title"))
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(DS.textPrimary)
 
-                Spacer()
+                        Label(
+                            overviewStatus(overdueCount: overdueCount, dueTodayCount: dueTodayCount),
+                            systemImage: overdueCount > 0 ? "exclamationmark.circle.fill" : "checkmark.seal.fill"
+                        )
+                        .font(.caption.weight(.semibold))
+                        .labelStyle(TightLabelStyle())
+                        .foregroundStyle(overdueCount > 0 ? Color(hex: 0xFF453A) : DS.textSecondary)
+                        .lineLimit(1)
+                    }
 
-                // Мини-статус
-                HStack(spacing: 8) {
-                    badge(text: L10n.fmt("tasks.badge.active", lang, activeCount), systemImage: "circle")
-                    badge(text: L10n.fmt("tasks.badge.done", lang, doneCount), systemImage: "checkmark.circle.fill")
+                    Spacer(minLength: 8)
+
+                    Menu {
+                        Picker(s("tasks.sort.label"), selection: $sortByDate) {
+                            Text(s("tasks.sort.by_due")).tag(true)
+                            Text(s("tasks.sort.by_date")).tag(false)
+                        }
+                    } label: {
+                        Image(safeSystemName: "arrow.up.arrow.down.circle.fill", fallback: "arrow.up.arrow.down")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(DS.textPrimary)
+                            .frame(width: 38, height: 38)
+                            .background(DS.glassFill(0.10), in: Circle())
+                            .lippiSystemGlass(in: Circle(), tint: DS.accent.opacity(0.10), interactive: true)
+                            .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
+                    }
+                    .accessibilityLabel(s("tasks.sort.label"))
                 }
-                .padding(.top, 2)
-            }
 
-            Text(s("tasks.info.subtitle"))
-                .font(.caption.weight(.medium))
-                .foregroundStyle(DS.textTertiary)
-                .singleLine()
-
-            HStack(spacing: 10) {
-                Picker("", selection: $sortByDate) {
-                    Text(s("tasks.sort.by_due")).tag(true)
-                    Text(s("tasks.sort.by_date")).tag(false)
+                HStack(spacing: 0) {
+                    overviewMetric(value: activeCount, title: s("tasks.overview.active"), symbol: "circle", tone: DS.accent)
+                    Divider().overlay(DS.glassStroke(0.18)).frame(height: 34)
+                    overviewMetric(value: overdueCount + dueTodayCount, title: s("tasks.overview.due"), symbol: "calendar", tone: overdueCount > 0 ? Color(hex: 0xFF453A) : Color(hex: 0xFF9F0A))
+                    Divider().overlay(DS.glassStroke(0.18)).frame(height: 34)
+                    overviewMetric(value: doneCount, title: s("tasks.overview.done"), symbol: "checkmark.circle.fill", tone: Color(hex: 0x30D158))
                 }
-                .pickerStyle(.segmented)
-
-                Button {
-                    query = ""
-                    #if os(iOS)
-                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                    #endif
-                } label: {
-                    Image(safeSystemName: "xmark.circle.fill", fallback: "xmark")
-                        .foregroundStyle(DS.text(query.isEmpty ? 0.25 : 0.85))
-                        .imageScale(.large)
-                }
-                .disabled(query.isEmpty)
             }
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(DS.glassFill(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(DS.glassTint)
-                        .opacity(0.30)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(DS.stroke, lineWidth: 1)
-                )
-                .overlay(alignment: .topLeading) {
-                    Capsule()
-                        .fill(DS.cardTopLine)
-                        .frame(width: 84, height: 1.3)
-                        .padding(.top, 10)
-                        .padding(.leading, 14)
-                }
-        )
-        .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
-            tint: Color(hex: 0x64D2FF).opacity(0.10)
-        )
-        .shadow(color: DS.depthShadow(0.14), radius: 6, x: 0, y: 3)
     }
 
-    private func badge(text: String, systemImage: String) -> some View {
-        Label(text, systemImage: systemImage)
-            .labelStyle(TightLabelStyle())
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(DS.glassFill(0.10), in: Capsule())
-            .lippiSystemGlass(
-                in: Capsule(),
-                tint: DS.accent.opacity(0.07)
-            )
-            .overlay(Capsule().stroke(DS.glassStroke(0.16), lineWidth: 1))
-            .foregroundStyle(DS.text(0.9))
+    private func overviewMetric(value: Int, title: String, symbol: String, tone: Color) -> some View {
+        HStack(spacing: 7) {
+            Image(safeSystemName: symbol, fallback: "circle")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(tone)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("\(value)")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func overviewStatus(overdueCount: Int, dueTodayCount: Int) -> String {
+        if overdueCount > 0 {
+            return L10n.fmt("tasks.overview.overdue", lang, overdueCount)
+        }
+        if dueTodayCount > 0 {
+            return L10n.fmt("tasks.overview.today", lang, dueTodayCount)
+        }
+        return s("tasks.overview.clear")
     }
 
     private func sectionHeader(title: String, count: Int, systemImage: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+        HStack(spacing: 8) {
                 Image(safeSystemName: systemImage, fallback: systemImage)
-                    .foregroundStyle(DS.text(0.85))
+                    .foregroundStyle(title == s("tasks.section_done") ? Color(hex: 0x30D158) : DS.accent)
 
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(DS.text(0.9))
+                    .foregroundStyle(DS.textPrimary)
 
                 Spacer()
 
                 Text("\(count)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(DS.text(0.75))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(DS.glassFill(0.10), in: Capsule())
-                    .lippiSystemGlass(
-                        in: Capsule(),
-                        tint: DS.accent.opacity(0.06)
-                    )
-                    .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
-            }
-
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [DS.accent.opacity(0.42), DS.accent.opacity(0.10), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(DS.textSecondary)
         }
         .textCase(nil)
-        .padding(.top, 6)
+        .padding(.top, 10)
     }
 
     private var emptyState: some View {
@@ -388,24 +351,15 @@ struct TaskRow: View, Equatable {
         lhs.item == rhs.item
     }
 
-    private var checkIconStyle: AnyShapeStyle {
-        item.isCompleted ? AnyShapeStyle(DS.brand) : AnyShapeStyle(DS.text(0.55))
+    private var dueTone: Color {
+        guard let due = item.dueDate, !item.isCompleted else { return categoryTone }
+        if due < .now { return Color(hex: 0xFF453A) }
+        if Calendar.current.isDateInToday(due) { return Color(hex: 0xFF9F0A) }
+        return categoryTone
     }
 
-    private var titleStyle: AnyShapeStyle {
-        item.isCompleted ? AnyShapeStyle(DS.text(0.55)) : AnyShapeStyle(DS.text(0.95))
-    }
-
-    private var notesStyle: AnyShapeStyle {
-        AnyShapeStyle(DS.text(item.isCompleted ? 0.35 : 0.65))
-    }
-
-    private var chipFillColor: Color {
-        DS.glassFill(item.isCompleted ? 0.06 : 0.10)
-    }
-
-    private var miniCardFillColor: Color {
-        DS.glassFill(item.isCompleted ? 0.05 : 0.09)
+    private var categoryTone: Color {
+        item.category == .other ? DS.textSecondary : item.category.tint
     }
 
     private var dueChip: some View {
@@ -416,101 +370,79 @@ struct TaskRow: View, Equatable {
                     .labelStyle(TightLabelStyle())
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(chipFillColor, in: Capsule())
+                    .background(dueTone.opacity(item.isCompleted ? 0.06 : 0.12), in: Capsule())
                     .lippiSystemGlass(
                         in: Capsule(),
-                        tint: item.category.tint.opacity(0.08)
+                        tint: dueTone.opacity(0.10)
                     )
                     .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
-                    .foregroundStyle(DS.text(item.isCompleted ? 0.45 : 0.80))
+                    .foregroundStyle(item.isCompleted ? DS.text(0.45) : dueTone)
             }
         }
     }
 
     var body: some View {
-        GlassCard(padding: 16, cornerRadius: 18, style: .flat) {
-            HStack(spacing: 12) {
-
-                // ✅ Большой удобный чек “в стекле”
+        GlassCard(padding: 14, cornerRadius: 20, style: .lightweight) {
+            HStack(alignment: .top, spacing: 12) {
                 Button(action: onToggle) {
                     Image(
                         safeSystemName: item.isCompleted ? "checkmark.circle.fill" : "circle",
                         fallback:       item.isCompleted ? "checkmark.circle"      : "circle"
                     )
-                    .imageScale(.large)
-                    .foregroundStyle(checkIconStyle)
-                    .frame(width: 36, height: 36)
-                    .background(miniCardFillColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(item.isCompleted ? Color(hex: 0x30D158) : DS.textSecondary)
+                    .frame(width: 40, height: 40)
+                    .background(categoryTone.opacity(item.isCompleted ? 0.10 : 0.14), in: Circle())
                     .lippiSystemGlass(
-                        in: RoundedRectangle(cornerRadius: 12, style: .continuous),
-                        tint: item.category.tint.opacity(0.08),
+                        in: Circle(),
+                        tint: categoryTone.opacity(0.10),
                         interactive: true
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                    )
+                    .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
 
-                VStack(alignment: .leading, spacing: 8) {
-                    // Заголовок + срок в одной строке (чисто, без перегруза)
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Button(action: onEdit) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text(item.title)
                             .font(.body.weight(.semibold))
-                            .foregroundStyle(titleStyle)
-                            .lineLimit(1)
-                            .strikethrough(item.isCompleted, color: DS.text(0.45))
-
-                        Spacer(minLength: 0)
-
-                        dueChip
-                    }
-
-                    if !item.notes.isEmpty {
-                        Text(item.notes)
-                            .font(.caption)
-                            .foregroundStyle(notesStyle)
+                            .foregroundStyle(item.isCompleted ? DS.textSecondary : DS.textPrimary)
                             .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                            .strikethrough(item.isCompleted, color: DS.textTertiary)
+
+                        if !item.notes.isEmpty {
+                            Text(item.notes)
+                                .font(.caption)
+                                .foregroundStyle(item.isCompleted ? DS.textTertiary.opacity(0.72) : DS.textSecondary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                        }
+
+                        HStack(spacing: 8) {
+                            Label(item.category.title, systemImage: item.category.symbol)
+                                .font(.caption2.weight(.semibold))
+                                .labelStyle(TightLabelStyle())
+                                .foregroundStyle(item.isCompleted ? DS.textTertiary : categoryTone)
+
+                            Spacer(minLength: 0)
+
+                            dueChip
+
+                            Image(safeSystemName: "chevron.right", fallback: "chevron.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(DS.textTertiary)
+                        }
                     }
-
-                    // Категория — как аккуратный чип
-                    Label(item.category.title, systemImage: item.category.symbol)
-                        .font(.caption2.weight(.semibold))
-                        .labelStyle(TightLabelStyle())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(chipFillColor, in: Capsule())
-                        .lippiSystemGlass(
-                            in: Capsule(),
-                            tint: item.category.tint.opacity(0.08)
-                        )
-                        .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
-                        .foregroundStyle(DS.text(item.isCompleted ? 0.45 : 0.85))
-                }
-
-                // Справа — “редактировать” в стекле
-                Button(action: onEdit) {
-                    Image(safeSystemName: "pencil", fallback: "square.and.pencil")
-                        .foregroundStyle(DS.text(0.9))
-                        .frame(width: 34, height: 34)
-                        .background(miniCardFillColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .lippiSystemGlass(
-                            in: RoundedRectangle(cornerRadius: 12, style: .continuous),
-                            tint: item.category.tint.opacity(0.08),
-                            interactive: true
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                        )
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.vertical, 4)
         .listRowInsets(EdgeInsets())
+        .opacity(item.isCompleted ? 0.72 : 1)
         .transaction { $0.animation = nil }
     }
 
@@ -526,7 +458,8 @@ struct TaskRow: View, Equatable {
             return L10n.fmt("tasks.due.tomorrow", lang, due.formatted(.dateTime.hour().minute()))
         }
         // Пример: “15 янв, 14:30”
-        return due.formatted(.dateTime.day().month(.abbreviated).hour().minute())
+        let locale = Locale(identifier: lang == .ru ? "ru_RU" : "en_US")
+        return due.formatted(.dateTime.locale(locale).day().month(.abbreviated).hour().minute())
     }
 }
 
