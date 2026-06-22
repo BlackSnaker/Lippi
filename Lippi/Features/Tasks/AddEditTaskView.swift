@@ -181,6 +181,7 @@ struct AddEditTaskView: View {
                     }
                     .padding(20)
                 }
+                .lippiScrollPerformance()
             }
             .navigationTitle(isEditing ? s("task_editor.nav.edit") : s("task_editor.nav.new"))
             .navigationBarTitleDisplayMode(.large)

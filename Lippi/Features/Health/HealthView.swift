@@ -61,6 +61,7 @@ struct HealthView: View {
                     .padding(20)
                 }
                 .scrollIndicators(.hidden)
+                .lippiScrollPerformance()
             }
             .navigationTitle(L10n.tr(.tab_health, lang))
             .navigationBarTitleDisplayMode(.large)

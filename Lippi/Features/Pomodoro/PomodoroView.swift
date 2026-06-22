@@ -309,6 +309,7 @@ struct PomodoroView: View {
                     }
                     .padding(20)
                 }
+                .lippiScrollPerformance()
                 .transaction { $0.animation = nil }
             }
             .navigationTitle(s("pomodoro.nav_title"))
@@ -318,7 +319,7 @@ struct PomodoroView: View {
             // ✅ нижний отступ под TabBar (на всякий, если скролл короткий)
             .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 92) }
 
-            .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { t in
+            .onReceive(Timer.publish(every: 1.0, tolerance: 0.12, on: .main, in: .common).autoconnect()) { t in
                 guard scenePhase == .active else { return }
                 guard isRunning else { return }
                 tick = t

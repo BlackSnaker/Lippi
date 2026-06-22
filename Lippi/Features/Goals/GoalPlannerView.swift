@@ -69,6 +69,7 @@ struct GoalPlannerView: View {
                 }
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
+                .lippiScrollPerformance()
 
                 if isGenerating {
                     roadmapProcessingOverlay

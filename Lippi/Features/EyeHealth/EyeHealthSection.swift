@@ -62,6 +62,7 @@ public struct EyeHealthHomeView: View {
                     }
                     .padding(20)
                 }
+                .lippiScrollPerformance()
             }
             .navigationTitle(s("eye.home.nav_title"))
             .navigationBarTitleDisplayMode(.large)
@@ -601,6 +602,7 @@ struct EyeStatsView: View {
             .padding(20)
         }
         .scrollIndicators(.hidden)
+        .lippiScrollPerformance()
     }
 
     private var totals: some View {
@@ -919,6 +921,7 @@ struct EyeSettingsView: View {
                     }
                 }
                 .scrollIndicators(.hidden)
+                .lippiScrollPerformance()
                 .padding(20)
             }
             .navigationTitle(t("eye.settings.nav_title"))

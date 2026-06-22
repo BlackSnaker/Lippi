@@ -138,6 +138,7 @@ struct TodayView: View {
                 .background(Color.clear)
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
+                .lippiScrollPerformance()
                 .transaction { $0.animation = nil }
             }
             .navigationTitle(s("today.nav_title"))

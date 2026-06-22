@@ -342,17 +342,43 @@ extension View {
         enabled: Bool = true,
         forceSystemGlass: Bool = false
     ) -> some View {
-        if enabled && (forceSystemGlass || DS.systemGlassEffectsEnabled) {
+        modifier(
+            LippiSystemGlassModifier(
+                shape: shape,
+                tint: tint,
+                interactive: interactive,
+                enabled: enabled,
+                forceSystemGlass: forceSystemGlass
+            )
+        )
+    }
+}
+
+private struct LippiSystemGlassModifier<S: Shape>: ViewModifier {
+    @Environment(\.lippiIsScrolling) private var isScrolling
+
+    let shape: S
+    let tint: Color?
+    let interactive: Bool
+    let enabled: Bool
+    let forceSystemGlass: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shouldRender = enabled
+            && (forceSystemGlass || DS.systemGlassEffectsEnabled)
+            && (!isScrolling || forceSystemGlass)
+        if shouldRender {
             if #available(iOS 26.0, *) {
-                self.glassEffect(
+                content.glassEffect(
                     Glass.regular.tint(tint).interactive(interactive),
                     in: shape
                 )
             } else {
-                self
+                content
             }
         } else {
-            self
+            content
         }
     }
 }
@@ -369,8 +395,9 @@ struct TightLabelStyle: LabelStyle {
 private struct LippiWindowChrome: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
 
-    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency }
+    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
 
     var body: some View {
         GeometryReader { proxy in
@@ -426,13 +453,14 @@ private struct LippiWindowChrome: View {
 // =======================================================
 struct LippiSectionHeader: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
 
     let title: String
     var subtitle: String? = nil
     var icon: String
     var accent: Color = DS.accent
 
-    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency }
+    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
 
     var body: some View {
         HStack(alignment: .center, spacing: 11) {
@@ -545,6 +573,7 @@ enum GlassCardStyle {
 struct GlassCard<Content: View>: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.lippiIsScrolling) private var isScrolling
 
     var padding: CGFloat = DS.pad
     var cornerRadius: CGFloat = DS.radius
@@ -557,10 +586,10 @@ struct GlassCard<Content: View>: View {
     private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
     private var isFlatStyle: Bool { style == .flat }
     private var useFlatEffects: Bool { style == .flat || performanceMode }
-    private var useLightEffects: Bool { useFlatEffects || style == .lightweight }
-    private var useFullEffects: Bool { style == .full && !performanceMode }
+    private var useLightEffects: Bool { useFlatEffects || style == .lightweight || isScrolling }
+    private var useFullEffects: Bool { style == .full && !performanceMode && !isScrolling }
     private var systemGlassEnabled: Bool {
-        !reduceTransparency && (!performanceMode || forceSystemGlass)
+        !reduceTransparency && !isScrolling && (!performanceMode || forceSystemGlass)
     }
     private var systemGlassTint: Color? {
         if useFullEffects { return DS.accent.opacity(0.18) }

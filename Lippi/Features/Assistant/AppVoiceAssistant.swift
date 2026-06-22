@@ -1869,6 +1869,7 @@ struct AppVoiceAssistantSheet: View {
                     .padding(.vertical, 20)
                 }
                 .scrollIndicators(.hidden)
+                .lippiScrollPerformance()
             }
             .navigationTitle(s("assistant.title"))
             .navigationBarTitleDisplayMode(.inline)

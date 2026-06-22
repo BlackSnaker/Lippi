@@ -113,6 +113,7 @@ struct TasksView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
+                .lippiScrollPerformance()
                 .transaction { $0.animation = nil }
             }
             .navigationTitle(s("tasks.nav_title"))

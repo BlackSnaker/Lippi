@@ -29,6 +29,7 @@ struct BreakView: View {
                     .padding(20)
                 }
                 .scrollIndicators(.hidden)
+                .lippiScrollPerformance()
             }
             .navigationTitle(s("break.nav_title"))
             .navigationBarTitleDisplayMode(.large)

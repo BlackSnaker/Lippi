@@ -1934,6 +1934,7 @@ struct ContentView: View {
     @StateObject private var voiceAssistant = AppVoiceAssistantCenter()
     @StateObject private var countdown = CountdownStore()
     @StateObject private var dailyReminder = DailyReminderStore()
+    @StateObject private var scrollPerformance = ScrollPerformanceCoordinator()
     @State private var tab: AppTab = .today
     @State private var showGoalPlanner = false
     @State private var showVoiceAssistant = false
@@ -1977,6 +1978,7 @@ struct ContentView: View {
     private func switchTab(to newTab: AppTab) {
         guard newTab != tab else { return }
 
+        scrollPerformance.stop()
         isSwitchingTabs = true
 
         withAnimation(tabSwitchAnimation) {
@@ -2367,6 +2369,7 @@ struct ContentView: View {
         // Прокидываем выбранный язык по всему приложению.
         .environment(\.lippiLangCode, langCode)
         .environment(\.lippiHasGlobalBackdrop, true)
+        .environment(\.lippiIsScrolling, scrollPerformance.isScrolling)
 
         .environment(\.locale, Locale(identifier: lang.localeIdentifier))
 
@@ -2378,6 +2381,7 @@ struct ContentView: View {
         .environmentObject(pomo)
         .environmentObject(countdown)
         .environmentObject(dailyReminder)
+        .environmentObject(scrollPerformance)
         .onAppear {
             NotificationManager.shared.requestAuthorization()
             pomo.stats = stats
@@ -2424,6 +2428,7 @@ struct ContentView: View {
         }
         .onDisappear {
             tabTransitionTask?.cancel()
+            scrollPerformance.stop()
             if let taskCompletionObserver {
                 NotificationCenter.default.removeObserver(taskCompletionObserver)
                 self.taskCompletionObserver = nil
@@ -2443,10 +2448,11 @@ struct AppBackdrop: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.lippiHasGlobalBackdrop) private var hasGlobalBackdrop
+    @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(AppTheme.storageKey) private var themeRaw: String = AppTheme.defaultTheme.rawValue
     var renderMode: RenderMode = .auto
 
-    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
+    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
     private var activeTheme: AppTheme { AppTheme(rawValue: themeRaw) ?? AppTheme.defaultTheme }
     private var palette: AppThemePalette { activeTheme.palette }
     private var shouldRender: Bool { renderMode == .force || !hasGlobalBackdrop }

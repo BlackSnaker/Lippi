@@ -91,6 +91,7 @@
         <li><strong>Liquid Glass and performance polish:</strong> Today, settings, inputs, navigation, task states, Dynamic Island activities, and assistant surfaces use stronger system glass while performance-aware rendering, lighter transitions, and safe observer cleanup keep interaction responsive.</li>
         <li><strong>Clearer task workspace:</strong> Tasks now opens with a compact focus summary, deadline status, and one-tap sorting. Rows prioritize the task, notes, category, and localized due date, with higher contrast for neutral labels and preserved swipe actions.</li>
         <li><strong>Neural feminine voice on Mac:</strong> Lippi can now request real WAV speech from a local Piper neural model with the Russian female <code>ru_RU-irina-medium</code> voice. The provider starts with an Xcode build, can be checked in Settings, and falls back to iPhone speech without blocking commands.</li>
+        <li><strong>Scroll-first rendering:</strong> primary scroll surfaces now report drag and deceleration phases to a shared performance coordinator. While scrolling, expensive Liquid Glass passes, deep card layers, and backdrop details temporarily switch to a lighter path, then settle back after the gesture.</li>
         <li><strong>Localization and verification:</strong> Russian and English copy covers Smart Goals and Ollama. The project includes tests for Ollama configuration, Russian planning translation, and evidence-source selection, and was verified on iPhone 17 Simulator.</li>
       </ul>
     </td>
@@ -107,6 +108,7 @@
         <li><strong>Liquid Glass и производительность:</strong> Today, настройки, поля ввода, навигация, состояния задач, активности Dynamic Island и ассистент получили более выразительное системное стекло; облегчённые переходы, адаптивный рендеринг и безопасная очистка observer-ов поддерживают отзывчивость интерфейса.</li>
         <li><strong>Более понятное рабочее пространство задач:</strong> экран «Задачи» теперь начинается с компактной сводки фокуса, статуса сроков и сортировки в одно касание. В строках приоритет у задачи, заметки, категории и локализованного срока; нейтральные подписи получили лучший контраст, а swipe-действия сохранены.</li>
         <li><strong>Нейросетевой женский голос на Mac:</strong> Lippi теперь получает настоящий WAV от локальной модели Piper с русским женским голосом <code>ru_RU-irina-medium</code>. Провайдер запускается вместе со сборкой Xcode, проверяется в Настройках и не блокирует команды: при недоступности Mac используется голос iPhone.</li>
+        <li><strong>Рендеринг с приоритетом скролла:</strong> основные прокручиваемые экраны передают фазы drag и инерции общему координатору производительности. На время скролла тяжёлые проходы Liquid Glass, глубокие слои карточек и детали фона переключаются на облегчённый путь, а после жеста аккуратно возвращаются.</li>
         <li><strong>Локализация и проверка:</strong> Smart Goals и Ollama получили русский и английский тексты. Добавлены тесты конфигурации Ollama, перевода целей с русского и выбора источников; релиз проверен на iPhone 17 Simulator.</li>
       </ul>
     </td>

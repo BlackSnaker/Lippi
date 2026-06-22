@@ -234,6 +234,7 @@ struct SettingsView: View {
                         .padding(20)
                     }
                     .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 92) }
+                    .lippiScrollPerformance()
                     .transaction { $0.animation = nil }
                     .onChange(of: selectedScope) { _, newScope in
                         let target = primaryAnchor(for: newScope)
