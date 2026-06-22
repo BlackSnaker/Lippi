@@ -11,6 +11,7 @@ struct TodayView: View {
     @EnvironmentObject private var stats: StatsStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var showAdd = false
     @Binding var showGoalPlanner: Bool
@@ -18,12 +19,23 @@ struct TodayView: View {
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
 
-    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
+    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
     private var activeTasksCount: Int { store.tasks.filter { !$0.isCompleted }.count }
     private var doneTasksCount: Int { store.tasks.filter { $0.isCompleted }.count }
     private var totalTasksCount: Int { max(store.tasks.count, 1) }
-    private var hasUpcomingTask: Bool { store.upcoming() != nil }
     private var activeTasks: [TaskItem] { store.tasks.filter { !$0.isCompleted } }
+    private var overdueTasks: [TaskItem] {
+        activeTasks.filter { task in
+            guard let due = task.dueDate else { return false }
+            return due < .now
+        }
+    }
+    private var dueTodayTasks: [TaskItem] {
+        activeTasks.filter { task in
+            guard let due = task.dueDate else { return false }
+            return Calendar.current.isDateInToday(due) && due >= .now
+        }
+    }
     private var upcomingTasks: [TaskItem] {
         activeTasks.sorted { lhs, rhs in
             let left = lhs.dueDate ?? .distantFuture
@@ -32,17 +44,25 @@ struct TodayView: View {
             return lhs.createdAt < rhs.createdAt
         }
     }
-    private var overdueTasksCount: Int {
-        activeTasks.filter { task in
-            guard let due = task.dueDate else { return false }
-            return due < Date()
-        }.count
-    }
+    private var overdueTasksCount: Int { overdueTasks.count }
+    private var dueTodayCount: Int { dueTodayTasks.count }
     private var completionProgress: Double {
         min(max(Double(doneTasksCount) / Double(totalTasksCount), 0), 1)
     }
     private var completionPercent: Int { Int((completionProgress * 100).rounded()) }
-    private var nextTask: TaskItem? { store.upcoming() }
+    private var priorityTask: TaskItem? {
+        if let overdue = upcomingTasks.first(where: { ($0.dueDate ?? .distantFuture) < .now }) {
+            return overdue
+        }
+        if let today = upcomingTasks.first(where: { task in
+            guard let due = task.dueDate else { return false }
+            return Calendar.current.isDateInToday(due)
+        }) {
+            return today
+        }
+        return upcomingTasks.first
+    }
+    private var hasUpcomingTask: Bool { priorityTask != nil }
     private var todayStatusText: String {
         if activeTasksCount == 0 && doneTasksCount > 0 { return s("today.status.clear") }
         if activeTasksCount == 0 { return s("today.status.empty") }
@@ -147,6 +167,16 @@ struct TodayView: View {
             .toolbarBackgroundVisibility(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        importantNowMenu
+                    } label: {
+                        Image(safeSystemName: "sparkles.rectangle.stack.fill", fallback: "sparkles")
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+                    .accessibilityLabel(s("today.summary.title"))
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
                     Button { showAdd = true } label: {
                         Label(s("today.toolbar.new_task"), systemImage: "plus.circle.fill")
                             .labelStyle(TightLabelStyle())
@@ -170,7 +200,7 @@ struct TodayView: View {
     // MARK: - Subviews
     private var headerCard: some View {
         GlassCard(padding: 18, cornerRadius: 30, style: .full) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(Date.now, format: .dateTime.weekday(.wide).day().month())
@@ -189,8 +219,6 @@ struct TodayView: View {
                             .lineLimit(2)
                             .minimumScaleFactor(0.90)
                             .allowsTightening(true)
-
-                        statusPill
                     }
 
                     Spacer(minLength: 0)
@@ -198,12 +226,25 @@ struct TodayView: View {
                     dayProgressBadge
                 }
 
+                HStack(spacing: 8) {
+                    statusPill
+                    Spacer(minLength: 0)
+                    Text(briefingLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(DS.textTertiary)
+                        .singleLine()
+                }
+
+                Divider().overlay(DS.glassStroke(0.16))
+
                 focusSummaryPanel
 
-                HStack(spacing: 8) {
+                HStack(spacing: 0) {
                     heroMetricChip(title: s("today.metric.active"), value: "\(activeTasksCount)", systemImage: "circle", tone: DS.brandA)
+                    Divider().overlay(DS.glassStroke(0.16)).frame(height: 38)
+                    heroMetricChip(title: s("today.metric.deadlines"), value: "\(overdueTasksCount + dueTodayCount)", systemImage: "calendar", tone: overdueTasksCount > 0 ? Color(hex: 0xFF453A) : Color(hex: 0xFF9F0A))
+                    Divider().overlay(DS.glassStroke(0.16)).frame(height: 38)
                     heroMetricChip(title: s("today.metric.done"), value: "\(doneTasksCount)", systemImage: "checkmark.circle.fill", tone: Color(hex: 0x30D158))
-                    heroMetricChip(title: s("today.metric.streak"), value: "\(stats.productiveStreak)", systemImage: "flame.fill", tone: Color(hex: 0xFF9F0A))
                 }
             }
         }
@@ -253,7 +294,6 @@ struct TodayView: View {
                         .background(DS.glassFill(0.10), in: Circle())
                         .lippiSystemGlass(in: Circle(), tint: DS.accent.opacity(0.09), interactive: true)
                         .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
-                        .padding(.trailing, 46)
                 }
                 .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             }
@@ -294,7 +334,7 @@ struct TodayView: View {
     }
 
     private var focusSummaryPanel: some View {
-        let task = nextTask
+        let task = priorityTask
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
@@ -366,24 +406,12 @@ struct TodayView: View {
                 #endif
             }
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(DS.glassFill(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(DS.brandSoftGradient)
-                        .opacity(0.36)
-                )
-        )
-        .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
-            tint: (task?.category.tint ?? DS.accent).opacity(0.10)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(DS.glassStroke(0.16), lineWidth: 1)
-        )
+        .padding(.leading, 14)
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill((task?.category.tint ?? DS.accent).opacity(0.88))
+                .frame(width: 3, height: 72)
+        }
     }
 
     private var dayProgressBadge: some View {
@@ -429,7 +457,7 @@ struct TodayView: View {
     }
 
     private func heroMetricChip(title: String, value: String, systemImage: String, tone: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 8) {
             HStack(spacing: 6) {
                 ZStack {
                     Circle()
@@ -442,34 +470,62 @@ struct TodayView: View {
                         .foregroundStyle(DS.text(0.90))
                 }
                 .frame(width: 24, height: 24)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .singleLine()
 
                 Text(title)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(DS.textTertiary)
                     .singleLine()
             }
-
-            Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(DS.textPrimary)
-                .monospacedDigit()
-                .singleLine()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(DS.glassFill(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(tone.opacity(0.10))
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(DS.glassStroke(0.14), lineWidth: 1)
-        )
+    }
+
+    private var briefingLabel: String {
+        if overdueTasksCount > 0 {
+            return L10n.fmt("today.summary.overdue", lang, overdueTasksCount)
+        }
+        if dueTodayCount > 0 {
+            return L10n.fmt("today.summary.due_today", lang, dueTodayCount)
+        }
+        return s("today.summary.clear")
+    }
+
+    @ViewBuilder
+    private var importantNowMenu: some View {
+        Section(s("today.summary.title")) {
+            Label(briefingLabel, systemImage: statusSymbol)
+
+            if let task = priorityTask {
+                Label(task.title, systemImage: task.category.symbol)
+                Label(dueSummary(for: task), systemImage: "clock")
+            } else {
+                Label(s("today.summary.no_focus"), systemImage: "checkmark.seal.fill")
+            }
+        }
+
+        Section {
+            if let task = priorityTask {
+                Button { markTaskDone(task) } label: {
+                    Label(s("today.summary.complete_focus"), systemImage: "checkmark.circle.fill")
+                }
+            }
+
+            Button { showAdd = true } label: {
+                Label(s("today.summary.new_task"), systemImage: "plus.circle.fill")
+            }
+
+            Button { showGoalPlanner = true } label: {
+                Label(s("today.summary.goals"), systemImage: "wand.and.stars")
+            }
+        }
     }
 
     private func categoryPill(_ category: TaskCategory) -> some View {
