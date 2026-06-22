@@ -37,10 +37,15 @@ enum AppVoiceSelector {
         let langCode = lang.rawValue.lowercased()
         let preferredCode = lang.speechLanguageCode.lowercased()
 
-        let voices = AVSpeechSynthesisVoice.speechVoices().filter { voice in
+        let languageVoices = AVSpeechSynthesisVoice.speechVoices().filter { voice in
             let code = voice.language.lowercased()
             return code.hasPrefix(langCode) || code.hasPrefix(preferredCode.prefix(2))
         }
+
+        // Lippi speaks with a feminine voice by default. If iOS does not expose one
+        // for the selected language, keep the full language-matched fallback list.
+        let feminineVoices = languageVoices.filter(isFemaleVoice)
+        let voices = feminineVoices.isEmpty ? languageVoices : feminineVoices
 
         return voices.sorted { lhs, rhs in
             let l = voiceScore(lhs, preferredCode: preferredCode)
@@ -59,12 +64,14 @@ enum AppVoiceSelector {
 
     static func preferredVoice(for lang: AppLang) -> AVSpeechSynthesisVoice? {
         let selected = storedIdentifier(for: lang)
+        let available = availableVoices(for: lang)
         if selected != AppVoicePreferences.autoIdentifier,
-           let voice = voice(withIdentifier: selected) {
+           let voice = voice(withIdentifier: selected),
+           available.contains(where: { $0.identifier == voice.identifier }) {
             return voice
         }
 
-        return availableVoices(for: lang).first
+        return available.first
             ?? AVSpeechSynthesisVoice(language: lang.speechLanguageCode)
             ?? AVSpeechSynthesisVoice(language: "en-US")
     }
@@ -75,6 +82,9 @@ enum AppVoiceSelector {
 
     private static func voiceScore(_ voice: AVSpeechSynthesisVoice, preferredCode: String) -> Int {
         var score = 0
+        if isFemaleVoice(voice) {
+            score += 1_000
+        }
         switch voice.quality {
         case .premium: score += 300
         case .enhanced: score += 200
@@ -93,6 +103,22 @@ enum AppVoiceSelector {
         if name.contains("siri") { score += 12 }
         if name.contains("neural") { score += 10 }
         return score
+    }
+
+    private static func isFemaleVoice(_ voice: AVSpeechSynthesisVoice) -> Bool {
+        if voice.gender == .female { return true }
+        if voice.gender == .male { return false }
+
+        let name = voice.name.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: .current
+        )
+        let femaleNameHints = [
+            "ava", "allison", "anna", "ellen", "karen", "kathy", "katya", "marina",
+            "milena", "monica", "moira", "nicky", "olga", "paulina", "petra", "samantha",
+            "susan", "tatyana", "tessa", "victoria", "yulia", "zoe"
+        ]
+        return femaleNameHints.contains { name.contains($0) }
     }
 }
 
@@ -156,8 +182,9 @@ final class HealthVoiceAssistant: NSObject, ObservableObject {
         let utterance = AVSpeechUtterance(string: trimmed)
         utterance.voice = AppVoiceSelector.preferredVoice(for: language)
         utterance.rate = speed.speechRate
-        utterance.pitchMultiplier = 1.0
-        utterance.postUtteranceDelay = 0.08
+        utterance.pitchMultiplier = 1.02
+        utterance.preUtteranceDelay = 0.04
+        utterance.postUtteranceDelay = 0.12
         utterance.prefersAssistiveTechnologySettings = true
 
         synthesizer.speak(utterance)

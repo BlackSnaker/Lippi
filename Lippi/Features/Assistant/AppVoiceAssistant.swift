@@ -1630,9 +1630,10 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
         utterance.voice = AppVoiceSelector.preferredVoice(for: lang)
             ?? AVSpeechSynthesisVoice(language: lang.speechLanguageCode)
             ?? AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = 0.48
-        utterance.pitchMultiplier = 1.0
-        utterance.postUtteranceDelay = 0.06
+        utterance.rate = 0.46
+        utterance.pitchMultiplier = 1.02
+        utterance.preUtteranceDelay = 0.04
+        utterance.postUtteranceDelay = 0.12
         utterance.prefersAssistiveTechnologySettings = true
 
         synthesizer.speak(utterance)
