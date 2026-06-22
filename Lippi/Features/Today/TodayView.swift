@@ -21,8 +21,9 @@ struct TodayView: View {
 
     private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
     private var activeTasksCount: Int { store.tasks.filter { !$0.isCompleted }.count }
-    private var doneTasksCount: Int { store.tasks.filter { $0.isCompleted }.count }
-    private var totalTasksCount: Int { max(store.tasks.count, 1) }
+    private var completedTodayCount: Int { stats.today.tasksDone }
+    private var focusedMinutesToday: Int { stats.today.focusMinutes }
+    private var productiveStreak: Int { stats.productiveStreak }
     private var activeTasks: [TaskItem] { store.tasks.filter { !$0.isCompleted } }
     private var overdueTasks: [TaskItem] {
         activeTasks.filter { task in
@@ -47,7 +48,8 @@ struct TodayView: View {
     private var overdueTasksCount: Int { overdueTasks.count }
     private var dueTodayCount: Int { dueTodayTasks.count }
     private var completionProgress: Double {
-        min(max(Double(doneTasksCount) / Double(totalTasksCount), 0), 1)
+        let todayWorkload = max(activeTasksCount + completedTodayCount, 1)
+        return min(max(Double(completedTodayCount) / Double(todayWorkload), 0), 1)
     }
     private var completionPercent: Int { Int((completionProgress * 100).rounded()) }
     private var priorityTask: TaskItem? {
@@ -64,10 +66,10 @@ struct TodayView: View {
     }
     private var hasUpcomingTask: Bool { priorityTask != nil }
     private var todayStatusText: String {
-        if activeTasksCount == 0 && doneTasksCount > 0 { return s("today.status.clear") }
+        if activeTasksCount == 0 && completedTodayCount > 0 { return s("today.status.clear") }
         if activeTasksCount == 0 { return s("today.status.empty") }
         if overdueTasksCount > 0 { return L10n.fmt("today.status.overdue", lang, overdueTasksCount) }
-        if doneTasksCount == 0 { return s("today.status.start") }
+        if completedTodayCount == 0 { return s("today.status.start") }
         return L10n.fmt("today.status.progress", lang, completionPercent)
     }
 
@@ -78,19 +80,7 @@ struct TodayView: View {
         ]
     }
 
-    private static let timeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter
-    }()
-
-    private static let dueFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter
-    }()
+    private var appLocale: Locale { Locale(identifier: lang.rawValue) }
 
     private var greetingTitle: String {
         let hour = Calendar.current.component(.hour, from: .now)
@@ -146,10 +136,10 @@ struct TodayView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         headerCard
-                        smartGoalsEntry
-                        quickActions
-                        CountdownCardView()
                         todayPlanCard
+                        quickActions
+                        smartGoalsEntry
+                        CountdownCardView()
                         StatsCardView()
                     }
                     .padding(20)
@@ -226,6 +216,8 @@ struct TodayView: View {
                     dayProgressBadge
                 }
 
+                dailySnapshotStrip
+
                 HStack(spacing: 8) {
                     statusPill
                     Spacer(minLength: 0)
@@ -244,7 +236,7 @@ struct TodayView: View {
                     Divider().overlay(DS.glassStroke(0.16)).frame(height: 38)
                     heroMetricChip(title: s("today.metric.deadlines"), value: "\(overdueTasksCount + dueTodayCount)", systemImage: "calendar", tone: overdueTasksCount > 0 ? Color(hex: 0xFF453A) : Color(hex: 0xFF9F0A))
                     Divider().overlay(DS.glassStroke(0.16)).frame(height: 38)
-                    heroMetricChip(title: s("today.metric.done"), value: "\(doneTasksCount)", systemImage: "checkmark.circle.fill", tone: Color(hex: 0x30D158))
+                    heroMetricChip(title: s("today.metric.done_today"), value: "\(completedTodayCount)", systemImage: "checkmark.circle.fill", tone: Color(hex: 0x30D158))
                 }
             }
         }
@@ -387,11 +379,19 @@ struct TodayView: View {
             }
 
             HStack(spacing: 10) {
-                Button { showAdd = true } label: {
-                    Label(s("today.quick.new"), systemImage: "plus")
-                        .labelStyle(TightLabelStyle())
+                if let task {
+                    Button { markTaskDone(task) } label: {
+                        Label(s("today.quick.done"), systemImage: "checkmark")
+                            .labelStyle(TightLabelStyle())
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .primary, compact: true))
+                } else {
+                    Button { showAdd = true } label: {
+                        Label(s("today.quick.new"), systemImage: "plus")
+                            .labelStyle(TightLabelStyle())
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .primary, compact: true))
                 }
-                .buttonStyle(LippiButtonStyle(kind: task == nil ? .primary : .secondary, compact: true))
 
                 #if canImport(ActivityKit)
                 if #available(iOS 16.2, *), let task {
@@ -401,7 +401,7 @@ struct TodayView: View {
                         Label(s("today.next.to_island"), systemImage: "wave.3.right")
                             .labelStyle(TightLabelStyle())
                     }
-                    .buttonStyle(LippiButtonStyle(kind: .primary, compact: true))
+                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                 }
                 #endif
             }
@@ -412,6 +412,60 @@ struct TodayView: View {
                 .fill((task?.category.tint ?? DS.accent).opacity(0.88))
                 .frame(width: 3, height: 72)
         }
+    }
+
+    private var dailySnapshotStrip: some View {
+        HStack(spacing: 0) {
+            dailySnapshotMetric(
+                value: focusTimeText,
+                title: s("today.metric.focus"),
+                systemImage: "timer",
+                tone: Color(hex: 0x64D2FF)
+            )
+            Divider().overlay(DS.glassStroke(0.16)).frame(height: 28)
+            dailySnapshotMetric(
+                value: "\(productiveStreak)",
+                title: s("today.metric.streak"),
+                systemImage: "flame.fill",
+                tone: Color(hex: 0xFF9F0A)
+            )
+            Divider().overlay(DS.glassStroke(0.16)).frame(height: 28)
+            dailySnapshotMetric(
+                value: "\(completedTodayCount)",
+                title: s("today.metric.done_today"),
+                systemImage: "checkmark.circle.fill",
+                tone: Color(hex: 0x30D158)
+            )
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var focusTimeText: String {
+        L10n.fmt("today.metric.focus_minutes", lang, focusedMinutesToday)
+    }
+
+    private func dailySnapshotMetric(value: String, title: String, systemImage: String, tone: Color) -> some View {
+        HStack(spacing: 7) {
+            Image(safeSystemName: systemImage, fallback: systemImage)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(tone)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .singleLine()
+
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .singleLine()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 2)
     }
 
     private var dayProgressBadge: some View {
@@ -564,7 +618,7 @@ struct TodayView: View {
         let preview = Array(upcomingTasks.prefix(3))
 
         return GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top, spacing: 10) {
                     LippiSectionHeader(
                         title: s("today.plan.title"),
@@ -604,13 +658,18 @@ struct TodayView: View {
                                 .singleLine()
                         }
                     }
-                    .padding(12)
+                    .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(taskRowBackground(tone: Color(hex: 0x30D158)))
                 } else {
-                    VStack(spacing: 9) {
-                        ForEach(preview) { task in
+                    VStack(spacing: 0) {
+                        ForEach(Array(preview.enumerated()), id: \.element.id) { index, task in
                             planTaskRow(task)
+
+                            if index < preview.count - 1 {
+                                Divider()
+                                    .overlay(DS.glassStroke(0.14))
+                                    .padding(.leading, 46)
+                            }
                         }
 
                         if upcomingTasks.count > preview.count {
@@ -629,12 +688,9 @@ struct TodayView: View {
     private func planTaskRow(_ task: TaskItem) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(task.category.chipFill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .stroke(task.category.chipStroke, lineWidth: 1)
-                    )
+                Circle()
+                    .fill(task.category.tint.opacity(0.16))
+                    .overlay(Circle().stroke(task.category.tint.opacity(0.28), lineWidth: 1))
 
                 Image(safeSystemName: task.category.symbol, fallback: "circle.fill")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
@@ -684,31 +740,12 @@ struct TodayView: View {
             }
             .buttonStyle(PressScaleStyle(scale: 0.94, opacity: 0.88))
         }
-        .padding(10)
-        .background(taskRowBackground(tone: task.category.tint))
-        .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
-            tint: task.category.tint.opacity(0.08)
-        )
-    }
-
-    private func taskRowBackground(tone: Color) -> some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(DS.glassFill(0.07))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(tone.opacity(0.08))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(DS.glassStroke(0.12), lineWidth: 1)
-            )
+        .padding(.vertical, 10)
     }
 
     private func markTaskDone(_ task: TaskItem) {
-        var updated = task
-        updated.isCompleted = true
-        store.update(updated)
+        guard !task.isCompleted else { return }
+        store.toggle(task.id, stats: stats)
         #if os(iOS)
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         #endif
@@ -719,15 +756,23 @@ struct TodayView: View {
 
         let calendar = Calendar.current
         if due < Date() {
-            return L10n.fmt("today.due.overdue", lang, Self.dueFormatter.string(from: due))
+            return L10n.fmt("today.due.overdue", lang, dueDateText(due))
         }
         if calendar.isDateInToday(due) {
-            return L10n.fmt("today.due.today", lang, Self.timeFormatter.string(from: due))
+            return L10n.fmt("today.due.today", lang, dueTimeText(due))
         }
         if calendar.isDateInTomorrow(due) {
-            return L10n.fmt("today.due.tomorrow", lang, Self.timeFormatter.string(from: due))
+            return L10n.fmt("today.due.tomorrow", lang, dueTimeText(due))
         }
-        return Self.dueFormatter.string(from: due)
+        return dueDateText(due)
+    }
+
+    private func dueTimeText(_ date: Date) -> String {
+        date.formatted(.dateTime.hour().minute().locale(appLocale))
+    }
+
+    private func dueDateText(_ date: Date) -> String {
+        date.formatted(.dateTime.month(.abbreviated).day().hour().minute().locale(appLocale))
     }
 
     private func dueTone(for task: TaskItem) -> Color {
@@ -780,14 +825,7 @@ struct TodayView: View {
                         icon: "checkmark.circle",
                         tone: Color(hex: 0x30D158)
                     ) {
-                        if let task = store.upcoming() {
-                            var updated = task
-                            updated.isCompleted = true
-                            store.update(updated)
-                            #if os(iOS)
-                            UINotificationFeedbackGenerator().notificationOccurred(.success)
-                            #endif
-                        }
+                        if let task = priorityTask { markTaskDone(task) }
                     }
                     .opacity(hasUpcomingTask ? 1.0 : 0.56)
                     .allowsHitTesting(hasUpcomingTask)
