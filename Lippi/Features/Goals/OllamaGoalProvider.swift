@@ -4,17 +4,30 @@ struct OllamaConfiguration: Equatable {
     static let enabledKey = "ollama.provider.enabled"
     static let endpointKey = "ollama.provider.endpoint"
     static let modelKey = "ollama.provider.model"
-    static let defaultModel = "qwen3:1.7b"
+    static let defaultModel = "qwen3:4b"
+    private static let legacyDefaultModel = "qwen3:1.7b"
+    private static let modelUpgradeKey = "ollama.provider.modelUpgrade.4b"
 
     var isEnabled: Bool
     var endpoint: String
     var model: String
 
     static var stored: OllamaConfiguration {
-        OllamaConfiguration(
-            isEnabled: UserDefaults.standard.bool(forKey: enabledKey),
-            endpoint: UserDefaults.standard.string(forKey: endpointKey) ?? "",
-            model: UserDefaults.standard.string(forKey: modelKey) ?? defaultModel
+        let defaults = UserDefaults.standard
+        let storedModel = defaults.string(forKey: modelKey)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let model: String
+        if storedModel == legacyDefaultModel, !defaults.bool(forKey: modelUpgradeKey) {
+            model = defaultModel
+            defaults.set(model, forKey: modelKey)
+            defaults.set(true, forKey: modelUpgradeKey)
+        } else {
+            model = (storedModel?.isEmpty == false) ? storedModel! : defaultModel
+        }
+
+        return OllamaConfiguration(
+            isEnabled: defaults.bool(forKey: enabledKey),
+            endpoint: defaults.string(forKey: endpointKey) ?? "",
+            model: model
         )
     }
 
@@ -146,7 +159,7 @@ struct OllamaGoalProvider {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 80
+        request.timeoutInterval = 120
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = try JSONEncoder().encode(body)
@@ -183,16 +196,29 @@ struct OllamaGoalProvider {
 private struct GenerateRequest: Encodable {
     let model: String
     let prompt: String
+    let system = OllamaPlannerSystemPrompt.value
     let stream = false
     let think = false
+    let keepAlive = "15m"
     let format = OllamaRoadmapSchema.response
     private let options = GenerateOptions()
 
+    enum CodingKeys: String, CodingKey {
+        case model
+        case prompt
+        case system
+        case stream
+        case think
+        case keepAlive = "keep_alive"
+        case format
+        case options
+    }
+
     private struct GenerateOptions: Encodable {
-        let temperature = 0.1
-        let numPredict = 1_000
-        let repeatPenalty = 1.12
-        let repeatLastN = 128
+        let temperature = 0.05
+        let numPredict = 1_200
+        let repeatPenalty = 1.08
+        let repeatLastN = 96
 
         enum CodingKeys: String, CodingKey {
             case temperature
@@ -201,6 +227,15 @@ private struct GenerateRequest: Encodable {
             case repeatLastN = "repeat_last_n"
         }
     }
+}
+
+private enum OllamaPlannerSystemPrompt {
+    static let value = """
+    You are Lippi's grounded goal-roadmap planner. Your job is to turn a user's stated goal and constraints into a practical route, not to predict success.
+    Treat only the user brief and supplied excerpts as facts. Unknown details must be assumptions or clarifying questions.
+    Never invent users, demand, feedback, downloads, revenue, conversion, prices, health outcomes, legal outcomes, deadlines, resources, or personal circumstances.
+    Return only valid JSON that matches the supplied schema. Do not add Markdown or explanations.
+    """
 }
 
 private enum OllamaRoadmapSchema {
@@ -228,7 +263,7 @@ private enum OllamaRoadmapSchema {
             "title": .string,
             "timeframe": .string,
             "target": .string,
-            "tasks": .array(items: .string, minItems: 1, maxItems: 3),
+            "tasks": .array(items: .string, minItems: 2, maxItems: 3),
             "category": .stringEnum(["work", "study", "health", "rest", "home", "other"])
         ],
         required: ["title", "timeframe", "target", "tasks", "category"]

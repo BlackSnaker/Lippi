@@ -1158,7 +1158,7 @@ private struct GoalRoadmapPayload: Codable {
                 timeframe: item.timeframe.nonEmpty(or: ""),
                 target: item.target.nonEmpty(or: summary.nonEmpty(or: input.goal)),
                 tasks: item.tasks.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.prefixArray(4),
-                category: TaskCategory(rawValue: item.category) ?? profile.category
+                category: profile.category
             )
         }.filter { !$0.title.isEmpty && !$0.target.isEmpty && !$0.tasks.isEmpty }
 
@@ -1361,17 +1361,20 @@ struct GoalRoadmapEngine {
             configuration: configuration
         )
 
-        if let payload = parsePayload(response),
-           let roadmap = payload.roadmap(source: .ollama, input: input, lang: lang, evidence: evidence) {
+        if let roadmap = qualifiedRoadmap(from: response, source: .ollama, input: input, lang: lang, evidence: evidence) {
             return roadmap
         }
 
         let repair = try await provider.generate(
-            prompt: ollamaRepairPrompt(previous: response, input: input, lang: lang, evidence: evidence),
+            prompt: ollamaRepairPrompt(
+                input: input,
+                lang: lang,
+                evidence: evidence,
+                qualityFeedback: roadmapQualityFeedback(from: response, source: .ollama, input: input, lang: lang, evidence: evidence)
+            ),
             configuration: configuration
         )
-        guard let payload = parsePayload(repair),
-              let roadmap = payload.roadmap(source: .ollama, input: input, lang: lang, evidence: evidence) else {
+        guard let roadmap = qualifiedRoadmap(from: repair, source: .ollama, input: input, lang: lang, evidence: evidence) else {
             throw OllamaProviderError.incompleteRoadmap
         }
         return roadmap
@@ -1379,79 +1382,94 @@ struct GoalRoadmapEngine {
 
     private func ollamaPrompt(for input: GoalPlannerInput, lang: AppLang, evidence: [GoalEvidenceSource]) -> String {
         """
-        You are Lippi's evidence-first roadmap planner. Your job is to help a person reach a real goal without inventing details.
-        Separate facts from the user's input, relevant open reference material, assumptions, and questions that need the user's answer.
-        Build a small, realistic route that respects the user's stated outcome, timeframe, available time, limits, and preferred pace.
-        Respond only with valid JSON. Do not add Markdown, explanations outside JSON, or a thinking trace.
+        You are Lippi's grounded roadmap planner. Return JSON only and follow the schema attached by the app.
 
-        User goal:
-        \(input.goal)
+        Known user goal: \(input.goal)
+        Known user context: \(input.context.isEmpty ? L10n.tr("goals.ai.no_context", lang) : input.context)
+        Horizon: \(input.horizon.weeks) weeks. Pace: \(input.intensity.rawValue). Output language: \(lang.aiOutputLanguage).
+        Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
 
-        User context:
-        \(input.context.isEmpty ? L10n.tr("goals.ai.no_context", lang) : input.context)
-
-        Planning horizon: \(input.horizon.weeks) weeks.
-        Desired pace: \(input.intensity.rawValue).
-        Output language: \(lang.aiOutputLanguage).
-
-        Curated open reference material fetched by Lippi. This is the only external material you may use:
+        Relevant open reference excerpts. Use them only when they help; do not claim they support anything beyond their text:
         \(evidencePromptSection(evidence))
 
-        Return this exact JSON shape:
-        {
-          "title": "short specific roadmap title",
-          "summary": "one clear sentence about the route",
-          "confidence": 0.82,
-          "successCriteria": ["observable sign of success", "measurable checkpoint"],
-          "firstActions": ["action the user can take today", "next small action"],
-          "assumptions": ["assumption made because context is missing"],
-          "clarifyingQuestions": ["question only when the answer would materially change the route"],
-          "milestones": [
-            {"title": "phase title", "timeframe": "Weeks 1-2", "target": "concrete phase outcome", "tasks": ["short task 1", "short task 2", "short task 3"], "category": "work"}
-          ],
-          "habits": [{"title": "habit", "detail": "short cadence"}],
-          "risks": [{"title": "risk", "mitigation": "specific mitigation"}]
-        }
-
-        Rules:
-        - Return exactly 3 milestones for a 4- or 8-week horizon, and exactly 4 milestones for a 12-week horizon. Never repeat a milestone title, target, or task.
-        - Return exactly 2 success criteria and 2 first actions. Return 1 or 2 habits and 1 or 2 risks.
-        - Use the user's language for every JSON string value.
-        - Keep tasks concrete and short.
-        - Preserve dates, numbers, weekly time, constraints, and the real domain from the input.
-        - Treat a fact as known only when it is present in the user input or reference material above.
-        - Do not invent deadlines, metrics, resources, prerequisites, statistics, source names, or personal circumstances.
-        - An assumption must only say what needs user confirmation; it must not claim that an unknown fact is true. Ask 1 to 3 clarifying questions only when the answer would change the proposed route; otherwise return an empty array.
-        - Success criteria may use an explicit user metric or a deliverable that can be reviewed. Never invent user feedback, satisfaction, audience demand, conversion, revenue, health outcomes, or test results.
-        - Use reference material only as a high-level route. Do not turn it into medical, legal, financial, or guaranteed-result advice.
-        - Never claim that the references recommend a step unless their excerpt supports it.
+        Planning contract:
+        - Build the smallest realistic route from the known facts. Preserve stated time, money, dates, constraints, and domain.
+        - Make each milestone a different reviewable outcome in its fixed slot. Give every milestone two or three distinct tasks.
+        - Each task must start with a clear action and name an artifact, decision, test, or deliverable. Never write vague tasks such as "make progress", "work on the project", or "do research" without a focus.
+        - Return exactly two success criteria and two first actions. A success criterion is either a user-supplied metric or an observable deliverable.
+        - Unknown information belongs in assumptions or up to three clarifying questions. Do not turn unknown facts into claims.
+        - For a business goal, plan discovery or validation work, not imagined users, downloads, demand, revenue, conversion, or profit. Do not invent any metric, deadline, resource, prerequisite, feedback, or outcome.
+        - Keep health, legal, and financial steps non-diagnostic and non-guaranteed. Use reference material as high-level guidance only.
         - Allowed categories: work, study, health, rest, home, other.
         """
     }
 
     private func ollamaRepairPrompt(
-        previous: String,
+        input: GoalPlannerInput,
+        lang: AppLang,
+        evidence: [GoalEvidenceSource],
+        qualityFeedback: String
+    ) -> String {
+        """
+        Build a fresh replacement in JSON only using the app schema. Do not copy unsupported claims from an earlier answer.
+        Goal: \(input.goal)
+        Context: \(input.context.isEmpty ? L10n.tr("goals.ai.no_context", lang) : input.context)
+        Horizon: \(input.horizon.weeks) weeks. Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
+        Output language: \(lang.aiOutputLanguage).
+        Quality audit to fix: \(qualityFeedback)
+        Reference excerpts:
+        \(evidencePromptSection(evidence))
+        The earlier answer was rejected. Replan from the user brief, the fixed slots, and the quality audit above.
+        """
+    }
+
+    private func decodedRoadmap(
+        from text: String,
+        source: GoalRoadmapSource,
+        input: GoalPlannerInput,
+        lang: AppLang,
+        evidence: [GoalEvidenceSource]
+    ) -> GoalRoadmap? {
+        guard let payload = parsePayload(text) else { return nil }
+        return payload.roadmap(source: source, input: input, lang: lang, evidence: evidence)
+    }
+
+    private func qualifiedRoadmap(
+        from text: String,
+        source: GoalRoadmapSource,
+        input: GoalPlannerInput,
+        lang: AppLang,
+        evidence: [GoalEvidenceSource]
+    ) -> GoalRoadmap? {
+        guard let roadmap = decodedRoadmap(from: text, source: source, input: input, lang: lang, evidence: evidence) else {
+            return nil
+        }
+        return GoalRoadmapQualityGate.validated(roadmap, input: input, lang: lang)
+    }
+
+    private func roadmapQualityFeedback(
+        from text: String,
+        source: GoalRoadmapSource,
         input: GoalPlannerInput,
         lang: AppLang,
         evidence: [GoalEvidenceSource]
     ) -> String {
-        """
-        Convert the previous answer into valid JSON only. Keep only useful, grounded planning details. Do not invent missing facts or sources.
-
-        User goal: \(input.goal)
-        User context: \(input.context.isEmpty ? L10n.tr("goals.ai.no_context", lang) : input.context)
-        Horizon: \(input.horizon.weeks) weeks.
-        Output language: \(lang.aiOutputLanguage).
-        Curated open reference material available to Lippi:
-        \(evidencePromptSection(evidence))
-
-        Required JSON shape:
-        {"title":"string","summary":"string","confidence":0.82,"successCriteria":["string"],"firstActions":["string"],"assumptions":["string"],"clarifyingQuestions":["string"],"milestones":[{"title":"string","timeframe":"string","target":"string","tasks":["string"],"category":"work"}],"habits":[{"title":"string","detail":"string"}],"risks":[{"title":"string","mitigation":"string"}]}
-
-        Previous answer:
-        \(previous)
-        """
+        GoalRoadmapQualityGate.feedback(
+            for: decodedRoadmap(from: text, source: source, input: input, lang: lang, evidence: evidence),
+            input: input
+        )
     }
+
+    private func milestoneSlotInstructions(totalWeeks: Int) -> String {
+        let count = totalWeeks == 12 ? 4 : 3
+        let base = totalWeeks / count
+        return (0..<count).map { index in
+            let start = index * base + 1
+            let end = index == count - 1 ? totalWeeks : (index + 1) * base
+            return start == end ? "week \(start)" : "weeks \(start)-\(end)"
+        }.joined(separator: ", ")
+    }
+
 
     private func generateFoundationModelsRoadmap(
         input: GoalPlannerInput,
@@ -1475,8 +1493,13 @@ struct GoalRoadmapEngine {
                     to: prompt(for: foundationInput, original: input, evidence: evidence),
                     options: GenerationOptions(temperature: 0.18, maximumResponseTokens: 2600)
                 )
-                if let payload = parsePayload(response.content),
-                   let roadmap = payload.roadmap(source: .foundationModels, input: input, lang: lang, evidence: evidence) {
+                if let roadmap = qualifiedRoadmap(
+                    from: response.content,
+                    source: .foundationModels,
+                    input: input,
+                    lang: lang,
+                    evidence: evidence
+                ) {
                     return annotateLanguageBridge(
                         roadmap,
                         lang: lang,
@@ -1486,11 +1509,28 @@ struct GoalRoadmapEngine {
                 }
 
                 let repair = try await session.respond(
-                    to: repairPrompt(original: response.content, input: foundationInput, originalInput: input, evidence: evidence),
+                    to: repairPrompt(
+                        original: response.content,
+                        input: foundationInput,
+                        originalInput: input,
+                        evidence: evidence,
+                        qualityFeedback: roadmapQualityFeedback(
+                            from: response.content,
+                            source: .foundationModels,
+                            input: input,
+                            lang: lang,
+                            evidence: evidence
+                        )
+                    ),
                     options: GenerationOptions(temperature: 0.05, maximumResponseTokens: 2200)
                 )
-                guard let payload = parsePayload(repair.content),
-                      let roadmap = payload.roadmap(source: .foundationModels, input: input, lang: lang, evidence: evidence) else {
+                guard let roadmap = qualifiedRoadmap(
+                    from: repair.content,
+                    source: .foundationModels,
+                    input: input,
+                    lang: lang,
+                    evidence: evidence
+                ) else {
                     throw GoalPlannerEngineError.invalidResponse
                 }
                 return annotateLanguageBridge(
@@ -1593,13 +1633,10 @@ struct GoalRoadmapEngine {
 
     private var foundationInstructions: String {
         """
-        You are Lippi's evidence-first roadmap planner inside an iPhone app.
-        You must operate in English because the local system model may reject unsupported languages/locales.
-        Build a route from the user's stated facts and the curated reference material supplied in the request.
-        Separate facts, assumptions, and questions. Never invent a deadline, metric, resource, personal circumstance, or source.
-        Return strict JSON only, without Markdown.
-        Make the plan practical, safe, short, and measurable.
-        Ask a clarifying question only when its answer materially changes the route. Do not promise guaranteed results.
+        You are Lippi's grounded goal-roadmap planner inside an iPhone app.
+        Work only from stated user facts and supplied reference excerpts. Return strict JSON only.
+        Build a small route with distinct, reviewable milestones and concrete tasks. Unknown facts belong in assumptions or clarifying questions.
+        Never invent metrics, users, downloads, demand, revenue, resources, prerequisites, personal circumstances, or guarantees.
         """
     }
 
@@ -1618,52 +1655,18 @@ struct GoalRoadmapEngine {
         }
 
         return """
-        Build a clear goal-achievement roadmap.
-
-        User goal in English:
-        \(input.goal)
-
-        User context in English:
-        \(input.context.isEmpty ? "No context provided" : input.context)
-
-        Planning horizon: \(original.horizon.weeks) weeks
-        Desired pace: \(original.intensity.rawValue)
-        Output language: English
-        Input was translated before planning: \(input.translatedFromUserLanguage ? "yes" : "no")
+        Produce a strict JSON roadmap in English.
+        Known goal: \(input.goal)
+        Known context: \(input.context.isEmpty ? "No context provided" : input.context)
+        Horizon: \(original.horizon.weeks) weeks. Pace: \(original.intensity.rawValue).
+        Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: original.horizon.weeks)).
         Source-language handling: \(sourceNote)
-        Curated open reference material fetched by Lippi. This is the only external material you may use:
+        Reference excerpts:
         \(evidencePromptSection(evidence))
 
-        Build a real, context-aware roadmap. Treat only the user brief and the reference material above as known facts. If context is thin, use assumptions or targeted questions instead of pretending certainty.
+        JSON shape: {"title":"string","summary":"string","confidence":0.7,"successCriteria":["string","string"],"firstActions":["string","string"],"assumptions":["string"],"clarifyingQuestions":["string"],"milestones":[{"title":"string","timeframe":"string","target":"reviewable output","tasks":["action plus artifact","action plus decision"],"category":"work"}],"habits":[{"title":"string","detail":"cadence"}],"risks":[{"title":"string","mitigation":"specific response"}]}
 
-        Return strict JSON only, no Markdown:
-        {
-          "title": "short specific roadmap title",
-          "summary": "one clear sentence explaining the route",
-          "confidence": 0.82,
-          "successCriteria": ["observable sign of success", "measurable checkpoint"],
-          "firstActions": ["first action the user can do today", "second action"],
-          "assumptions": ["assumption made because context is missing"],
-          "clarifyingQuestions": ["question only when the answer would materially change the route"],
-          "milestones": [
-            {"title": "phase title", "timeframe": "Weeks 1-2", "target": "concrete outcome of this phase", "tasks": ["short task 1", "short task 2", "short task 3"], "category": "work"}
-          ],
-          "habits": [{"title": "habit", "detail": "short cadence"}],
-          "risks": [{"title": "risk", "mitigation": "mitigation"}]
-        }
-
-        Allowed categories: work, study, health, rest, home, other.
-        Rules:
-        - Write all JSON string values in simple English.
-        - Return exactly 3 milestones for a 4- or 8-week horizon, and exactly 4 milestones for a 12-week horizon. Never repeat a milestone title, target, or task.
-        - Each task must be actionable, short, and understandable without extra explanation.
-        - Success criteria must describe what the user will see or measure.
-        - Do not invent deadlines, metrics, resources, prerequisites, statistics, source names, personal circumstances, feedback, satisfaction, demand, conversion, or revenue.
-        - An assumption may only identify a fact that needs user confirmation; it must not claim that the fact is true.
-        - Use reference material only as a high-level route. Do not claim that it recommends a step unless its excerpt supports it.
-        - Return an empty clarifyingQuestions array unless an answer is necessary to choose a route.
-        - Do not include medical, financial, legal, or guaranteed-outcome promises.
-        - Do not produce generic productivity advice unless it directly matches the goal context.
+        Rules: use 3 milestones for 4 or 8 weeks and 4 for 12 weeks; every milestone has two or three different action-plus-artifact tasks; return exactly two success criteria and first actions; use assumptions instead of invented facts; no vague tasks, performance predictions, medical/legal/financial instructions, or guarantees. Categories: work, study, health, rest, home, other.
         """
     }
 
@@ -1671,7 +1674,8 @@ struct GoalRoadmapEngine {
         original: String,
         input: FoundationGoalInput,
         originalInput: GoalPlannerInput,
-        evidence: [GoalEvidenceSource]
+        evidence: [GoalEvidenceSource],
+        qualityFeedback: String
     ) -> String {
         let sourceNote: String
         if input.usedSemanticBridge {
@@ -1683,7 +1687,7 @@ struct GoalRoadmapEngine {
         }
 
         return """
-        The previous answer was not valid for the app. Convert it into strict JSON only using the exact schema below. Preserve useful context-specific planning ideas, but fix missing fields and invalid structure.
+        Repair the previous answer into strict JSON only. Preserve grounded, context-specific ideas and fix the audit findings.
 
         Goal in English: \(input.goal)
         Context in English: \(input.context.isEmpty ? "No context provided" : input.context)
@@ -1691,7 +1695,9 @@ struct GoalRoadmapEngine {
         Desired pace: \(originalInput.intensity.rawValue)
         Output language: English
         Source-language handling: \(sourceNote)
-        Curated open reference material available to Lippi:
+        Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: originalInput.horizon.weeks)).
+        Quality audit to fix: \(qualityFeedback)
+        Reference excerpts:
         \(evidencePromptSection(evidence))
 
         Required JSON schema:
@@ -1711,7 +1717,7 @@ struct GoalRoadmapEngine {
         }
 
         Previous answer:
-        \(original)
+        \(String(original.prefix(5_000)))
         """
     }
 
@@ -1721,7 +1727,7 @@ struct GoalRoadmapEngine {
         }
 
         return evidence.map { source in
-            "- \(source.title): \(source.excerpt) [\(source.url)]"
+            "- \(source.title): \(source.excerpt)"
         }.joined(separator: "\n")
     }
 

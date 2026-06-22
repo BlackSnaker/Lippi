@@ -2,6 +2,11 @@ import Testing
 @testable import Lippi
 
 struct OllamaConfigurationTests {
+    @Test("Uses the stronger compact model by default")
+    func usesStrongerDefaultModel() {
+        #expect(OllamaConfiguration.defaultModel == "qwen3:4b")
+    }
+
     @Test("Builds the Ollama endpoint from a local Mac address")
     func buildsLocalEndpoint() throws {
         let configuration = OllamaConfiguration(
