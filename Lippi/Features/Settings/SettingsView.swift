@@ -224,6 +224,7 @@ struct SettingsView: View {
                                     .id(SettingsAnchor.eye)
                                 healthVoiceCard
                                     .id(SettingsAnchor.voice)
+                                NeuralVoiceSettingsCard()
                             }
                             if shouldShowDataScopeCards() {
                                 dataCard

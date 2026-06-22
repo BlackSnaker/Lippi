@@ -220,6 +220,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 188D1A772E6491BC00EA6B1D /* Build configuration list for PBXNativeTarget "Lippi" */;
 			buildPhases = (
+				18A1B2D12E7A000000000001 /* Start Local AI Providers */,
 				188D1A522E6491BA00EA6B1D /* Sources */,
 				188D1A532E6491BA00EA6B1D /* Frameworks */,
 				188D1A542E6491BA00EA6B1D /* Resources */,
@@ -420,6 +421,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		18A1B2D12E7A000000000001 /* Start Local AI Providers */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Scripts/warm-local-ollama.zsh",
+				"$(SRCROOT)/Scripts/start-local-tts.zsh",
+			);
+			name = "Start Local AI Providers";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/zsh;
+			shellScript = "\"$SRCROOT/Scripts/warm-local-ollama.zsh\"\n\"$SRCROOT/Scripts/start-local-tts.zsh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		188D1A522E6491BA00EA6B1D /* Sources */ = {

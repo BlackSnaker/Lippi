@@ -161,6 +161,9 @@ final class HealthVoiceAssistant: NSObject, ObservableObject {
     @Published private(set) var isSpeaking: Bool = false
 
     private let synthesizer = AVSpeechSynthesizer()
+    private var neuralPlayer: AVAudioPlayer?
+    private var neuralSpeechTask: Task<Void, Never>?
+    private var speechRequestID = UUID()
 
     override init() {
         super.init()
@@ -175,11 +178,46 @@ final class HealthVoiceAssistant: NSObject, ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        if synthesizer.isSpeaking {
-            synthesizer.stopSpeaking(at: .immediate)
+        stopCurrentPlayback()
+        let requestID = UUID()
+        speechRequestID = requestID
+        let configuration = NeuralVoiceConfiguration.stored
+
+        guard configuration.isConfigured, configuration.supports(language) else {
+            speakWithSystemVoice(trimmed, language: language, speed: speed)
+            return
         }
 
-        let utterance = AVSpeechUtterance(string: trimmed)
+        isSpeaking = true
+        neuralSpeechTask = Task { [weak self] in
+            do {
+                let audio = try await MacNeuralVoiceProvider().synthesize(
+                    trimmed,
+                    language: language,
+                    lengthScale: speed.neuralLengthScale,
+                    configuration: configuration
+                )
+                guard !Task.isCancelled, let self, self.speechRequestID == requestID else { return }
+                self.playNeuralAudio(audio, fallbackText: trimmed, language: language, speed: speed)
+            } catch {
+                guard !Task.isCancelled, let self, self.speechRequestID == requestID else { return }
+                self.speakWithSystemVoice(trimmed, language: language, speed: speed)
+            }
+        }
+    }
+
+    func stop() {
+        speechRequestID = UUID()
+        stopCurrentPlayback()
+        isSpeaking = false
+    }
+
+    private func speakWithSystemVoice(
+        _ text: String,
+        language: AppLang,
+        speed: HealthVoicePlaybackSpeed
+    ) {
+        let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AppVoiceSelector.preferredVoice(for: language)
         utterance.rate = speed.speechRate
         utterance.pitchMultiplier = 1.02
@@ -191,17 +229,42 @@ final class HealthVoiceAssistant: NSObject, ObservableObject {
         isSpeaking = true
     }
 
-    func stop() {
-        guard synthesizer.isSpeaking else {
-            isSpeaking = false
-            return
+    private func playNeuralAudio(
+        _ audio: Data,
+        fallbackText: String,
+        language: AppLang,
+        speed: HealthVoicePlaybackSpeed
+    ) {
+        do {
+            #if os(iOS)
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try session.setActive(true)
+            #endif
+
+            let player = try AVAudioPlayer(data: audio)
+            player.delegate = self
+            player.prepareToPlay()
+            guard player.play() else { throw NSError(domain: "Lippi.NeuralVoice", code: 1) }
+            neuralPlayer = player
+            isSpeaking = true
+        } catch {
+            speakWithSystemVoice(fallbackText, language: language, speed: speed)
         }
-        synthesizer.stopSpeaking(at: .immediate)
-        isSpeaking = false
+    }
+
+    private func stopCurrentPlayback() {
+        neuralSpeechTask?.cancel()
+        neuralSpeechTask = nil
+        neuralPlayer?.stop()
+        neuralPlayer = nil
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+        }
     }
 }
 
-extension HealthVoiceAssistant: AVSpeechSynthesizerDelegate {
+extension HealthVoiceAssistant: AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
     nonisolated func speechSynthesizer(
         _ synthesizer: AVSpeechSynthesizer,
         didStart utterance: AVSpeechUtterance
@@ -225,6 +288,14 @@ extension HealthVoiceAssistant: AVSpeechSynthesizerDelegate {
         didCancel utterance: AVSpeechUtterance
     ) {
         Task { @MainActor in
+            self.isSpeaking = false
+        }
+    }
+
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        Task { @MainActor in
+            guard self.neuralPlayer === player else { return }
+            self.neuralPlayer = nil
             self.isSpeaking = false
         }
     }

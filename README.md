@@ -90,6 +90,7 @@
         <li><strong>Transparent, readable roadmap UI:</strong> success criteria, first actions, assumptions, questions worth clarifying, evidence cards, milestones, habits, and risks now have distinct Liquid Glass sections. While a request is running, its modal animation uses native system Liquid Glass for the backdrop, panel, and live status indicator - including in iPhone 17 Simulator. A Live Activity also shows the real planning phase in Dynamic Island and opens Smart Goals when tapped.</li>
         <li><strong>Liquid Glass and performance polish:</strong> Today, settings, inputs, navigation, task states, Dynamic Island activities, and assistant surfaces use stronger system glass while performance-aware rendering, lighter transitions, and safe observer cleanup keep interaction responsive.</li>
         <li><strong>Clearer task workspace:</strong> Tasks now opens with a compact focus summary, deadline status, and one-tap sorting. Rows prioritize the task, notes, category, and localized due date, with higher contrast for neutral labels and preserved swipe actions.</li>
+        <li><strong>Neural feminine voice on Mac:</strong> Lippi can now request real WAV speech from a local Piper neural model with the Russian female <code>ru_RU-irina-medium</code> voice. The provider starts with an Xcode build, can be checked in Settings, and falls back to iPhone speech without blocking commands.</li>
         <li><strong>Localization and verification:</strong> Russian and English copy covers Smart Goals and Ollama. The project includes tests for Ollama configuration, Russian planning translation, and evidence-source selection, and was verified on iPhone 17 Simulator.</li>
       </ul>
     </td>
@@ -105,6 +106,7 @@
         <li><strong>Прозрачная и читаемая дорожная карта:</strong> критерии успеха, первые действия, допущения, вопросы, карточки оснований, этапы, привычки и риски разделены на понятные Liquid Glass-блоки. Пока идёт запрос, модальная анимация использует нативный системный Liquid Glass для фона, панели и живого индикатора - в том числе в iPhone 17 Simulator. Live Activity также показывает реальный этап работы в Dynamic Island и открывает Умные цели по нажатию.</li>
         <li><strong>Liquid Glass и производительность:</strong> Today, настройки, поля ввода, навигация, состояния задач, активности Dynamic Island и ассистент получили более выразительное системное стекло; облегчённые переходы, адаптивный рендеринг и безопасная очистка observer-ов поддерживают отзывчивость интерфейса.</li>
         <li><strong>Более понятное рабочее пространство задач:</strong> экран «Задачи» теперь начинается с компактной сводки фокуса, статуса сроков и сортировки в одно касание. В строках приоритет у задачи, заметки, категории и локализованного срока; нейтральные подписи получили лучший контраст, а swipe-действия сохранены.</li>
+        <li><strong>Нейросетевой женский голос на Mac:</strong> Lippi теперь получает настоящий WAV от локальной модели Piper с русским женским голосом <code>ru_RU-irina-medium</code>. Провайдер запускается вместе со сборкой Xcode, проверяется в Настройках и не блокирует команды: при недоступности Mac используется голос iPhone.</li>
         <li><strong>Локализация и проверка:</strong> Smart Goals и Ollama получили русский и английский тексты. Добавлены тесты конфигурации Ollama, перевода целей с русского и выбора источников; релиз проверен на iPhone 17 Simulator.</li>
       </ul>
     </td>
@@ -124,6 +126,7 @@ The goal is simple: help users stay focused, recover faster, and keep a sustaina
 - Focus engine: Pomodoro sessions, customizable timer behavior, and ringtone selection.
 - Health tools: eye exercise section, breathing and recovery routines, concise analytics.
 - Voice assistant: fast in-app actions, command recognition, and spoken guidance.
+- Neural voice option: a local Mac Piper provider with a feminine Russian model and a system-speech fallback.
 - Widgets: home/lock-screen widgets with useful quick entry points.
 - Personalization: dynamic themes, adaptive full-screen backgrounds, liquid-glass style.
 - Localization: Russian, English, German, and Spanish across the app.
@@ -147,6 +150,7 @@ The goal is simple: help users stay focused, recover faster, and keep a sustaina
 2. Open `Lippi.xcodeproj` in Xcode.
 3. Select the `Lippi` scheme.
 4. Build and run on iPhone or Simulator with iOS 18.5+.
+5. For local neural speech, run `./Scripts/install-local-tts.zsh` once on the Mac. Xcode then starts the provider automatically; enable it in Settings -> Health and keep the iPhone and Mac on the same Wi-Fi network.
 
 ### Status
 Active development. UI quality, performance smoothness, and assistant intelligence are continuously improved.
@@ -169,6 +173,7 @@ Lippi - это аккуратное iOS-приложение для продук
 - Фокус-движок: Pomodoro-сессии, гибкие настройки таймера и выбор рингтонов.
 - Инструменты здоровья: раздел для глаз, дыхание и восстановление, лаконичная аналитика.
 - Голосовой помощник: быстрые команды внутри приложения и голосовые ответы.
+- Нейро-голос: локальный провайдер Piper на Mac с женской русской моделью и резервным системным голосом.
 - Виджеты: удобные виджеты для домашнего экрана и экрана блокировки.
 - Персонализация: темы оформления, адаптивный фон на весь экран, liquid-glass стиль.
 - Локализация: русский, английский, немецкий и испанский языки.
@@ -192,6 +197,7 @@ Lippi - это аккуратное iOS-приложение для продук
 2. Откройте `Lippi.xcodeproj` в Xcode.
 3. Выберите схему `Lippi`.
 4. Запустите на iPhone или Simulator с iOS 18.5+.
+5. Для локальной нейро-озвучки один раз выполните `./Scripts/install-local-tts.zsh` на Mac. Затем Xcode запускает провайдер автоматически; включите его в Настройках -> Здоровье и держите iPhone и Mac в одной Wi-Fi сети.
 
 ### Статус
 Проект активно развивается: улучшаются качество интерфейса, плавность работы и интеллект помощника.
