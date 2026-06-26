@@ -45,15 +45,32 @@
 
 ## Screenshots / Скриншоты
 
+<p align="center"><strong>Русский интерфейс</strong></p>
+
 <p align="center">
-  <img src="docs/screenshots/01-today.png" alt="Lippi Today" width="220">
-  <img src="docs/screenshots/02-tasks.png" alt="Lippi Tasks" width="220">
-  <img src="docs/screenshots/03-smart-goals.png" alt="Lippi Smart Goals" width="220">
+  <img src="docs/screenshots/01-today.png" alt="Lippi Today in Russian" width="220">
+  <img src="docs/screenshots/02-tasks.png" alt="Lippi Tasks in Russian" width="220">
+  <img src="docs/screenshots/03-smart-goals.png" alt="Lippi Smart Goals in Russian" width="220">
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/04-voice-assistant.png" alt="Lippi Voice Assistant" width="220">
-  <img src="docs/screenshots/05-pomodoro.png" alt="Lippi Pomodoro" width="220">
+  <img src="docs/screenshots/04-voice-assistant.png" alt="Lippi Voice Assistant in Russian" width="220">
+  <img src="docs/screenshots/05-pomodoro.png" alt="Lippi Pomodoro in Russian" width="220">
+</p>
+
+<p align="center"><sub>Сегодня · Задачи · Умные цели · Голосовой помощник · Pomodoro</sub></p>
+
+<p align="center"><strong>English interface</strong></p>
+
+<p align="center">
+  <img src="docs/screenshots/en/01-today.png" alt="Lippi Today in English" width="220">
+  <img src="docs/screenshots/en/02-tasks.png" alt="Lippi Tasks in English" width="220">
+  <img src="docs/screenshots/en/03-smart-goals.png" alt="Lippi Smart Goals in English" width="220">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/en/04-voice-assistant.png" alt="Lippi Voice Assistant in English" width="220">
+  <img src="docs/screenshots/en/05-pomodoro.png" alt="Lippi Pomodoro in English" width="220">
 </p>
 
 <p align="center"><sub>Today · Tasks · Smart Goals · Voice Assistant · Pomodoro</sub></p>
@@ -64,7 +81,7 @@
 
 <div align="center">
   <p>
-    <img alt="Update" src="https://img.shields.io/badge/Update-June%2026%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Update" src="https://img.shields.io/badge/Update-June%2027%2C%202026-0A84FF?style=for-the-badge">
     <img alt="Design" src="https://img.shields.io/badge/Design-Liquid%20Glass-64D2FF?style=for-the-badge">
     <img alt="AI" src="https://img.shields.io/badge/AI-Ollama%20on%20Mac-30D158?style=for-the-badge">
     <img alt="Simulator" src="https://img.shields.io/badge/Checked-iPhone%2017%20Simulator-30D158?style=for-the-badge">
@@ -80,6 +97,7 @@
         <li><strong>Today overview:</strong> the main screen now surfaces focus minutes, streak, completed-today count, active tasks, deadlines, and the best next action without divider-heavy UI.</li>
         <li><strong>Important Now:</strong> the toolbar summary opens a readable Liquid Glass panel with the current focus, urgent deadlines, and clear actions instead of cramped menu rows.</li>
         <li><strong>Readable Smart Goals:</strong> generated roadmaps, milestones, tasks, habits, risks, evidence, and summaries expand naturally so long AI output can be read comfortably.</li>
+        <li><strong>Bilingual screenshot gallery:</strong> the repository now shows fresh iPhone 17 Simulator captures for both Russian and English app interfaces.</li>
         <li><strong>Smart Goals:</strong> a new entry point on the Today screen turns a goal, available time, constraints, and preferred pace into a phased roadmap and the first Lippi tasks.</li>
         <li><strong>Evidence-first planning:</strong> Lippi selects up to two relevant open references from a curated catalog, retrieves concise excerpts in parallel, and shows every source in the roadmap. The user’s goal is never sent to those public sources.</li>
         <li><strong>Grounded local AI:</strong> the planner distinguishes known facts, assumptions, and clarifying questions. A strict Ollama JSON Schema prevents incomplete plans; invented metrics, testimonials, demand, revenue, and guaranteed outcomes are blocked, and duplicate milestones are removed defensively.</li>
@@ -100,6 +118,7 @@
         <li><strong>Обзор дня:</strong> главный экран сразу показывает минуты фокуса, серию, выполненное сегодня, активные задачи, сроки и ближайшее полезное действие без перегруза разделителями.</li>
         <li><strong>Важное сейчас:</strong> сводка в toolbar открывает читаемую Liquid Glass-панель с текущим фокусом, срочными сроками и понятными действиями вместо тесных строк меню.</li>
         <li><strong>Читаемые Умные цели:</strong> сгенерированные дорожные карты, этапы, задачи, привычки, риски, источники и summary раскрываются по высоте, чтобы длинный ответ ИИ было удобно читать.</li>
+        <li><strong>Двуязычная галерея скриншотов:</strong> главная страница репозитория теперь показывает свежие кадры из iPhone 17 Simulator для русского и английского интерфейса приложения.</li>
         <li><strong>Умные цели:</strong> новый вход с главного экрана превращает цель, доступное время, ограничения и желаемый темп в поэтапную дорожную карту и первые задачи Lippi.</li>
         <li><strong>Планирование с опорой на источники:</strong> Lippi выбирает до двух подходящих открытых материалов из проверенного каталога, параллельно получает короткие выдержки и показывает каждый источник внутри маршрута. Текст цели пользователя в эти публичные источники не отправляется.</li>
         <li><strong>Достоверный локальный ИИ:</strong> планировщик разделяет известные факты, допущения и вопросы для уточнения. Строгая JSON Schema для Ollama предотвращает незавершённые планы; модель не должна выдумывать метрики, отзывы, спрос, выручку и гарантированные результаты, а повторяющиеся этапы дополнительно отсекаются.</li>
