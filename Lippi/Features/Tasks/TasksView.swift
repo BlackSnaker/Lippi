@@ -188,11 +188,9 @@ struct TasksView: View {
                     .accessibilityLabel(s("tasks.sort.label"))
                 }
 
-                HStack(spacing: 0) {
+                HStack(spacing: 8) {
                     overviewMetric(value: activeCount, title: s("tasks.overview.active"), symbol: "circle", tone: DS.accent)
-                    Divider().overlay(DS.glassStroke(0.18)).frame(height: 34)
                     overviewMetric(value: overdueCount + dueTodayCount, title: s("tasks.overview.due"), symbol: "calendar", tone: overdueCount > 0 ? Color(hex: 0xFF453A) : Color(hex: 0xFF9F0A))
-                    Divider().overlay(DS.glassStroke(0.18)).frame(height: 34)
                     overviewMetric(value: doneCount, title: s("tasks.overview.done"), symbol: "checkmark.circle.fill", tone: Color(hex: 0x30D158))
                 }
             }

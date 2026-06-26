@@ -4,10 +4,19 @@ private struct LippiIsScrollingKey: EnvironmentKey {
     static let defaultValue = false
 }
 
+private struct LippiScrollPerformanceCoordinatorKey: EnvironmentKey {
+    static let defaultValue: ScrollPerformanceCoordinator? = nil
+}
+
 extension EnvironmentValues {
     var lippiIsScrolling: Bool {
         get { self[LippiIsScrollingKey.self] }
         set { self[LippiIsScrollingKey.self] = newValue }
+    }
+
+    var lippiScrollPerformanceCoordinator: ScrollPerformanceCoordinator? {
+        get { self[LippiScrollPerformanceCoordinatorKey.self] }
+        set { self[LippiScrollPerformanceCoordinatorKey.self] = newValue }
     }
 }
 
@@ -40,11 +49,11 @@ final class ScrollPerformanceCoordinator: ObservableObject {
 }
 
 private struct LippiScrollPerformanceModifier: ViewModifier {
-    @EnvironmentObject private var coordinator: ScrollPerformanceCoordinator
+    @Environment(\.lippiScrollPerformanceCoordinator) private var coordinator
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(iOS 18.0, *) {
+        if #available(iOS 18.0, *), let coordinator {
             content.onScrollPhaseChange { _, phase in
                 coordinator.setScrolling(phase.isScrolling)
             }

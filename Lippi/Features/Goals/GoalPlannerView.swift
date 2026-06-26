@@ -426,25 +426,20 @@ struct GoalPlannerView: View {
     private func roadmapOverview(_ roadmap: GoalRoadmap) -> some View {
         GlassCard(padding: 16, cornerRadius: 26, style: .full) {
             VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(roadmap.title)
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(2)
+                Text(roadmap.title)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                        Text(roadmap.summary)
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(DS.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                Text(roadmap.summary)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                    Spacer()
-
+                HStack(alignment: .center, spacing: 8) {
                     confidenceBadge(roadmap.confidence)
-                }
-
-                HStack(spacing: 8) {
                     infoPill(title: roadmap.source.title(lang: lang), icon: roadmap.source.icon)
                     infoPill(title: horizon.title(lang: lang), icon: "calendar")
                     infoPill(title: intensity.title(lang: lang), icon: "dial.medium")
@@ -551,7 +546,8 @@ struct GoalPlannerView: View {
                     Text(source.title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Spacer(minLength: 0)
 
@@ -563,7 +559,8 @@ struct GoalPlannerView: View {
                 Text(source.excerpt)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(DS.textSecondary)
-                    .lineLimit(3)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(source.host)
                     .font(.caption2.weight(.semibold))
@@ -641,13 +638,15 @@ struct GoalPlannerView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(milestone.title)
-                        .font(.subheadline.weight(.bold))
+                        .font(.callout.weight(.bold))
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Text(milestone.target)
-                        .font(.caption.weight(.medium))
+                        .font(.callout.weight(.medium))
                         .foregroundStyle(DS.textSecondary)
+                        .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: 7) {
@@ -659,13 +658,14 @@ struct GoalPlannerView: View {
                 Spacer(minLength: 0)
             }
 
-            VStack(alignment: .leading, spacing: 7) {
-                ForEach(milestone.tasks.prefix(3), id: \.self) { task in
-                    Label(task, systemImage: "checkmark.circle")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(DS.text(0.78))
-                        .labelStyle(TightLabelStyle())
-                        .lineLimit(2)
+            VStack(alignment: .leading, spacing: 9) {
+                ForEach(milestone.tasks, id: \.self) { task in
+                    readableItemRow(
+                        task,
+                        icon: "checkmark.circle.fill",
+                        tone: tone,
+                        textColor: DS.text(0.80)
+                    )
                 }
             }
             .padding(.leading, 41)
@@ -700,11 +700,13 @@ struct GoalPlannerView: View {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(DS.textPrimary)
-                    .singleLine()
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(detail)
-                    .font(.caption.weight(.medium))
+                    .font(.callout.weight(.medium))
                     .foregroundStyle(DS.textSecondary)
+                    .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -731,13 +733,9 @@ struct GoalPlannerView: View {
                 .labelStyle(TightLabelStyle())
                 .singleLine()
 
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 9) {
                 ForEach(items.prefix(4), id: \.self) { item in
-                    Label(item, systemImage: itemIcon)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(DS.text(0.80))
-                        .labelStyle(TightLabelStyle())
-                        .lineLimit(2)
+                    readableItemRow(item, icon: itemIcon, tone: tone, textColor: DS.text(0.80))
                 }
             }
         }
@@ -753,6 +751,28 @@ struct GoalPlannerView: View {
             tint: tone.opacity(0.07)
         )
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
+    private func readableItemRow(
+        _ text: String,
+        icon: String,
+        tone: Color,
+        textColor: Color
+    ) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(safeSystemName: icon, fallback: "checkmark.circle.fill")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(tone)
+                .frame(width: 16)
+                .padding(.top, 3)
+
+            Text(text)
+                .font(.callout.weight(.medium))
+                .foregroundStyle(textColor)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func previewStep(index: String, title: String, tone: Color) -> some View {
@@ -796,9 +816,9 @@ struct GoalPlannerView: View {
 
     private func confidenceBadge(_ confidence: Double) -> some View {
         let value = Int(max(0, min(1, confidence)) * 100)
-        return VStack(spacing: 2) {
+        return HStack(spacing: 5) {
             Text("\(value)%")
-                .font(.headline.weight(.bold))
+                .font(.caption.weight(.bold))
                 .foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
             Text(s("goals.confidence"))
@@ -807,13 +827,14 @@ struct GoalPlannerView: View {
                 .singleLine()
                 .minimumScaleFactor(0.72)
         }
-        .frame(width: 88, height: 62)
-        .background(DS.glassFill(0.09), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
+        .background(DS.glassFill(0.09), in: Capsule())
         .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            in: Capsule(),
             tint: DS.accent.opacity(0.08)
         )
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
+        .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
     }
 
     private var bottomActionBar: some View {

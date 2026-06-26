@@ -2370,6 +2370,7 @@ struct ContentView: View {
         .environment(\.lippiLangCode, langCode)
         .environment(\.lippiHasGlobalBackdrop, true)
         .environment(\.lippiIsScrolling, scrollPerformance.isScrolling)
+        .environment(\.lippiScrollPerformanceCoordinator, scrollPerformance)
 
         .environment(\.locale, Locale(identifier: lang.localeIdentifier))
 
@@ -2416,6 +2417,8 @@ struct ContentView: View {
         .sheet(isPresented: $showGoalPlanner) {
             GoalPlannerView()
                 .environmentObject(store)
+                .environment(\.lippiIsScrolling, scrollPerformance.isScrolling)
+                .environment(\.lippiScrollPerformanceCoordinator, scrollPerformance)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }

@@ -520,19 +520,7 @@ struct LippiSectionHeader: View {
                     .padding(.trailing, 1)
             }
         }
-        .overlay(alignment: .bottomLeading) {
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [accent.opacity(0.58), accent.opacity(0.18), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1.2)
-                .offset(y: 10)
-        }
-        .padding(.bottom, 8)
+        .padding(.bottom, subtitle == nil ? 2 : 4)
     }
 }
 
@@ -612,9 +600,6 @@ struct GlassCard<Content: View>: View {
                 forceSystemGlass: forceSystemGlass
             )
             .overlay(cardBorder.allowsHitTesting(false))
-            .overlay(alignment: .topLeading) {
-                topLine.allowsHitTesting(false)
-            }
             .overlay(alignment: .bottomTrailing) {
                 fullModeBottomAccent.allowsHitTesting(false)
             }
@@ -705,15 +690,6 @@ struct GlassCard<Content: View>: View {
                         .blendMode(.screen)
                 }
             }
-    }
-
-    private var topLine: some View {
-        Capsule()
-            .fill(DS.cardTopLine)
-            .frame(width: useFlatEffects ? 54 : (useFullEffects ? 90 : 70), height: useFlatEffects ? 1 : 1.2)
-            .opacity(useFlatEffects ? 0.68 : 1.0)
-            .padding(.top, 8)
-            .padding(.leading, 14)
     }
 
     @ViewBuilder

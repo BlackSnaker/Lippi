@@ -14,6 +14,7 @@ struct TodayView: View {
     @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var showAdd = false
+    @State private var showImportantNow = false
     @Binding var showGoalPlanner: Bool
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
@@ -157,8 +158,8 @@ struct TodayView: View {
             .toolbarBackgroundVisibility(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        importantNowMenu
+                    Button {
+                        showImportantNow = true
                     } label: {
                         Image(safeSystemName: "sparkles.rectangle.stack.fill", fallback: "sparkles")
                     }
@@ -181,6 +182,11 @@ struct TodayView: View {
             .sheet(isPresented: $showAdd) {
                 AddEditTaskView { store.add($0) }
                     .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showImportantNow) {
+                importantNowSheet
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
         }
         // ✅ Убираем системный фон NavigationStack “на всякий”
@@ -227,15 +233,11 @@ struct TodayView: View {
                         .singleLine()
                 }
 
-                Divider().overlay(DS.glassStroke(0.16))
-
                 focusSummaryPanel
 
-                HStack(spacing: 0) {
+                HStack(spacing: 8) {
                     heroMetricChip(title: s("today.metric.active"), value: "\(activeTasksCount)", systemImage: "circle", tone: DS.brandA)
-                    Divider().overlay(DS.glassStroke(0.16)).frame(height: 38)
                     heroMetricChip(title: s("today.metric.deadlines"), value: "\(overdueTasksCount + dueTodayCount)", systemImage: "calendar", tone: overdueTasksCount > 0 ? Color(hex: 0xFF453A) : Color(hex: 0xFF9F0A))
-                    Divider().overlay(DS.glassStroke(0.16)).frame(height: 38)
                     heroMetricChip(title: s("today.metric.done_today"), value: "\(completedTodayCount)", systemImage: "checkmark.circle.fill", tone: Color(hex: 0x30D158))
                 }
             }
@@ -415,21 +417,19 @@ struct TodayView: View {
     }
 
     private var dailySnapshotStrip: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 8) {
             dailySnapshotMetric(
                 value: focusTimeText,
                 title: s("today.metric.focus"),
                 systemImage: "timer",
                 tone: Color(hex: 0x64D2FF)
             )
-            Divider().overlay(DS.glassStroke(0.16)).frame(height: 28)
             dailySnapshotMetric(
                 value: "\(productiveStreak)",
                 title: s("today.metric.streak"),
                 systemImage: "flame.fill",
                 tone: Color(hex: 0xFF9F0A)
             )
-            Divider().overlay(DS.glassStroke(0.16)).frame(height: 28)
             dailySnapshotMetric(
                 value: "\(completedTodayCount)",
                 title: s("today.metric.done_today"),
@@ -552,34 +552,339 @@ struct TodayView: View {
         return s("today.summary.clear")
     }
 
-    @ViewBuilder
-    private var importantNowMenu: some View {
-        Section(s("today.summary.title")) {
-            Label(briefingLabel, systemImage: statusSymbol)
-
-            if let task = priorityTask {
-                Label(task.title, systemImage: task.category.symbol)
-                Label(dueSummary(for: task), systemImage: "clock")
-            } else {
-                Label(s("today.summary.no_focus"), systemImage: "checkmark.seal.fill")
-            }
+    private var importantTasks: [TaskItem] {
+        (overdueTasks + dueTodayTasks).sorted { lhs, rhs in
+            let left = lhs.dueDate ?? .distantFuture
+            let right = rhs.dueDate ?? .distantFuture
+            if left != right { return left < right }
+            return lhs.createdAt < rhs.createdAt
         }
+    }
 
-        Section {
-            if let task = priorityTask {
-                Button { markTaskDone(task) } label: {
-                    Label(s("today.summary.complete_focus"), systemImage: "checkmark.circle.fill")
+    private var importantNowSubtitle: String {
+        if overdueTasksCount > 0 {
+            return L10n.fmt("today.summary.overdue", lang, overdueTasksCount)
+        }
+        if dueTodayCount > 0 {
+            return L10n.fmt("today.summary.due_today", lang, dueTodayCount)
+        }
+        return s("today.summary.clear")
+    }
+
+    @ViewBuilder
+    private var importantNowSheet: some View {
+        NavigationStack {
+            ZStack {
+                AppBackdrop(renderMode: .force)
+
+                ScrollView {
+                    LazyVStack(spacing: 14) {
+                        importantNowHero
+                        importantNowFocusCard
+                        importantNowDeadlinesCard
+                        importantNowActionCard
+
+                        Color.clear.frame(height: 18)
+                    }
+                    .padding(20)
+                }
+                .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.interactively)
+                .lippiScrollPerformance()
+            }
+            .navigationTitle(s("today.summary.title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.clear, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(s("common.close")) {
+                        showImportantNow = false
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                 }
             }
+        }
+    }
 
-            Button { showAdd = true } label: {
-                Label(s("today.summary.new_task"), systemImage: "plus.circle.fill")
-            }
+    private var importantNowHero: some View {
+        GlassCard(padding: 18, cornerRadius: 28, style: .full) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(DS.glassFill(0.12))
+                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(statusTone.opacity(0.22)))
+                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.18), lineWidth: 1))
 
-            Button { showGoalPlanner = true } label: {
-                Label(s("today.summary.goals"), systemImage: "wand.and.stars")
+                        Image(safeSystemName: statusSymbol, fallback: "sparkles")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(DS.text(0.95))
+                    }
+                    .frame(width: 50, height: 50)
+                    .lippiSystemGlass(
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                        tint: statusTone.opacity(0.10)
+                    )
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(s("today.summary.title"))
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(importantNowSubtitle)
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(DS.textSecondary)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    summaryMiniMetric(value: "\(overdueTasksCount)", title: s("today.summary.overdue_short"), tone: Color(hex: 0xFF453A))
+                    summaryMiniMetric(value: "\(dueTodayCount)", title: s("today.summary.today_short"), tone: Color(hex: 0xFF9F0A))
+                    summaryMiniMetric(value: "\(activeTasksCount)", title: s("today.metric.active"), tone: DS.brandA)
+                }
             }
         }
+    }
+
+    private var importantNowFocusCard: some View {
+        GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
+            VStack(alignment: .leading, spacing: 12) {
+                LippiSectionHeader(
+                    title: s("today.summary.focus_section"),
+                    subtitle: s("today.summary.focus_subtitle"),
+                    icon: "target",
+                    accent: DS.brandA
+                )
+
+                if let task = priorityTask {
+                    importantTaskRow(task, prominent: true)
+                } else {
+                    readableSummaryRow(
+                        title: s("today.summary.no_focus"),
+                        subtitle: s("today.focus.empty_hint"),
+                        icon: "checkmark.seal.fill",
+                        tone: Color(hex: 0x30D158)
+                    )
+                }
+            }
+        }
+    }
+
+    private var importantNowDeadlinesCard: some View {
+        GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
+            VStack(alignment: .leading, spacing: 12) {
+                LippiSectionHeader(
+                    title: s("today.summary.deadlines_section"),
+                    subtitle: importantNowSubtitle,
+                    icon: "calendar.badge.clock",
+                    accent: statusTone
+                )
+
+                if importantTasks.isEmpty {
+                    readableSummaryRow(
+                        title: s("today.summary.clear"),
+                        subtitle: s("today.summary.clear_hint"),
+                        icon: "sparkles",
+                        tone: Color(hex: 0x30D158)
+                    )
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(importantTasks.prefix(5)) { task in
+                            importantTaskRow(task, prominent: false)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var importantNowActionCard: some View {
+        GlassCard(padding: 16, cornerRadius: 24, style: .full) {
+            VStack(alignment: .leading, spacing: 12) {
+                LippiSectionHeader(
+                    title: s("today.summary.actions_section"),
+                    subtitle: s("today.summary.actions_subtitle"),
+                    icon: "bolt.fill",
+                    accent: Color(hex: 0x64D2FF)
+                )
+
+                VStack(spacing: 10) {
+                    if let task = priorityTask {
+                        summaryActionButton(
+                            title: s("today.summary.complete_focus"),
+                            icon: "checkmark.circle.fill",
+                            tone: Color(hex: 0x30D158)
+                        ) {
+                            markTaskDone(task)
+                            showImportantNow = false
+                        }
+                    }
+
+                    summaryActionButton(
+                        title: s("today.summary.new_task"),
+                        icon: "plus.circle.fill",
+                        tone: DS.brandA
+                    ) {
+                        showImportantNow = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
+                            showAdd = true
+                        }
+                    }
+
+                    summaryActionButton(
+                        title: s("today.summary.goals"),
+                        icon: "wand.and.stars",
+                        tone: Color(hex: 0x64D2FF)
+                    ) {
+                        showImportantNow = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
+                            showGoalPlanner = true
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func summaryMiniMetric(value: String, title: String, tone: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(DS.glassFill(0.07))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(tone.opacity(0.08)))
+        )
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
+    private func importantTaskRow(_ task: TaskItem, prominent: Bool) -> some View {
+        HStack(alignment: .top, spacing: 11) {
+            ZStack {
+                Circle()
+                    .fill(task.category.tint.opacity(0.16))
+                    .overlay(Circle().stroke(task.category.tint.opacity(0.28), lineWidth: 1))
+
+                Image(safeSystemName: task.category.symbol, fallback: "circle.fill")
+                    .font(.system(size: prominent ? 15 : 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(DS.text(0.90))
+            }
+            .frame(width: prominent ? 36 : 32, height: prominent ? 36 : 32)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(task.title)
+                    .font((prominent ? Font.callout : Font.subheadline).weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(alignment: .top, spacing: 7) {
+                    Text(task.category.title)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Circle()
+                        .fill(DS.textTertiary)
+                        .frame(width: 3, height: 3)
+                        .padding(.top, 6)
+
+                    Text(dueSummary(for: task))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(dueTone(for: task))
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(DS.glassFill(0.07))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(task.category.tint.opacity(0.06)))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            tint: task.category.tint.opacity(0.06)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
+    private func readableSummaryRow(title: String, subtitle: String, icon: String, tone: Color) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(safeSystemName: icon, fallback: "sparkles")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(tone)
+                .frame(width: 26, height: 26)
+                .background(tone.opacity(0.14), in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(subtitle)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(DS.glassFill(0.07), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
+    private func summaryActionButton(title: String, icon: String, tone: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(safeSystemName: icon, fallback: icon)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(DS.text(0.94))
+                    .frame(width: 30, height: 30)
+                    .background(tone.opacity(0.18), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(DS.glassFill(0.08))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(tone.opacity(0.08)))
+            )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                tint: tone.opacity(0.08),
+                interactive: true
+            )
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.986, opacity: 0.98))
     }
 
     private func categoryPill(_ category: TaskCategory) -> some View {
@@ -661,15 +966,9 @@ struct TodayView: View {
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
-                    VStack(spacing: 0) {
+                    VStack(spacing: 4) {
                         ForEach(Array(preview.enumerated()), id: \.element.id) { index, task in
                             planTaskRow(task)
-
-                            if index < preview.count - 1 {
-                                Divider()
-                                    .overlay(DS.glassStroke(0.14))
-                                    .padding(.leading, 46)
-                            }
                         }
 
                         if upcomingTasks.count > preview.count {

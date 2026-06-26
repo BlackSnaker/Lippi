@@ -637,7 +637,7 @@ struct SettingsView: View {
                     }
                 }
 
-                softDivider()
+                softGap()
 
                 actionRow(icon: "timer",
                           title: s("settings.live.test_title"),
@@ -1055,10 +1055,6 @@ struct SettingsView: View {
                         }
                     }
 
-                    if !availableVoiceModels.isEmpty {
-                        Divider()
-                    }
-
                     ForEach(availableVoiceModels, id: \.identifier) { voice in
                         Button {
                             setVoiceSelection(voice.identifier)
@@ -1192,17 +1188,9 @@ struct SettingsView: View {
 
     // MARK: - UI helpers (polished elements)
 
-    private func softDivider() -> some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [DS.glassFill(0.12), DS.glassFill(0.05), .clear],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .frame(height: 1)
-            .padding(.vertical, 8)
+    private func softGap() -> some View {
+        Color.clear
+            .frame(height: 6)
     }
 
     private func iconBadge(_ name: String, fallback: String) -> some View {
