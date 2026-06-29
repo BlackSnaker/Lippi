@@ -186,11 +186,11 @@ struct DS {
     static let pad: CGFloat = 20
 
     // Motion tokens: one source of truth for smooth, consistent animations.
-    static let motionQuick = Animation.spring(response: 0.28, dampingFraction: 0.90, blendDuration: 0.10)
-    static let motionSmooth = Animation.spring(response: 0.40, dampingFraction: 0.91, blendDuration: 0.14)
-    static let motionGentle = Animation.spring(response: 0.54, dampingFraction: 0.92, blendDuration: 0.16)
-    static let motionEnter = Animation.spring(response: 0.50, dampingFraction: 0.90, blendDuration: 0.16)
-    static let motionFadeQuick = Animation.easeOut(duration: 0.20)
+    static let motionQuick = Animation.spring(response: 0.22, dampingFraction: 0.96, blendDuration: 0.06)
+    static let motionSmooth = Animation.spring(response: 0.34, dampingFraction: 0.95, blendDuration: 0.10)
+    static let motionGentle = Animation.spring(response: 0.46, dampingFraction: 0.95, blendDuration: 0.12)
+    static let motionEnter = Animation.spring(response: 0.40, dampingFraction: 0.94, blendDuration: 0.12)
+    static let motionFadeQuick = Animation.easeOut(duration: 0.16)
 
     static let pressScale: CGFloat = 0.988
     static let press = motionQuick
@@ -572,10 +572,11 @@ struct GlassCard<Content: View>: View {
     @State private var didAppear = false
 
     private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
+    private var scrollPerformanceMode: Bool { isScrolling && !forceSystemGlass }
     private var isFlatStyle: Bool { style == .flat }
-    private var useFlatEffects: Bool { style == .flat || performanceMode }
+    private var useFlatEffects: Bool { style == .flat || performanceMode || scrollPerformanceMode }
     private var useLightEffects: Bool { useFlatEffects || style == .lightweight || isScrolling }
-    private var useFullEffects: Bool { style == .full && !performanceMode && !isScrolling }
+    private var useFullEffects: Bool { style == .full && !performanceMode && !scrollPerformanceMode }
     private var systemGlassEnabled: Bool {
         !reduceTransparency && !isScrolling && (!performanceMode || forceSystemGlass)
     }
@@ -652,7 +653,11 @@ struct GlassCard<Content: View>: View {
     @ViewBuilder
     private var cardBackground: some View {
         let shape = cardShape
-        if useFlatEffects {
+        if scrollPerformanceMode {
+            shape
+                .fill(DS.glassFill(0.085))
+                .overlay { shape.fill(DS.glassTint).opacity(0.11) }
+        } else if useFlatEffects {
             shape
                 .fill(DS.glassFill(0.075))
                 .overlay { shape.fill(DS.glassTint).opacity(isFlatStyle ? 0.18 : 0.12) }
@@ -706,13 +711,16 @@ struct GlassCard<Content: View>: View {
     }
 
     private var primaryShadowColor: Color {
-        DS.shadow.opacity(useFlatEffects ? 0.08 : (useLightEffects ? 0.20 : 0.36))
+        if scrollPerformanceMode { return DS.shadow.opacity(0.06) }
+        return DS.shadow.opacity(useFlatEffects ? 0.08 : (useLightEffects ? 0.20 : 0.36))
     }
     private var primaryShadowRadius: CGFloat {
-        useFlatEffects ? 1.8 : (useLightEffects ? 4 : 12)
+        if scrollPerformanceMode { return 1.2 }
+        return useFlatEffects ? 1.8 : (useLightEffects ? 4 : 12)
     }
     private var primaryShadowY: CGFloat {
-        useFlatEffects ? 1 : (useLightEffects ? 2 : 7)
+        if scrollPerformanceMode { return 1 }
+        return useFlatEffects ? 1 : (useLightEffects ? 2 : 7)
     }
     private var secondaryShadowColor: Color {
         DS.shadow.opacity(useFlatEffects ? 0.0 : (useFullEffects ? 0.10 : 0.0))
@@ -790,8 +798,9 @@ struct LippiButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
 
-    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency }
+    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
     private var systemGlassEnabled: Bool { !simplifiedEffects }
     private var systemGlassTint: Color? {
         switch kind {
@@ -832,9 +841,9 @@ struct LippiButtonStyle: ButtonStyle {
             .scaleEffect(reduceMotion ? 1 : (pressed ? DS.pressScale : 1))
             .shadow(
                 color: shadowColor(pressed: pressed),
-                radius: pressed ? 3 : (kind == .primary ? (simplifiedEffects ? 5 : 8) : (simplifiedEffects ? 3 : 5)),
+                radius: pressed ? 3 : (kind == .primary ? (simplifiedEffects ? 3 : 8) : (simplifiedEffects ? 1.5 : 5)),
                 x: 0,
-                y: pressed ? 1 : (kind == .primary ? 4 : 2)
+                y: pressed ? 1 : (kind == .primary ? (simplifiedEffects ? 2 : 4) : (simplifiedEffects ? 1 : 2))
             )
             .animation(reduceMotion ? nil : DS.press, value: pressed)
             .onChange(of: configuration.isPressed) { _, newValue in

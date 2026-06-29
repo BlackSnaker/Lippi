@@ -77,63 +77,107 @@
 
 ---
 
-## Latest Changes / Последние изменения
+## Change History / История изменений
 
 <div align="center">
   <p>
-    <img alt="Update" src="https://img.shields.io/badge/Update-June%2027%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Design" src="https://img.shields.io/badge/Design-Liquid%20Glass-64D2FF?style=for-the-badge">
-    <img alt="AI" src="https://img.shields.io/badge/AI-Ollama%20on%20Mac-30D158?style=for-the-badge">
-    <img alt="Simulator" src="https://img.shields.io/badge/Checked-iPhone%2017%20Simulator-30D158?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-June%2029%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-Chat%20First-64D2FF?style=for-the-badge">
+    <img alt="Performance" src="https://img.shields.io/badge/Target-60%20FPS-30D158?style=for-the-badge">
+    <img alt="AI" src="https://img.shields.io/badge/AI-Grounded%20Roadmaps-BF5AF2?style=for-the-badge">
   </p>
+  <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
+  <p><strong>Красивая и понятная история изменений для главной страницы репозитория.</strong></p>
 </div>
+
+<table>
+  <tr>
+    <td width="25%" align="center" valign="top">
+      <strong>Chat-first goals</strong><br>
+      <sub>Goal setup, context, questions, and roadmap generation now happen in one Liquid Glass chat.</sub>
+      <br><br>
+      <strong>Цели через чат</strong><br>
+      <sub>Постановка цели, контекст, вопросы и генерация карты идут в одном Liquid Glass-диалоге.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>Grounded AI</strong><br>
+      <sub>The planner asks guiding questions, respects context, and rejects vague or invented roadmaps.</sub>
+      <br><br>
+      <strong>Достоверный ИИ</strong><br>
+      <sub>Планировщик задаёт вопросы, учитывает контекст и отсекает общие или выдуманные планы.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>Liquid Glass polish</strong><br>
+      <sub>Cards, controls, Dynamic Island states, and roadmap surfaces use cleaner system-glass styling.</sub>
+      <br><br>
+      <strong>Больше Liquid Glass</strong><br>
+      <sub>Карточки, controls, Dynamic Island и дорожные карты получили более чистое системное стекло.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>Smoother scrolling</strong><br>
+      <sub>Scroll-aware rendering reduces heavy effects during gestures and returns polish after settling.</sub>
+      <br><br>
+      <strong>Плавный скролл</strong><br>
+      <sub>Во время жестов тяжёлые эффекты упрощаются и возвращаются после остановки.</sub>
+    </td>
+  </tr>
+</table>
+
+### June 29, 2026 - Smart Goals Chat, Adaptive Roadmaps, and 60 FPS Polish
 
 <table>
   <tr>
     <td width="50%" align="left" valign="top">
       <h3>English</h3>
-      <p><strong>A complete interaction, visual, and local-AI update focused on trustworthy planning and smooth daily use.</strong></p>
+      <p><strong>This update turns Smart Goals into a calm chat experience and makes the roadmap engine more useful, contextual, and responsive.</strong></p>
       <ul>
-        <li><strong>Today overview:</strong> the main screen now surfaces focus minutes, streak, completed-today count, active tasks, deadlines, and the best next action without divider-heavy UI.</li>
-        <li><strong>Important Now:</strong> the toolbar summary opens a readable Liquid Glass panel with the current focus, urgent deadlines, and clear actions instead of cramped menu rows.</li>
-        <li><strong>Readable Smart Goals:</strong> generated roadmaps, milestones, tasks, habits, risks, evidence, and summaries expand naturally so long AI output can be read comfortably.</li>
-        <li><strong>Bilingual screenshot gallery:</strong> the repository now shows fresh iPhone 17 Simulator captures for both Russian and English app interfaces.</li>
-        <li><strong>Smart Goals:</strong> a new entry point on the Today screen turns a goal, available time, constraints, and preferred pace into a phased roadmap and the first Lippi tasks.</li>
-        <li><strong>Evidence-first planning:</strong> Lippi selects up to two relevant open references from a curated catalog, retrieves concise excerpts in parallel, and shows every source in the roadmap. The user’s goal is never sent to those public sources.</li>
-        <li><strong>Grounded local AI:</strong> the planner distinguishes known facts, assumptions, and clarifying questions. A strict Ollama JSON Schema prevents incomplete plans; invented metrics, testimonials, demand, revenue, and guaranteed outcomes are blocked, and duplicate milestones are removed defensively.</li>
-        <li><strong>Mac-first Ollama provider:</strong> Smart Goals can use a local Ollama server over the home network before falling back to the system model. Settings include endpoint, model, enablement, and a connection check.</li>
-        <li><strong>More capable local planner:</strong> the Mac configuration now defaults to <code>qwen3:4b</code>, a stronger compact model for contextual routes. Deterministic generation settings, a 15-minute warm window, a concise planning contract, fixed time slots, and a post-generation quality gate prevent generic tasks, duplicate phases, unsupported outcome metrics, and invented demand or revenue.</li>
-        <li><strong>Transparent, readable roadmap UI:</strong> success criteria, first actions, assumptions, questions worth clarifying, evidence cards, milestones, habits, and risks now have distinct Liquid Glass sections. While a request is running, its modal animation uses native system Liquid Glass for the backdrop, panel, and live status indicator - including in iPhone 17 Simulator. A Live Activity also shows the real planning phase in Dynamic Island and opens Smart Goals when tapped.</li>
-        <li><strong>Liquid Glass and performance polish:</strong> Today, settings, inputs, navigation, task states, Dynamic Island activities, and assistant surfaces use stronger system glass while performance-aware rendering, lighter transitions, and safe observer cleanup keep interaction responsive.</li>
-        <li><strong>Clearer task workspace:</strong> Tasks now opens with a compact focus summary, deadline status, and one-tap sorting. Rows prioritize the task, notes, category, and localized due date, with higher contrast for neutral labels and preserved swipe actions.</li>
-        <li><strong>Neural feminine voice on Mac:</strong> Lippi can now request real WAV speech from a local Piper neural model with the Russian female <code>ru_RU-irina-medium</code> voice. The provider starts with an Xcode build, can be checked in Settings, and falls back to iPhone speech without blocking commands.</li>
-        <li><strong>Scroll-first rendering:</strong> primary scroll surfaces now report drag and deceleration phases to a shared performance coordinator. While scrolling, expensive Liquid Glass passes, deep card layers, and backdrop details temporarily switch to a lighter path, then settle back after the gesture.</li>
-        <li><strong>Localization and verification:</strong> Russian and English copy covers Smart Goals and Ollama. The project includes tests for Ollama configuration, Russian planning translation, and evidence-source selection, and was verified on iPhone 17 Simulator.</li>
+        <li><strong>Chat-first Smart Goals:</strong> the "Smart Goals" window now opens as a full Liquid Glass conversation. The user writes the goal, answers follow-up questions, chooses horizon and pace, and starts generation without leaving the chat.</li>
+        <li><strong>Guiding questions before planning:</strong> Lippi asks practical questions about the starting point, weekly capacity, success metric, deadline, constraints, blockers, first checkpoint, and review cadence.</li>
+        <li><strong>Context-aware roadmap generation:</strong> the model must answer in the user's request language, separate known facts from assumptions, and include two or three clarifying questions for future support.</li>
+        <li><strong>Adaptive support:</strong> when tracked Lippi tasks show overdue or stalled progress, the planner can reduce the nearest workload, split blocked items, and suggest a gentler correction instead of restarting blindly.</li>
+        <li><strong>Quality gate for AI output:</strong> vague tasks, duplicate phases, unsupported metrics, invented demand, revenue, health guarantees, and missing clarifying questions are rejected before the roadmap reaches the UI.</li>
+        <li><strong>Mac Ollama planner:</strong> the local provider keeps a stricter system role, structured JSON schema, repair prompt, and grounded planning contract for more reliable roadmaps.</li>
+        <li><strong>Readable roadmap UI:</strong> generated text, milestones, assumptions, risks, evidence, and support questions are laid out in comfortable Liquid Glass sections for long AI responses.</li>
+        <li><strong>60 FPS-oriented rendering:</strong> shared scroll surfaces report drag and deceleration phases. During scroll, expensive glass layers, deep shadows, and background details switch to a lighter path, then return after the gesture settles.</li>
+        <li><strong>Cleaner daily surfaces:</strong> the Today and Important Now areas keep the interface quieter, remove visual divider noise, and prioritize immediately useful information.</li>
+        <li><strong>Verification:</strong> code was checked with <code>git diff --check</code>, <code>xcodebuild build</code>, and <code>xcodebuild build-for-testing</code>.</li>
       </ul>
     </td>
     <td width="50%" align="left" valign="top">
       <h3>Русский</h3>
-      <p><strong>Полное обновление взаимодействий, визуального стиля и локального ИИ с акцентом на достоверное планирование и плавное ежедневное использование.</strong></p>
+      <p><strong>Это обновление превращает «Умные цели» в спокойный чат и делает построение дорожных карт более полезным, контекстным и отзывчивым.</strong></p>
       <ul>
-        <li><strong>Обзор дня:</strong> главный экран сразу показывает минуты фокуса, серию, выполненное сегодня, активные задачи, сроки и ближайшее полезное действие без перегруза разделителями.</li>
-        <li><strong>Важное сейчас:</strong> сводка в toolbar открывает читаемую Liquid Glass-панель с текущим фокусом, срочными сроками и понятными действиями вместо тесных строк меню.</li>
-        <li><strong>Читаемые Умные цели:</strong> сгенерированные дорожные карты, этапы, задачи, привычки, риски, источники и summary раскрываются по высоте, чтобы длинный ответ ИИ было удобно читать.</li>
-        <li><strong>Двуязычная галерея скриншотов:</strong> главная страница репозитория теперь показывает свежие кадры из iPhone 17 Simulator для русского и английского интерфейса приложения.</li>
-        <li><strong>Умные цели:</strong> новый вход с главного экрана превращает цель, доступное время, ограничения и желаемый темп в поэтапную дорожную карту и первые задачи Lippi.</li>
-        <li><strong>Планирование с опорой на источники:</strong> Lippi выбирает до двух подходящих открытых материалов из проверенного каталога, параллельно получает короткие выдержки и показывает каждый источник внутри маршрута. Текст цели пользователя в эти публичные источники не отправляется.</li>
-        <li><strong>Достоверный локальный ИИ:</strong> планировщик разделяет известные факты, допущения и вопросы для уточнения. Строгая JSON Schema для Ollama предотвращает незавершённые планы; модель не должна выдумывать метрики, отзывы, спрос, выручку и гарантированные результаты, а повторяющиеся этапы дополнительно отсекаются.</li>
-        <li><strong>Ollama на Mac - первый провайдер:</strong> Умные цели могут обращаться к локальному серверу Ollama в домашней сети до системной модели Apple. В настройках есть адрес, модель, включение и проверка подключения.</li>
-        <li><strong>Более способный локальный планировщик:</strong> по умолчанию используется <code>qwen3:4b</code> - более сильная компактная модель для контекстных маршрутов. Предсказуемые настройки генерации, 15-минутный разогрев, короткий planning contract, фиксированные временные слоты и quality gate отсекают общие задачи, повторяющиеся фазы, неподтверждённые метрики и выдуманные спрос или выручку.</li>
-        <li><strong>Прозрачная и читаемая дорожная карта:</strong> критерии успеха, первые действия, допущения, вопросы, карточки оснований, этапы, привычки и риски разделены на понятные Liquid Glass-блоки. Пока идёт запрос, модальная анимация использует нативный системный Liquid Glass для фона, панели и живого индикатора - в том числе в iPhone 17 Simulator. Live Activity также показывает реальный этап работы в Dynamic Island и открывает Умные цели по нажатию.</li>
-        <li><strong>Liquid Glass и производительность:</strong> Today, настройки, поля ввода, навигация, состояния задач, активности Dynamic Island и ассистент получили более выразительное системное стекло; облегчённые переходы, адаптивный рендеринг и безопасная очистка observer-ов поддерживают отзывчивость интерфейса.</li>
-        <li><strong>Более понятное рабочее пространство задач:</strong> экран «Задачи» теперь начинается с компактной сводки фокуса, статуса сроков и сортировки в одно касание. В строках приоритет у задачи, заметки, категории и локализованного срока; нейтральные подписи получили лучший контраст, а swipe-действия сохранены.</li>
-        <li><strong>Нейросетевой женский голос на Mac:</strong> Lippi теперь получает настоящий WAV от локальной модели Piper с русским женским голосом <code>ru_RU-irina-medium</code>. Провайдер запускается вместе со сборкой Xcode, проверяется в Настройках и не блокирует команды: при недоступности Mac используется голос iPhone.</li>
-        <li><strong>Рендеринг с приоритетом скролла:</strong> основные прокручиваемые экраны передают фазы drag и инерции общему координатору производительности. На время скролла тяжёлые проходы Liquid Glass, глубокие слои карточек и детали фона переключаются на облегчённый путь, а после жеста аккуратно возвращаются.</li>
-        <li><strong>Локализация и проверка:</strong> Smart Goals и Ollama получили русский и английский тексты. Добавлены тесты конфигурации Ollama, перевода целей с русского и выбора источников; релиз проверен на iPhone 17 Simulator.</li>
+        <li><strong>Умные цели целиком через чат:</strong> окно «Умные цели» теперь открывается как полноценный Liquid Glass-диалог. Пользователь пишет цель, отвечает на уточнения, выбирает горизонт и темп, а затем запускает генерацию в этом же чате.</li>
+        <li><strong>Наводящие вопросы до планирования:</strong> Lippi спрашивает о текущей точке, времени в неделю, критерии успеха, сроке, ограничениях, возможных блокерах, первом контрольном результате и частоте пересмотра плана.</li>
+        <li><strong>Контекстная генерация дорожной карты:</strong> модель отвечает на языке запроса пользователя, отделяет известные факты от допущений и возвращает 2-3 уточняющих вопроса для дальнейшего сопровождения.</li>
+        <li><strong>Адаптивное сопровождение:</strong> если задачи Lippi показывают просрочку или застой, планировщик может уменьшить ближайшую нагрузку, разбить заблокированные пункты и предложить более мягкую корректировку.</li>
+        <li><strong>Quality gate для ответа ИИ:</strong> общие задачи, повторяющиеся этапы, неподтверждённые метрики, выдуманные спрос/выручка, медицинские гарантии и отсутствие уточняющих вопросов отсекаются до показа карты.</li>
+        <li><strong>Ollama-планировщик на Mac:</strong> локальный провайдер получил более строгую роль, JSON Schema, repair prompt и grounded planning contract для более надёжных дорожных карт.</li>
+        <li><strong>Читаемый интерфейс карты:</strong> сгенерированный текст, этапы, допущения, риски, источники и вопросы сопровождения разложены в удобные Liquid Glass-блоки для длинных ответов ИИ.</li>
+        <li><strong>Рендеринг под 60 FPS:</strong> основные прокручиваемые экраны передают drag и deceleration-фазы. Во время скролла тяжёлые glass-слои, глубокие тени и детали фона временно упрощаются, а после жеста возвращаются.</li>
+        <li><strong>Более спокойные ежедневные экраны:</strong> Today и «Важное сейчас» стали чище, без лишнего визуального шума и с приоритетом на информацию, которая нужна пользователю сразу.</li>
+        <li><strong>Проверка:</strong> код проверен через <code>git diff --check</code>, <code>xcodebuild build</code> и <code>xcodebuild build-for-testing</code>.</li>
       </ul>
     </td>
   </tr>
 </table>
+
+<details>
+  <summary><strong>Previous milestone / Предыдущее крупное обновление</strong></summary>
+  <br>
+  <table>
+    <tr>
+      <td width="50%" align="left" valign="top">
+        <strong>English</strong><br>
+        Earlier updates introduced the bilingual screenshot gallery, Today overview redesign, Important Now panel, readable roadmap sections, Dynamic Island roadmap activity, Mac-first Ollama provider, local Piper neural voice, and stronger Liquid Glass styling across the app.
+      </td>
+      <td width="50%" align="left" valign="top">
+        <strong>Русский</strong><br>
+        Ранее были добавлены двуязычная галерея скриншотов, редизайн Today, панель «Важное сейчас», читаемые блоки дорожной карты, активность Dynamic Island, Ollama на Mac, локальный нейро-голос Piper и более выразительный Liquid Glass по всему приложению.
+      </td>
+    </tr>
+  </table>
+</details>
 
 ---
 

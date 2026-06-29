@@ -29,11 +29,26 @@ struct GoalPlannerView: View {
     @State private var isDrafting = false
     @State private var addedTasks = false
     @State private var generationIssue: String?
+    @State private var chatDraftText = ""
 
     private let engine = GoalRoadmapEngine()
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
-    private var canGenerate: Bool { !goalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isGenerating }
+    private var trimmedGoalText: String { goalText.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var trimmedContextText: String { contextText.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var hasGoalInput: Bool { !trimmedGoalText.isEmpty }
+    private var canGenerate: Bool { hasGoalInput && !isGenerating }
+    private var currentInput: GoalPlannerInput {
+        GoalPlannerInput(
+            goal: trimmedGoalText,
+            context: trimmedContextText,
+            horizon: horizon,
+            intensity: intensity
+        )
+    }
+    private var currentBrief: GoalRequestBrief {
+        GoalRequestBrief.make(input: currentInput, fallbackLang: lang)
+    }
 
     var body: some View {
         NavigationStack {
@@ -42,14 +57,12 @@ struct GoalPlannerView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        heroCard
-                        inputCard
-
-                        if let generationIssue {
-                            generationIssueCard(generationIssue)
-                        }
+                        smartGoalChatCard
 
                         if let roadmap {
+                            if let audit = progressAudit(for: roadmap), audit.shouldSuggestAdjustment {
+                                adaptationCard(audit)
+                            }
                             roadmapOverview(roadmap)
                             clarityCard(roadmap)
                             if !(roadmap.evidence ?? []).isEmpty {
@@ -57,10 +70,6 @@ struct GoalPlannerView: View {
                             }
                             milestonesCard(roadmap)
                             habitsAndRisksCard(roadmap)
-                        } else if generationIssue != nil {
-                            emptyPreviewCard
-                        } else {
-                            emptyPreviewCard
                         }
 
                         Color.clear.frame(height: 72)
@@ -70,12 +79,6 @@ struct GoalPlannerView: View {
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
                 .lippiScrollPerformance()
-
-                if isGenerating {
-                    roadmapProcessingOverlay
-                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                        .zIndex(2)
-                }
             }
             .navigationTitle(s("goals.nav_title"))
             .navigationBarTitleDisplayMode(.large)
@@ -91,6 +94,124 @@ struct GoalPlannerView: View {
             }
             .onAppear(perform: restoreRoadmap)
         }
+    }
+
+    private var smartGoalChatCard: some View {
+        let brief = currentBrief
+        let questions = hasGoalInput
+            ? GoalGuidanceQuestionBuilder.questions(for: currentInput, brief: brief, lang: brief.responseLanguage)
+            : []
+        let displayedGoal = hasGoalInput ? trimmedGoalText : (roadmap?.title ?? "")
+        let hasDisplayedGoal = !displayedGoal.trimmed.isEmpty
+
+        return GlassCard(
+            padding: 0,
+            cornerRadius: 30,
+            style: .full,
+            forceSystemGlass: !reduceTransparency
+        ) {
+            VStack(spacing: 0) {
+                roadmapChatHeader(brief, showsCloseButton: false)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    chatMessageBubble(
+                        text: hasDisplayedGoal ? s("goals.chat.goal_received") : s("goals.chat.ask_goal"),
+                        icon: "sparkles",
+                        tone: DS.accent
+                    )
+
+                    if hasDisplayedGoal {
+                        chatMessageBubble(
+                            title: s("goals.chat.user_goal"),
+                            text: displayedGoal,
+                            icon: "flag.checkered",
+                            tone: Color(hex: 0x30D158),
+                            isUser: true
+                        )
+                    }
+
+                    if hasGoalInput {
+                        if !trimmedContextText.isEmpty {
+                            chatMessageBubble(
+                                title: s("goals.chat.user_context"),
+                                text: trimmedContextText,
+                                icon: "text.alignleft",
+                                tone: Color(hex: 0x64D2FF),
+                                isUser: true
+                            )
+                        }
+
+                        chatPlanningControls(brief)
+
+                        if roadmap == nil && !isGenerating {
+                            chatMessageBubble(
+                                text: trimmedContextText.isEmpty ? s("goals.chat.context_needed") : s("goals.chat.context_ready"),
+                                icon: trimmedContextText.isEmpty ? "questionmark.bubble.fill" : "checkmark.seal.fill",
+                                tone: trimmedContextText.isEmpty ? Color(hex: 0x64D2FF) : Color(hex: 0x30D158)
+                            )
+
+                            VStack(spacing: 9) {
+                                ForEach(questions, id: \.self) { question in
+                                    chatQuestionBubble(question)
+                                }
+                            }
+                        }
+                    }
+
+                    if isGenerating {
+                        chatProcessingPanel
+                    } else {
+                        if let generationIssue {
+                            chatIssuePanel(generationIssue)
+                        }
+
+                        if roadmap != nil {
+                            chatReadyPanel
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 16)
+            }
+        }
+    }
+
+    private func chatPlanningControls(_ brief: GoalRequestBrief) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(s("goals.chat.controls_title"), systemImage: "slider.horizontal.3")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(DS.text(0.70))
+                .labelStyle(TightLabelStyle())
+
+            HStack(spacing: 10) {
+                optionPicker(
+                    title: s("goals.input.horizon"),
+                    icon: "calendar.badge.clock",
+                    selection: $horizon,
+                    values: GoalPlanningHorizon.allCases
+                )
+
+                optionPicker(
+                    title: s("goals.input.intensity"),
+                    icon: "gauge.with.dots.needle.67percent",
+                    selection: $intensity,
+                    values: GoalPlanningIntensity.allCases
+                )
+            }
+
+            HStack(spacing: 8) {
+                infoPill(title: L10n.fmt("goals.brief.language", lang, brief.responseLanguage.title), icon: "globe")
+                infoPill(title: GoalRoadmapEngine.primaryAIPrivacyLabel(lang: lang), icon: "lock.shield.fill")
+            }
+        }
+        .padding(12)
+        .background(DS.glassFill(0.065), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            tint: DS.accent.opacity(0.06)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.11), lineWidth: 1))
     }
 
     private var heroCard: some View {
@@ -141,63 +262,357 @@ struct GoalPlannerView: View {
         }
     }
 
-    private var roadmapProcessingOverlay: some View {
-        ZStack {
+    private var roadmapChatOverlay: some View {
+        let brief = currentBrief
+        let questions = GoalGuidanceQuestionBuilder.questions(for: currentInput, brief: brief, lang: brief.responseLanguage)
+
+        return ZStack {
             Rectangle()
-                .fill(.black.opacity(reduceTransparency ? 0.28 : 0.12))
+                .fill(.black.opacity(reduceTransparency ? 0.30 : 0.14))
                 .background(.ultraThinMaterial)
                 .lippiSystemGlass(
                     in: Rectangle(),
-                    tint: DS.accent.opacity(0.045),
+                    tint: DS.accent.opacity(0.04),
                     forceSystemGlass: !reduceTransparency
                 )
                 .ignoresSafeArea()
 
             GlassCard(
-                padding: 22,
-                cornerRadius: 28,
+                padding: 0,
+                cornerRadius: 32,
                 style: .full,
                 forceSystemGlass: !reduceTransparency
             ) {
-                VStack(spacing: 18) {
-                    processingEmblem
+                VStack(spacing: 0) {
+                    roadmapChatHeader(brief)
 
-                    VStack(spacing: 6) {
-                        Text(s("goals.processing.title"))
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(DS.textPrimary)
-                            .multilineTextAlignment(.center)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            chatMessageBubble(
+                                text: s("goals.chat.assistant_start"),
+                                icon: "sparkles",
+                                tone: DS.accent
+                            )
 
-                        Text(s("goals.processing.subtitle"))
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(DS.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                            chatMessageBubble(
+                                title: s("goals.chat.user_goal"),
+                                text: trimmedGoalText,
+                                icon: "flag.checkered",
+                                tone: Color(hex: 0x30D158),
+                                isUser: true
+                            )
 
-                    TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
-                        let activeStep = Int(timeline.date.timeIntervalSinceReferenceDate / 1.15) % processingSteps.count
+                            chatMessageBubble(
+                                text: trimmedContextText.isEmpty ? s("goals.chat.context_needed") : s("goals.chat.context_ready"),
+                                icon: trimmedContextText.isEmpty ? "questionmark.bubble.fill" : "checkmark.seal.fill",
+                                tone: trimmedContextText.isEmpty ? Color(hex: 0x64D2FF) : Color(hex: 0x30D158)
+                            )
 
-                        VStack(alignment: .leading, spacing: 11) {
-                            ForEach(Array(processingSteps.enumerated()), id: \.offset) { index, step in
-                                processingStepRow(step, isActive: index == activeStep, isComplete: index < activeStep)
+                            if !isGenerating, roadmap == nil {
+                                VStack(spacing: 9) {
+                                    ForEach(questions, id: \.self) { question in
+                                        chatQuestionBubble(question)
+                                    }
+                                }
+
+                                chatContextComposer
+                            }
+
+                            if isGenerating {
+                                chatProcessingPanel
+                            } else {
+                                if let generationIssue {
+                                    chatIssuePanel(generationIssue)
+                                }
+
+                                if roadmap != nil {
+                                    chatReadyPanel
+                                }
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
                     }
+                    .frame(maxHeight: 460)
+                    .scrollIndicators(.hidden)
+                    .scrollDismissesKeyboard(.interactively)
+                    .lippiScrollPerformance()
 
-                    Text(s("goals.processing.notice"))
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(DS.textTertiary)
-                        .multilineTextAlignment(.center)
+                    roadmapChatActionBar
                 }
             }
-            .frame(maxWidth: 360)
-            .padding(24)
-            .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+            .frame(maxWidth: 420)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 24)
+            .shadow(color: .black.opacity(0.20), radius: 24, y: 12)
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(s("goals.processing.title"))
+        .accessibilityLabel(s("goals.chat.title"))
         .accessibilityAddTraits(.isModal)
+    }
+
+    private func roadmapChatHeader(_ brief: GoalRequestBrief, showsCloseButton: Bool = true) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(DS.glassFill(0.12))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(DS.brandSoftGradient).opacity(0.42))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.18), lineWidth: 1))
+
+                Image(safeSystemName: "bubble.left.and.text.bubble.right.fill", fallback: "sparkles")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(DS.textPrimary)
+            }
+            .frame(width: 46, height: 46)
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                tint: DS.accent.opacity(0.12)
+            )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(s("goals.chat.title"))
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
+
+                HStack(spacing: 6) {
+                    infoPill(title: brief.responseLanguage.title, icon: "globe")
+                    infoPill(title: horizon.title(lang: lang), icon: "calendar")
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if showsCloseButton && !isGenerating {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(safeSystemName: "xmark", fallback: "xmark")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .frame(width: 18, height: 18)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .ghost, compact: true))
+                .accessibilityLabel(s("common.close"))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 10)
+    }
+
+    private func chatMessageBubble(
+        title: String? = nil,
+        text: String,
+        icon: String,
+        tone: Color,
+        isUser: Bool = false
+    ) -> some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if isUser { Spacer(minLength: 34) }
+
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 7) {
+                    Image(safeSystemName: icon, fallback: "sparkles")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(tone)
+
+                    Text(title ?? (isUser ? s("goals.chat.user") : "Lippi"))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(DS.text(0.70))
+                        .singleLine()
+                }
+
+                Text(text)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(DS.text(0.88))
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(DS.glassFill(isUser ? 0.12 : 0.075))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(tone.opacity(isUser ? 0.11 : 0.07)))
+            )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                tint: tone.opacity(0.07)
+            )
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+
+            if !isUser { Spacer(minLength: 34) }
+        }
+        .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
+    }
+
+    private func chatQuestionBubble(_ question: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(safeSystemName: "questionmark.circle.fill", fallback: "questionmark.circle.fill")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(hex: 0x64D2FF))
+                .frame(width: 22)
+                .padding(.top, 3)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(question)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(DS.text(0.86))
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    appendGuidanceQuestion(question)
+                } label: {
+                    Label(s("goals.guidance.add"), systemImage: "plus.circle.fill")
+                        .font(.caption.weight(.bold))
+                        .labelStyle(TightLabelStyle())
+                }
+                .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+            }
+        }
+        .padding(12)
+        .background(DS.glassFill(0.07), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            tint: Color(hex: 0x64D2FF).opacity(0.07)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
+    private var chatContextComposer: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(s("goals.chat.context_title"), systemImage: "text.alignleft")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(DS.text(0.70))
+                .labelStyle(TightLabelStyle())
+
+            TextEditor(text: $contextText)
+                .frame(minHeight: 78, maxHeight: 118)
+                .scrollContentBackground(.hidden)
+                .font(.callout)
+                .foregroundStyle(DS.textPrimary)
+                .overlay(alignment: .topLeading) {
+                    if contextText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(s("goals.chat.context_placeholder"))
+                            .font(.callout)
+                            .foregroundStyle(DS.textTertiary)
+                            .padding(.top, 8)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .goalGlassField(tint: Color(hex: 0x64D2FF))
+        }
+    }
+
+    private var chatProcessingPanel: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(DS.glassFill(0.08))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(DS.brandSoftGradient).opacity(0.18))
+
+            VStack(spacing: 14) {
+                processingEmblem.scaleEffect(0.78)
+
+                VStack(spacing: 4) {
+                    Text(s("goals.processing.title"))
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(DS.textPrimary)
+
+                    Text(s("goals.processing.subtitle"))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(DS.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                    let activeStep = Int(timeline.date.timeIntervalSinceReferenceDate / 1.15) % processingSteps.count
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(Array(processingSteps.enumerated()), id: \.offset) { index, step in
+                            processingStepRow(step, isActive: index == activeStep, isComplete: index < activeStep)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: DS.accent.opacity(0.08),
+            forceSystemGlass: !reduceTransparency
+        )
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(DS.glassStroke(0.13), lineWidth: 1))
+    }
+
+    private var chatReadyPanel: some View {
+        chatMessageBubble(
+            text: s("goals.chat.ready"),
+            icon: "checkmark.seal.fill",
+            tone: Color(hex: 0x30D158)
+        )
+    }
+
+    private func chatIssuePanel(_ message: String) -> some View {
+        chatMessageBubble(
+            text: message,
+            icon: "exclamationmark.triangle.fill",
+            tone: Color(hex: 0xFF9F0A)
+        )
+    }
+
+    private var roadmapChatActionBar: some View {
+        VStack(spacing: 9) {
+            if isGenerating {
+                HStack(spacing: 9) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(DS.accent)
+
+                    Text(s("goals.chat.building"))
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(DS.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            } else if roadmap != nil {
+                Button {
+                    dismiss()
+                } label: {
+                    Label(s("goals.chat.show_roadmap"), systemImage: "map.fill")
+                        .labelStyle(TightLabelStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .primary))
+            } else {
+                Button {
+                    Task { await generateRoadmap() }
+                } label: {
+                    Label(s("goals.chat.start_build"), systemImage: "sparkles")
+                        .labelStyle(TightLabelStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(!canGenerate)
+                .buttonStyle(LippiButtonStyle(kind: .primary))
+
+                if generationIssue != nil {
+                    Button {
+                        createDraftRoadmap()
+                    } label: {
+                        Label(s("goals.action.draft"), systemImage: "doc.text.magnifyingglass")
+                            .labelStyle(TightLabelStyle())
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(isDrafting)
+                    .buttonStyle(LippiButtonStyle(kind: .secondary))
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 16)
+        .background(DS.glassFill(0.055))
     }
 
     private var processingEmblem: some View {
@@ -380,6 +795,187 @@ struct GoalPlannerView: View {
         }
     }
 
+    private func roadmapChatIntroCard(_ brief: GoalRequestBrief) -> some View {
+        GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
+            VStack(alignment: .leading, spacing: 14) {
+                LippiSectionHeader(
+                    title: s("goals.chat.intro_title"),
+                    subtitle: s("goals.chat.intro_subtitle"),
+                    icon: "bubble.left.and.text.bubble.right.fill",
+                    accent: Color(hex: 0x64D2FF)
+                )
+
+                HStack(spacing: 8) {
+                    infoPill(title: L10n.fmt("goals.brief.language", lang, brief.responseLanguage.title), icon: "globe")
+                    infoPill(title: horizon.title(lang: lang), icon: "calendar")
+                    infoPill(title: intensity.title(lang: lang), icon: "dial.medium")
+                }
+
+                Button {
+                    openRoadmapChat()
+                } label: {
+                    Label(s("goals.chat.open"), systemImage: "sparkles")
+                        .labelStyle(TightLabelStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .secondary))
+            }
+        }
+    }
+
+    private func requestBriefCard(_ brief: GoalRequestBrief) -> some View {
+        GlassCard(padding: 16, cornerRadius: 24, style: .full) {
+            VStack(alignment: .leading, spacing: 14) {
+                LippiSectionHeader(
+                    title: s("goals.brief.title"),
+                    subtitle: L10n.fmt("goals.brief.subtitle", lang, brief.responseLanguage.title),
+                    icon: "text.magnifyingglass",
+                    accent: Color(hex: 0x64D2FF)
+                )
+
+                HStack(spacing: 8) {
+                    infoPill(title: L10n.fmt("goals.brief.language", lang, brief.responseLanguage.title), icon: "globe")
+                    infoPill(title: horizon.title(lang: lang), icon: "calendar")
+                    infoPill(title: intensity.title(lang: lang), icon: "dial.medium")
+                }
+
+                VStack(spacing: 10) {
+                    briefBlock(
+                        title: s("goals.brief.objective"),
+                        icon: "flag.checkered",
+                        tone: DS.accent,
+                        items: [brief.objective]
+                    )
+
+                    if !brief.quantitiesAndDates.isEmpty {
+                        briefBlock(
+                            title: s("goals.brief.numbers"),
+                            icon: "number.circle.fill",
+                            tone: Color(hex: 0xFF9F0A),
+                            items: brief.quantitiesAndDates
+                        )
+                    }
+
+                    if !brief.constraints.isEmpty {
+                        briefBlock(
+                            title: s("goals.brief.constraints"),
+                            icon: "slider.horizontal.3",
+                            tone: Color(hex: 0xBF5AF2),
+                            items: brief.constraints
+                        )
+                    }
+
+                    if !brief.contextFacts.isEmpty {
+                        briefBlock(
+                            title: s("goals.brief.context"),
+                            icon: "list.bullet.rectangle.fill",
+                            tone: Color(hex: 0x30D158),
+                            items: brief.contextFacts
+                        )
+                    }
+
+                    if !brief.missingContextHints.isEmpty {
+                        briefBlock(
+                            title: s("goals.brief.missing"),
+                            icon: "questionmark.circle.fill",
+                            tone: Color(hex: 0x64D2FF),
+                            items: brief.missingContextHints,
+                            itemIcon: "questionmark.circle.fill"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private func guidanceQuestionsCard(_ brief: GoalRequestBrief) -> some View {
+        let questions = GoalGuidanceQuestionBuilder.questions(for: currentInput, brief: brief, lang: brief.responseLanguage)
+
+        return GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
+            VStack(alignment: .leading, spacing: 14) {
+                LippiSectionHeader(
+                    title: s("goals.guidance.title"),
+                    subtitle: s("goals.guidance.subtitle"),
+                    icon: "bubble.left.and.text.bubble.right.fill",
+                    accent: Color(hex: 0x64D2FF)
+                )
+
+                VStack(spacing: 10) {
+                    ForEach(questions, id: \.self) { question in
+                        guidanceQuestionRow(question)
+                    }
+                }
+            }
+        }
+    }
+
+    private func guidanceQuestionRow(_ question: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            readableItemRow(
+                question,
+                icon: "questionmark.circle.fill",
+                tone: Color(hex: 0x64D2FF),
+                textColor: DS.text(0.84)
+            )
+
+            Button {
+                appendGuidanceQuestion(question)
+            } label: {
+                Label(s("goals.guidance.add"), systemImage: "plus.circle.fill")
+                    .font(.caption.weight(.bold))
+                    .labelStyle(TightLabelStyle())
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(DS.glassFill(0.07))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color(hex: 0x64D2FF).opacity(0.07)))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            tint: Color(hex: 0x64D2FF).opacity(0.07),
+            interactive: true
+        )
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
+    private func briefBlock(
+        title: String,
+        icon: String,
+        tone: Color,
+        items: [String],
+        itemIcon: String = "checkmark.circle.fill"
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Label(title, systemImage: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(DS.text(0.86))
+                .labelStyle(TightLabelStyle())
+                .singleLine()
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(items.prefix(3), id: \.self) { item in
+                    readableItemRow(item, icon: itemIcon, tone: tone, textColor: DS.text(0.82))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(DS.glassFill(0.07))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(tone.opacity(0.07)))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            tint: tone.opacity(0.07)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
     private var emptyPreviewCard: some View {
         GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
             VStack(alignment: .leading, spacing: 12) {
@@ -446,6 +1042,73 @@ struct GoalPlannerView: View {
                 }
             }
         }
+    }
+
+    private func adaptationCard(_ audit: GoalPlanProgressAudit) -> some View {
+        GlassCard(padding: 16, cornerRadius: 24, style: .full) {
+            VStack(alignment: .leading, spacing: 14) {
+                LippiSectionHeader(
+                    title: s("goals.adapt.title"),
+                    subtitle: L10n.fmt("goals.adapt.subtitle", lang, audit.overdueTasks, audit.activeTasks, audit.completedTasks),
+                    icon: "slider.horizontal.3",
+                    accent: Color(hex: 0xFF9F0A)
+                )
+
+                HStack(spacing: 8) {
+                    adaptationMetric(value: audit.overdueTasks, title: s("goals.adapt.metric.overdue"), tone: Color(hex: 0xFF453A))
+                    adaptationMetric(value: audit.activeTasks, title: s("goals.adapt.metric.active"), tone: DS.accent)
+                    adaptationMetric(value: audit.completedTasks, title: s("goals.adapt.metric.done"), tone: Color(hex: 0x30D158))
+                }
+
+                VStack(alignment: .leading, spacing: 9) {
+                    ForEach(audit.suggestions(lang: lang), id: \.self) { suggestion in
+                        readableItemRow(
+                            suggestion,
+                            icon: "arrow.triangle.2.circlepath.circle.fill",
+                            tone: Color(hex: 0xFF9F0A),
+                            textColor: DS.text(0.82)
+                        )
+                    }
+                }
+
+                Button {
+                    Task { await generateRoadmap(adaptingToProgress: true) }
+                } label: {
+                    Label(s("goals.adapt.action"), systemImage: "wand.and.stars")
+                        .labelStyle(TightLabelStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(!canGenerate)
+                .buttonStyle(LippiButtonStyle(kind: .secondary))
+            }
+        }
+    }
+
+    private func adaptationMetric(value: Int, title: String, tone: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(value)")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.76)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(11)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(DS.glassFill(0.08))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(tone.opacity(0.08)))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            tint: tone.opacity(0.07)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
     }
 
     private func clarityCard(_ roadmap: GoalRoadmap) -> some View {
@@ -848,36 +1511,51 @@ struct GoalPlannerView: View {
                 .buttonStyle(LippiButtonStyle(kind: addedTasks ? .secondary : .primary))
             }
 
-            if generationIssue != nil, roadmap == nil {
+            if roadmap != nil {
                 Button {
-                    createDraftRoadmap()
+                    resetGoalChat()
                 } label: {
-                    Label(isDrafting ? s("goals.action.drafting") : s("goals.action.draft"), systemImage: "doc.text.magnifyingglass")
+                    Label(s("goals.chat.new_goal"), systemImage: "plus.bubble.fill")
                         .labelStyle(TightLabelStyle())
                         .frame(maxWidth: .infinity)
                 }
-                .disabled(isDrafting)
                 .buttonStyle(LippiButtonStyle(kind: .secondary))
-            }
+            } else {
+                chatComposerField
 
-            Button {
-                Task { await generateRoadmap() }
-            } label: {
-                HStack(spacing: 8) {
-                    if isGenerating {
-                        ProgressView()
-                            .tint(DS.text())
-                    } else {
-                        Image(safeSystemName: "sparkles", fallback: "sparkles")
+                if hasGoalInput {
+                    Button {
+                        Task { await generateRoadmap() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            if isGenerating {
+                                ProgressView()
+                                    .tint(DS.text())
+                            } else {
+                                Image(safeSystemName: "sparkles", fallback: "sparkles")
+                            }
+                            Text(isGenerating ? s("goals.action.generating") : s("goals.chat.start_build"))
+                                .singleLine()
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    Text(isGenerating ? s("goals.action.generating") : s("goals.action.generate_ai"))
-                        .singleLine()
+                    .disabled(!canGenerate)
+                    .buttonStyle(LippiButtonStyle(kind: .primary))
+                    .opacity(canGenerate ? 1 : 0.55)
+
+                    if generationIssue != nil {
+                        Button {
+                            createDraftRoadmap()
+                        } label: {
+                            Label(isDrafting ? s("goals.action.drafting") : s("goals.action.draft"), systemImage: "doc.text.magnifyingglass")
+                                .labelStyle(TightLabelStyle())
+                                .frame(maxWidth: .infinity)
+                        }
+                        .disabled(isDrafting)
+                        .buttonStyle(LippiButtonStyle(kind: .secondary))
+                    }
                 }
-                .frame(maxWidth: .infinity)
             }
-            .disabled(!canGenerate)
-            .buttonStyle(LippiButtonStyle(kind: .primary))
-            .opacity(canGenerate ? 1 : 0.55)
         }
         .padding(.horizontal, 20)
         .padding(.top, 10)
@@ -891,25 +1569,94 @@ struct GoalPlannerView: View {
         .lippiSystemGlass(in: Rectangle(), tint: DS.accent.opacity(0.05))
     }
 
+    private var chatComposerField: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            TextField(chatComposerPlaceholder, text: $chatDraftText, axis: .vertical)
+                .lineLimit(1...4)
+                .textFieldStyle(.plain)
+                .font(.callout.weight(.medium))
+                .foregroundStyle(DS.textPrimary)
+                .submitLabel(.send)
+                .onSubmit(sendChatDraft)
+
+            Button {
+                sendChatDraft()
+            } label: {
+                Image(safeSystemName: "arrow.up.circle.fill", fallback: "paperplane.fill")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(canSendChatDraft ? DS.accent : DS.textTertiary)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSendChatDraft)
+            .accessibilityLabel(s("goals.chat.send"))
+        }
+        .padding(.horizontal, 13)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(DS.glassFill(0.09))
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(DS.glassTint).opacity(0.20))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous),
+            tint: DS.accent.opacity(0.06),
+            interactive: true
+        )
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
+    }
+
+    private var chatComposerPlaceholder: String {
+        let textLang = hasGoalInput ? currentBrief.responseLanguage : lang
+        return L10n.tr(hasGoalInput ? "goals.chat.reply_placeholder" : "goals.chat.goal_placeholder", textLang)
+    }
+
+    private var canSendChatDraft: Bool {
+        !chatDraftText.trimmed.isEmpty && !isGenerating && roadmap == nil
+    }
+
+    private func sendChatDraft() {
+        let value = chatDraftText.trimmed
+        guard !value.isEmpty, !isGenerating, roadmap == nil else { return }
+
+        if hasGoalInput {
+            contextText = trimmedContextText.isEmpty ? value : "\(trimmedContextText)\n\(value)"
+        } else {
+            goalText = value
+            generationIssue = nil
+        }
+        chatDraftText = ""
+
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+
+    private func resetGoalChat() {
+        goalText = ""
+        contextText = ""
+        chatDraftText = ""
+        roadmap = nil
+        generationIssue = nil
+        addedTasks = false
+        savedRoadmap = ""
+    }
+
     @MainActor
-    private func generateRoadmap() async {
+    private func generateRoadmap(adaptingToProgress: Bool = false) async {
         guard canGenerate else { return }
         isGenerating = true
         addedTasks = false
         generationIssue = nil
         defer { isGenerating = false }
+        let currentAudit = roadmap.flatMap { progressAudit(for: $0) }
+        let auditForModel = adaptingToProgress ? currentAudit : currentAudit?.forAutomaticReplan
 
-        let input = GoalPlannerInput(
-            goal: goalText.trimmingCharacters(in: .whitespacesAndNewlines),
-            context: contextText.trimmingCharacters(in: .whitespacesAndNewlines),
-            horizon: horizon,
-            intensity: intensity
-        )
+        let input = currentInput
 
         await startRoadmapLiveActivity(for: input.goal)
 
         do {
-            let result = try await engine.buildAIRoadmap(input: input, lang: lang) { stage in
+            let result = try await engine.buildAIRoadmap(input: input, lang: lang, progressAudit: auditForModel) { stage in
                 await updateRoadmapLiveActivity(stage)
             }
             roadmap = result
@@ -921,10 +1668,10 @@ struct GoalPlannerView: View {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             #endif
         } catch let error as GoalPlannerEngineError {
-            handleGenerationFailure(error, input: input)
+            handleGenerationFailure(error, input: input, progressAudit: auditForModel)
             await finishRoadmapLiveActivity(error.shouldBuildDraftFallback ? .draftReady : .failed)
         } catch {
-            handleGenerationFailure(.generationFailed(error.localizedDescription), input: input)
+            handleGenerationFailure(.generationFailed(error.localizedDescription), input: input, progressAudit: auditForModel)
             await finishRoadmapLiveActivity(.draftReady)
         }
     }
@@ -954,11 +1701,11 @@ struct GoalPlannerView: View {
     }
 
     @MainActor
-    private func handleGenerationFailure(_ error: GoalPlannerEngineError, input: GoalPlannerInput) {
+    private func handleGenerationFailure(_ error: GoalPlannerEngineError, input: GoalPlannerInput, progressAudit: GoalPlanProgressAudit?) {
         generationIssue = error.message(lang: lang)
 
         if error.shouldBuildDraftFallback {
-            let draft = engine.buildDraftRoadmap(input: input, lang: lang)
+            let draft = engine.buildDraftRoadmap(input: input, lang: lang, progressAudit: progressAudit)
             roadmap = draft
             saveRoadmap(draft)
         } else {
@@ -970,25 +1717,38 @@ struct GoalPlannerView: View {
         #endif
     }
 
+    private func openRoadmapChat() {
+        guard hasGoalInput else { return }
+
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+
     private func createDraftRoadmap() {
-        guard canGenerate || !goalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard canGenerate || hasGoalInput else { return }
         isDrafting = true
         defer { isDrafting = false }
 
-        let input = GoalPlannerInput(
-            goal: goalText.trimmingCharacters(in: .whitespacesAndNewlines),
-            context: contextText.trimmingCharacters(in: .whitespacesAndNewlines),
-            horizon: horizon,
-            intensity: intensity
-        )
+        let input = currentInput
 
-        let result = engine.buildDraftRoadmap(input: input, lang: lang)
+        let result = engine.buildDraftRoadmap(input: input, lang: lang, progressAudit: roadmap.flatMap { progressAudit(for: $0) })
         roadmap = result
         generationIssue = nil
         saveRoadmap(result)
 
         #if os(iOS)
         UINotificationFeedbackGenerator().notificationOccurred(.success)
+        #endif
+    }
+
+    private func appendGuidanceQuestion(_ question: String) {
+        guard !contextText.localizedCaseInsensitiveContains(question) else { return }
+        let prefix = contextText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : "\n\n"
+        contextText += prefix + L10n.fmt("goals.guidance.context_line", currentBrief.responseLanguage, question)
+
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
         #endif
     }
 
@@ -1029,6 +1789,10 @@ struct GoalPlannerView: View {
     private func saveRoadmap(_ roadmap: GoalRoadmap) {
         guard let data = try? JSONEncoder().encode(roadmap) else { return }
         savedRoadmap = String(decoding: data, as: UTF8.self)
+    }
+
+    private func progressAudit(for roadmap: GoalRoadmap) -> GoalPlanProgressAudit? {
+        GoalPlanProgressAudit.make(roadmap: roadmap, tasks: store.tasks)
     }
 }
 
@@ -1105,6 +1869,190 @@ struct GoalPlannerInput: Codable, Hashable {
     var context: String
     var horizon: GoalPlanningHorizon
     var intensity: GoalPlanningIntensity
+
+    func responseLanguage(fallback: AppLang) -> AppLang {
+        GoalRequestLanguageDetector.detect(goal: goal, context: context, fallback: fallback)
+    }
+}
+
+struct GoalRequestBrief: Codable, Hashable {
+    var responseLanguage: AppLang
+    var objective: String
+    var contextFacts: [String]
+    var constraints: [String]
+    var quantitiesAndDates: [String]
+    var missingContextHints: [String]
+
+    static func make(input: GoalPlannerInput, fallbackLang: AppLang) -> GoalRequestBrief {
+        let responseLanguage = input.responseLanguage(fallback: fallbackLang)
+        let objective = input.goal.trimmed.nonEmpty(or: L10n.tr("goals.brief.empty_goal", responseLanguage))
+        let contextSentences = splitMeaningfulLines(input.context)
+        let quantities = extractQuantities(from: "\(input.goal) \(input.context)")
+        let constraints = contextSentences.filter(isConstraintLine).prefixArray(3)
+        let facts = contextSentences
+            .filter { line in !constraints.contains(line) }
+            .prefixArray(3)
+        var missing: [String] = []
+
+        if input.context.trimmed.isEmpty {
+            missing.append(L10n.tr("goals.brief.missing.context", responseLanguage))
+        }
+        if quantities.isEmpty {
+            missing.append(L10n.tr("goals.brief.missing.metric", responseLanguage))
+        }
+        if !input.goal.localizedCaseInsensitiveContains("за ")
+            && !input.goal.localizedCaseInsensitiveContains("by ")
+            && !input.goal.localizedCaseInsensitiveContains("in ")
+            && quantities.filter({ containsTimeWord($0) }).isEmpty {
+            missing.append(L10n.tr("goals.brief.missing.deadline", responseLanguage))
+        }
+
+        return GoalRequestBrief(
+            responseLanguage: responseLanguage,
+            objective: objective,
+            contextFacts: facts,
+            constraints: constraints,
+            quantitiesAndDates: quantities.prefixArray(4),
+            missingContextHints: missing.prefixArray(3)
+        )
+    }
+
+    var outputLanguageName: String { responseLanguage.aiOutputLanguage }
+
+    func promptSection() -> String {
+        """
+        Structured user request:
+        - response language: \(outputLanguageName)
+        - objective: \(objective)
+        - known context facts: \(contextFacts.ifEmpty(["none"]).joined(separator: "; "))
+        - constraints and preferences: \(constraints.ifEmpty(["none"]).joined(separator: "; "))
+        - numbers, dates, or time limits: \(quantitiesAndDates.ifEmpty(["none"]).joined(separator: "; "))
+        - missing context to handle as assumptions/questions: \(missingContextHints.ifEmpty(["none"]).joined(separator: "; "))
+        """
+    }
+
+    private static func splitMeaningfulLines(_ text: String) -> [String] {
+        text
+            .replacingOccurrences(of: "\n", with: ". ")
+            .components(separatedBy: CharacterSet(charactersIn: ".;!?"))
+            .map { $0.trimmed }
+            .filter { $0.count > 2 }
+    }
+
+    private static func isConstraintLine(_ line: String) -> Bool {
+        let normalized = line.lowercased()
+        return normalized.containsAny([
+            "огранич", "без ", "нельзя", "могу", "только", "не хочу", "спокой", "перегруз",
+            "constraint", "limit", "only", "without", "can't", "cannot", "calm", "budget",
+            "einschr", "nur", "ohne", "begrenz", "solo",
+            "limit", "solo", "sin ", "solo ", "presupuesto"
+        ])
+    }
+
+    private static func extractQuantities(from text: String) -> [String] {
+        let pattern = #"(?iu)(?:\d+[,.]?\d*\s*)?(?:кг|килограмм(?:а|ов)?|месяц(?:а|ев)?|недел(?:я|и|ь)|дн(?:я|ей)?|час(?:а|ов)?|минут(?:а|ы)?|руб(?:лей)?|\$|%|kg|kilo(?:gram)?s?|month(?:s)?|week(?:s)?|day(?:s)?|hour(?:s)?|minute(?:s)?|eur|usd|дедлайн|deadline|mvp|a1|a2|b1|b2|c1|c2)|\d+[,.]?\d*"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        var seen = Set<String>()
+        return regex.matches(in: text, range: range).compactMap { match in
+            guard let range = Range(match.range, in: text) else { return nil }
+            let value = String(text[range]).trimmed
+            guard !value.isEmpty, seen.insert(value.lowercased()).inserted else { return nil }
+            return value
+        }
+    }
+
+    private static func containsTimeWord(_ text: String) -> Bool {
+        text.lowercased().containsAny(["меся", "недел", "дн", "час", "минут", "month", "week", "day", "hour", "minute"])
+    }
+}
+
+enum GoalGuidanceQuestionBuilder {
+    static func questions(for input: GoalPlannerInput, brief: GoalRequestBrief, lang: AppLang) -> [String] {
+        var candidates: [String] = []
+        let fullText = "\(input.goal) \(input.context)"
+
+        if input.context.trimmed.isEmpty {
+            candidates.append(L10n.tr("goals.guidance.question.current_state", lang))
+            candidates.append(L10n.tr("goals.guidance.question.weekly_capacity", lang))
+        }
+
+        if brief.quantitiesAndDates.isEmpty {
+            candidates.append(L10n.tr("goals.guidance.question.metric", lang))
+        }
+
+        if !hasTimeSignal(fullText) {
+            candidates.append(L10n.tr("goals.guidance.question.deadline", lang))
+        }
+
+        if brief.constraints.isEmpty {
+            candidates.append(L10n.tr("goals.guidance.question.constraints", lang))
+        }
+
+        candidates.append(contentsOf: [
+            L10n.tr("goals.guidance.question.blockers", lang),
+            L10n.tr("goals.guidance.question.first_checkpoint", lang),
+            L10n.tr("goals.guidance.question.support_cadence", lang)
+        ])
+
+        return unique(candidates).prefixArray(3)
+    }
+
+    static func ensuringUsefulQuestions(
+        _ questions: [String],
+        input: GoalPlannerInput,
+        lang: AppLang,
+        limit: Int = 3
+    ) -> [String] {
+        let brief = GoalRequestBrief.make(input: input, fallbackLang: lang)
+        let fallback = self.questions(for: input, brief: brief, lang: lang)
+        return unique(questions + fallback).prefixArray(limit)
+    }
+
+    private static func unique(_ questions: [String]) -> [String] {
+        var seen = Set<String>()
+        return questions.compactMap { question in
+            let value = question.trimmed
+            let key = value
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+                .lowercased()
+            guard !value.isEmpty, seen.insert(key).inserted else { return nil }
+            return value
+        }
+    }
+
+    private static func hasTimeSignal(_ text: String) -> Bool {
+        text.lowercased().containsAny([
+            "сегодня", "завтра", "дедлайн", "срок", "месяц", "недел", "день", "дня", "дней", "час",
+            "today", "tomorrow", "deadline", "month", "week", "day", "hour",
+            "heute", "morgen", "frist", "monat", "woche", "tag", "stunde",
+            "hoy", "manana", "fecha", "mes", "semana", "dia", "hora"
+        ])
+    }
+}
+
+enum GoalRequestLanguageDetector {
+    static func detect(goal: String, context: String, fallback: AppLang) -> AppLang {
+        let text = "\(goal) \(context)".trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return fallback }
+
+        if text.unicodeScalars.contains(where: { (0x0400...0x04FF).contains(Int($0.value)) }) {
+            return .ru
+        }
+
+        let lower = text.lowercased()
+        let spanishSignals = ["ñ", "¿", "¡", "para ", "quiero ", "necesito ", "meses", "semanas", "objetivo"]
+        if spanishSignals.contains(where: { lower.contains($0) }) { return .es }
+
+        let germanSignals = ["ä", "ö", "ü", "ß", "ich ", "möchte", "wochen", "monate", "ziel", "lernen"]
+        if germanSignals.contains(where: { lower.contains($0) }) { return .de }
+
+        if lower.range(of: #"[a-z]"#, options: .regularExpression) != nil {
+            return .en
+        }
+
+        return fallback
+    }
 }
 
 struct GoalRoadmap: Identifiable, Codable, Hashable {
@@ -1143,6 +2091,136 @@ struct GoalRisk: Identifiable, Codable, Hashable {
     var id = UUID()
     var title: String
     var mitigation: String
+}
+
+struct GoalPlanProgressAudit: Codable, Hashable {
+    var trackedTasks: Int
+    var completedTasks: Int
+    var activeTasks: Int
+    var overdueTasks: Int
+    var daysSinceRoadmapCreated: Int
+    var oldestActiveTaskAgeDays: Int
+    var overdueExamples: [String]
+    var nextActiveTask: String?
+
+    var completionRate: Double {
+        guard trackedTasks > 0 else { return 0 }
+        return Double(completedTasks) / Double(trackedTasks)
+    }
+
+    var isStalledWithoutFirstWin: Bool {
+        completedTasks == 0 && activeTasks > 0 && oldestActiveTaskAgeDays >= 2
+    }
+
+    var isOverloaded: Bool {
+        activeTasks >= 4 && completionRate < 0.35 && daysSinceRoadmapCreated >= 2
+    }
+
+    var shouldSuggestAdjustment: Bool {
+        overdueTasks > 0 || isStalledWithoutFirstWin || isOverloaded
+    }
+
+    var forAutomaticReplan: GoalPlanProgressAudit? {
+        shouldSuggestAdjustment ? self : nil
+    }
+
+    static func make(roadmap: GoalRoadmap, tasks: [TaskItem], now: Date = .now) -> GoalPlanProgressAudit? {
+        let linkedTasks = tasks.filter { task in
+            isLinked(task, to: roadmap)
+        }
+        guard !linkedTasks.isEmpty else { return nil }
+
+        let calendar = Calendar.current
+        let completed = linkedTasks.filter(\.isCompleted)
+        let active = linkedTasks.filter { !$0.isCompleted }
+        let overdue = active.filter { task in
+            guard let due = task.dueDate else { return false }
+            return due < now
+        }
+        let oldestActiveAge = active
+            .map { max(0, calendar.dateComponents([.day], from: $0.createdAt, to: now).day ?? 0) }
+            .max() ?? 0
+        let daysSinceRoadmap = max(0, calendar.dateComponents([.day], from: roadmap.createdAt, to: now).day ?? 0)
+
+        return GoalPlanProgressAudit(
+            trackedTasks: linkedTasks.count,
+            completedTasks: completed.count,
+            activeTasks: active.count,
+            overdueTasks: overdue.count,
+            daysSinceRoadmapCreated: daysSinceRoadmap,
+            oldestActiveTaskAgeDays: oldestActiveAge,
+            overdueExamples: overdue.sorted(by: dueSort).map(\.title).prefixArray(3),
+            nextActiveTask: active.sorted(by: dueSort).first?.title
+        )
+    }
+
+    func suggestions(lang: AppLang) -> [String] {
+        var result: [String] = []
+
+        if overdueTasks > 0 {
+            result.append(L10n.tr("goals.adapt.suggestion.reschedule", lang))
+        }
+        if isStalledWithoutFirstWin {
+            result.append(L10n.tr("goals.adapt.suggestion.first_win", lang))
+        }
+        if isOverloaded {
+            result.append(L10n.tr("goals.adapt.suggestion.scope", lang))
+        }
+
+        result.append(L10n.tr("goals.adapt.suggestion.review", lang))
+        return result.prefixArray(3)
+    }
+
+    func promptSection() -> String {
+        guard shouldSuggestAdjustment else {
+            return "No correction signal from tracked Lippi tasks."
+        }
+
+        let examples = overdueExamples.isEmpty ? "none" : overdueExamples.joined(separator: "; ")
+        let next = nextActiveTask?.trimmed.isEmpty == false ? nextActiveTask! : "not detected"
+
+        return """
+        Previous roadmap progress from tracked Lippi tasks:
+        - tracked tasks: \(trackedTasks)
+        - completed: \(completedTasks)
+        - active: \(activeTasks)
+        - overdue: \(overdueTasks)
+        - days since roadmap was created: \(daysSinceRoadmapCreated)
+        - oldest active task age in days: \(oldestActiveTaskAgeDays)
+        - overdue examples: \(examples)
+        - next active task: \(next)
+
+        Adaptation instruction:
+        The user appears behind the previous plan based only on task facts. Preserve the goal, reduce the immediate workload, split or reschedule blocked tasks, make the next 48 hours easier to start, and explain uncertainty as assumptions or clarifying questions. Do not blame the user, infer motivation, or invent reasons for the delay.
+        """
+    }
+
+    private static func isLinked(_ task: TaskItem, to roadmap: GoalRoadmap) -> Bool {
+        let note = normalized(task.notes)
+        let roadmapTitle = normalized(roadmap.title)
+        if !roadmapTitle.isEmpty, note.contains(roadmapTitle) {
+            return true
+        }
+
+        let taskTitle = normalized(task.title)
+        let roadmapTasks = Set(roadmap.milestones.flatMap(\.tasks).map(normalized) + roadmap.firstActions.map(normalized))
+        return !taskTitle.isEmpty && roadmapTasks.contains(taskTitle)
+    }
+
+    private static func dueSort(_ lhs: TaskItem, _ rhs: TaskItem) -> Bool {
+        let left = lhs.dueDate ?? .distantFuture
+        let right = rhs.dueDate ?? .distantFuture
+        if left == right { return lhs.createdAt < rhs.createdAt }
+        return left < right
+    }
+
+    private static func normalized(_ text: String) -> String {
+        text
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .lowercased()
+            .replacingOccurrences(of: "[^\\p{L}\\p{N}]+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 private struct GoalRoadmapPayload: Codable {
@@ -1189,7 +2267,11 @@ private struct GoalRoadmapPayload: Codable {
         let cleanCriteria = successCriteria.cleanLines(limit: 4)
         let cleanActions = firstActions.cleanLines(limit: 4)
         let cleanAssumptions = assumptions.cleanLines(limit: 3)
-        let cleanQuestions = clarifyingQuestions.cleanLines(limit: 3)
+        let cleanQuestions = GoalGuidanceQuestionBuilder.ensuringUsefulQuestions(
+            clarifyingQuestions.cleanLines(limit: 3),
+            input: input,
+            lang: lang
+        )
         let cleanHabits = habits.prefix(4).map { GoalHabit(title: $0.title, detail: $0.detail) }
             .filter { !$0.title.trimmed.isEmpty && !$0.detail.trimmed.isEmpty }
         let cleanRisks = risks.prefix(3).map { GoalRisk(title: $0.title, mitigation: $0.mitigation) }
@@ -1207,7 +2289,7 @@ private struct GoalRoadmapPayload: Codable {
             successCriteria: cleanCriteria,
             firstActions: cleanActions,
             assumptions: cleanAssumptions,
-            clarifyingQuestions: cleanQuestions.isEmpty ? nil : cleanQuestions,
+            clarifyingQuestions: cleanQuestions,
             evidence: evidence.isEmpty ? nil : evidence,
             milestones: mappedMilestones,
             habits: cleanHabits,
@@ -1287,6 +2369,7 @@ struct GoalRoadmapEngine {
     func buildAIRoadmap(
         input: GoalPlannerInput,
         lang: AppLang,
+        progressAudit: GoalPlanProgressAudit? = nil,
         onStage: @escaping (GoalRoadmapActivityStage) async -> Void = { _ in }
     ) async throws -> GoalRoadmap {
         await onStage(.research)
@@ -1301,7 +2384,8 @@ struct GoalRoadmapEngine {
                     input: input,
                     lang: lang,
                     configuration: configuration,
-                    evidence: evidence
+                    evidence: evidence,
+                    progressAudit: progressAudit
                 )
                 await onStage(.checking)
                 return roadmap
@@ -1314,7 +2398,7 @@ struct GoalRoadmapEngine {
 
         do {
             await onStage(.planning)
-            let roadmap = try await generateFoundationModelsRoadmap(input: input, lang: lang, evidence: evidence)
+            let roadmap = try await generateFoundationModelsRoadmap(input: input, lang: lang, evidence: evidence, progressAudit: progressAudit)
             await onStage(.checking)
             return roadmap
         } catch let error as GoalPlannerEngineError {
@@ -1375,15 +2459,17 @@ struct GoalRoadmapEngine {
         input: GoalPlannerInput,
         lang: AppLang,
         configuration: OllamaConfiguration,
-        evidence: [GoalEvidenceSource]
+        evidence: [GoalEvidenceSource],
+        progressAudit: GoalPlanProgressAudit?
     ) async throws -> GoalRoadmap {
         let provider = OllamaGoalProvider()
+        let brief = GoalRequestBrief.make(input: input, fallbackLang: lang)
         let response = try await provider.generate(
-            prompt: ollamaPrompt(for: input, lang: lang, evidence: evidence),
+            prompt: ollamaPrompt(for: input, lang: lang, brief: brief, evidence: evidence, progressAudit: progressAudit),
             configuration: configuration
         )
 
-        if let roadmap = qualifiedRoadmap(from: response, source: .ollama, input: input, lang: lang, evidence: evidence) {
+        if let roadmap = qualifiedRoadmap(from: response, source: .ollama, input: input, lang: brief.responseLanguage, evidence: evidence) {
             return roadmap
         }
 
@@ -1391,35 +2477,52 @@ struct GoalRoadmapEngine {
             prompt: ollamaRepairPrompt(
                 input: input,
                 lang: lang,
+                brief: brief,
                 evidence: evidence,
-                qualityFeedback: roadmapQualityFeedback(from: response, source: .ollama, input: input, lang: lang, evidence: evidence)
+                progressAudit: progressAudit,
+                qualityFeedback: roadmapQualityFeedback(from: response, source: .ollama, input: input, lang: brief.responseLanguage, evidence: evidence)
             ),
             configuration: configuration
         )
-        guard let roadmap = qualifiedRoadmap(from: repair, source: .ollama, input: input, lang: lang, evidence: evidence) else {
+        guard let roadmap = qualifiedRoadmap(from: repair, source: .ollama, input: input, lang: brief.responseLanguage, evidence: evidence) else {
             throw OllamaProviderError.incompleteRoadmap
         }
         return roadmap
     }
 
-    private func ollamaPrompt(for input: GoalPlannerInput, lang: AppLang, evidence: [GoalEvidenceSource]) -> String {
+    private func ollamaPrompt(
+        for input: GoalPlannerInput,
+        lang: AppLang,
+        brief: GoalRequestBrief,
+        evidence: [GoalEvidenceSource],
+        progressAudit: GoalPlanProgressAudit?
+    ) -> String {
         """
         You are Lippi's grounded roadmap planner. Return JSON only and follow the schema attached by the app.
 
         Known user goal: \(input.goal)
         Known user context: \(input.context.isEmpty ? L10n.tr("goals.ai.no_context", lang) : input.context)
-        Horizon: \(input.horizon.weeks) weeks. Pace: \(input.intensity.rawValue). Output language: \(lang.aiOutputLanguage).
+        Horizon: \(input.horizon.weeks) weeks. Pace: \(input.intensity.rawValue). Output language: \(brief.outputLanguageName).
         Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
+
+        \(brief.promptSection())
+
+        Progress audit from the previous Lippi plan:
+        \(progressAuditPromptSection(progressAudit))
 
         Relevant open reference excerpts. Use them only when they help; do not claim they support anything beyond their text:
         \(evidencePromptSection(evidence))
 
         Planning contract:
         - Build the smallest realistic route from the known facts. Preserve stated time, money, dates, constraints, and domain.
+        - Use the structured request as the canonical interpretation. If the raw text and structured request conflict, ask a clarifying question instead of inventing.
+        - All human-readable JSON string values must be in \(brief.outputLanguageName), matching the user's request language. Keep product names and technical acronyms as written.
         - Make each milestone a different reviewable outcome in its fixed slot. Give every milestone two or three distinct tasks.
         - Each task must start with a clear action and name an artifact, decision, test, or deliverable. Never write vague tasks such as "make progress", "work on the project", or "do research" without a focus.
         - Return exactly two success criteria and two first actions. A success criterion is either a user-supplied metric or an observable deliverable.
-        - Unknown information belongs in assumptions or up to three clarifying questions. Do not turn unknown facts into claims.
+        - Return two or three clarifyingQuestions. They must be guiding questions that help refine the roadmap and future Lippi support, not generic placeholders.
+        - Unknown information belongs in assumptions or clarifying questions. Do not turn unknown facts into claims.
+        - If the progress audit says the previous plan is behind, adapt the roadmap instead of restarting blindly: reduce the next 48-hour load, split blocked items, reschedule the closest milestone, and keep the tone supportive.
         - For a business goal, plan discovery or validation work, not imagined users, downloads, demand, revenue, conversion, or profit. Do not invent any metric, deadline, resource, prerequisite, feedback, or outcome.
         - Keep health, legal, and financial steps non-diagnostic and non-guaranteed. Use reference material as high-level guidance only.
         - Allowed categories: work, study, health, rest, home, other.
@@ -1429,7 +2532,9 @@ struct GoalRoadmapEngine {
     private func ollamaRepairPrompt(
         input: GoalPlannerInput,
         lang: AppLang,
+        brief: GoalRequestBrief,
         evidence: [GoalEvidenceSource],
+        progressAudit: GoalPlanProgressAudit?,
         qualityFeedback: String
     ) -> String {
         """
@@ -1437,11 +2542,15 @@ struct GoalRoadmapEngine {
         Goal: \(input.goal)
         Context: \(input.context.isEmpty ? L10n.tr("goals.ai.no_context", lang) : input.context)
         Horizon: \(input.horizon.weeks) weeks. Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
-        Output language: \(lang.aiOutputLanguage).
+        Output language: \(brief.outputLanguageName).
+        \(brief.promptSection())
+        Progress audit:
+        \(progressAuditPromptSection(progressAudit))
         Quality audit to fix: \(qualityFeedback)
         Reference excerpts:
         \(evidencePromptSection(evidence))
-        The earlier answer was rejected. Replan from the user brief, the fixed slots, and the quality audit above.
+        The earlier answer was rejected. Replan from the user brief, the fixed slots, the progress audit, and the quality audit above.
+        Return two or three useful clarifyingQuestions in \(brief.outputLanguageName) so the user can refine the roadmap and Lippi can adjust support later.
         """
     }
 
@@ -1496,7 +2605,8 @@ struct GoalRoadmapEngine {
     private func generateFoundationModelsRoadmap(
         input: GoalPlannerInput,
         lang: AppLang,
-        evidence: [GoalEvidenceSource]
+        evidence: [GoalEvidenceSource],
+        progressAudit: GoalPlanProgressAudit?
     ) async throws -> GoalRoadmap {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
@@ -1504,6 +2614,7 @@ struct GoalRoadmapEngine {
             guard model.isAvailable else { throw GoalPlannerEngineError.modelUnavailable }
             guard model.supportsLocale(.current) else { throw GoalPlannerEngineError.systemLocaleUnsupported }
             let foundationInput = try await prepareFoundationInput(input)
+            let brief = GoalRequestBrief.make(input: input, fallbackLang: lang)
 
             let session = LanguageModelSession(
                 model: model,
@@ -1512,19 +2623,19 @@ struct GoalRoadmapEngine {
 
             do {
                 let response = try await session.respond(
-                    to: prompt(for: foundationInput, original: input, evidence: evidence),
+                    to: prompt(for: foundationInput, original: input, brief: brief, evidence: evidence, progressAudit: progressAudit),
                     options: GenerationOptions(temperature: 0.18, maximumResponseTokens: 2600)
                 )
                 if let roadmap = qualifiedRoadmap(
                     from: response.content,
                     source: .foundationModels,
                     input: input,
-                    lang: lang,
+                    lang: brief.responseLanguage,
                     evidence: evidence
                 ) {
                     return annotateLanguageBridge(
                         roadmap,
-                        lang: lang,
+                        lang: brief.responseLanguage,
                         translatedInput: foundationInput.translatedFromUserLanguage,
                         semanticBridge: foundationInput.usedSemanticBridge
                     )
@@ -1535,12 +2646,14 @@ struct GoalRoadmapEngine {
                         original: response.content,
                         input: foundationInput,
                         originalInput: input,
+                        brief: brief,
                         evidence: evidence,
+                        progressAudit: progressAudit,
                         qualityFeedback: roadmapQualityFeedback(
                             from: response.content,
                             source: .foundationModels,
                             input: input,
-                            lang: lang,
+                            lang: brief.responseLanguage,
                             evidence: evidence
                         )
                     ),
@@ -1550,14 +2663,14 @@ struct GoalRoadmapEngine {
                     from: repair.content,
                     source: .foundationModels,
                     input: input,
-                    lang: lang,
+                    lang: brief.responseLanguage,
                     evidence: evidence
                 ) else {
                     throw GoalPlannerEngineError.invalidResponse
                 }
                 return annotateLanguageBridge(
                     roadmap,
-                    lang: lang,
+                    lang: brief.responseLanguage,
                     translatedInput: foundationInput.translatedFromUserLanguage,
                     semanticBridge: foundationInput.usedSemanticBridge
                 )
@@ -1657,7 +2770,11 @@ struct GoalRoadmapEngine {
         """
         You are Lippi's grounded goal-roadmap planner inside an iPhone app.
         Work only from stated user facts and supplied reference excerpts. Return strict JSON only.
+        First structure the user's request into objective, context facts, constraints, numbers, dates, missing details, and response language. Use that structure as the planning contract.
         Build a small route with distinct, reviewable milestones and concrete tasks. Unknown facts belong in assumptions or clarifying questions.
+        Always include two or three helpful clarifying questions for refining the roadmap and future support.
+        Write every human-readable JSON value in the detected user request language. Keep names, brands, product terms, and acronyms as written.
+        When Lippi supplies a progress audit showing overdue or stalled plan tasks, adapt the plan: preserve the goal, reduce the immediate workload, split or reschedule blocked next actions, and avoid blaming or psychoanalyzing the user.
         Never invent metrics, users, downloads, demand, revenue, resources, prerequisites, personal circumstances, or guarantees.
         """
     }
@@ -1665,30 +2782,37 @@ struct GoalRoadmapEngine {
     private func prompt(
         for input: FoundationGoalInput,
         original: GoalPlannerInput,
-        evidence: [GoalEvidenceSource]
+        brief: GoalRequestBrief,
+        evidence: [GoalEvidenceSource],
+        progressAudit: GoalPlanProgressAudit?
     ) -> String {
         let sourceNote: String
         if input.usedSemanticBridge {
-            sourceNote = "The user wrote in Russian. Apple Translation was unavailable, so Lippi used its offline Russian-English goal translator before this request. The translated goal and context preserve the planning-relevant intent, domain, dates, quantities, weekly time, and explicit constraints. Do not request or use the original Russian text. State assumptions only for information that is missing from the English brief."
+            sourceNote = "The user wrote in \(brief.outputLanguageName). Apple Translation was unavailable, so Lippi used its offline planning translator before this request. The translated goal and context preserve the planning-relevant intent, domain, dates, quantities, weekly time, and explicit constraints. Use the translated brief for understanding, but write the JSON string values in \(brief.outputLanguageName)."
         } else if input.translatedFromUserLanguage {
-            sourceNote = "The user wrote in Russian. Apple Translation converted the goal and context to English before this request. Do not use or request the original language text."
+            sourceNote = "The user wrote in \(brief.outputLanguageName). Apple Translation converted the goal and context to English before this request. Use the English translation for reasoning, but write the JSON string values in \(brief.outputLanguageName)."
         } else {
-            sourceNote = "The user provided English text."
+            sourceNote = "The user request language is \(brief.outputLanguageName)."
         }
 
         return """
-        Produce a strict JSON roadmap in English.
-        Known goal: \(input.goal)
-        Known context: \(input.context.isEmpty ? "No context provided" : input.context)
+        Produce a strict JSON roadmap in \(brief.outputLanguageName).
+        Original user goal: \(original.goal)
+        Original user context: \(original.context.isEmpty ? "No context provided" : original.context)
+        Planning goal in English if translated: \(input.goal)
+        Planning context in English if translated: \(input.context.isEmpty ? "No context provided" : input.context)
         Horizon: \(original.horizon.weeks) weeks. Pace: \(original.intensity.rawValue).
         Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: original.horizon.weeks)).
         Source-language handling: \(sourceNote)
+        \(brief.promptSection())
+        Progress audit from previous Lippi tasks:
+        \(progressAuditPromptSection(progressAudit))
         Reference excerpts:
         \(evidencePromptSection(evidence))
 
-        JSON shape: {"title":"string","summary":"string","confidence":0.7,"successCriteria":["string","string"],"firstActions":["string","string"],"assumptions":["string"],"clarifyingQuestions":["string"],"milestones":[{"title":"string","timeframe":"string","target":"reviewable output","tasks":["action plus artifact","action plus decision"],"category":"work"}],"habits":[{"title":"string","detail":"cadence"}],"risks":[{"title":"string","mitigation":"specific response"}]}
+        JSON shape: {"title":"string","summary":"string","confidence":0.7,"successCriteria":["string","string"],"firstActions":["string","string"],"assumptions":["string"],"clarifyingQuestions":["guiding question","guiding question"],"milestones":[{"title":"string","timeframe":"string","target":"reviewable output","tasks":["action plus artifact","action plus decision"],"category":"work"}],"habits":[{"title":"string","detail":"cadence"}],"risks":[{"title":"string","mitigation":"specific response"}]}
 
-        Rules: use 3 milestones for 4 or 8 weeks and 4 for 12 weeks; every milestone has two or three different action-plus-artifact tasks; return exactly two success criteria and first actions; use assumptions instead of invented facts; no vague tasks, performance predictions, medical/legal/financial instructions, or guarantees. Categories: work, study, health, rest, home, other.
+        Rules: use 3 milestones for 4 or 8 weeks and 4 for 12 weeks; every milestone has two or three different action-plus-artifact tasks; return exactly two success criteria and first actions; return two or three guiding clarifying questions; use assumptions instead of invented facts; if the progress audit says the user is behind, make the nearest milestone smaller and easier to restart; all human-readable JSON strings must be in \(brief.outputLanguageName); no vague tasks, performance predictions, medical/legal/financial instructions, or guarantees. Categories: work, study, health, rest, home, other.
         """
     }
 
@@ -1696,28 +2820,35 @@ struct GoalRoadmapEngine {
         original: String,
         input: FoundationGoalInput,
         originalInput: GoalPlannerInput,
+        brief: GoalRequestBrief,
         evidence: [GoalEvidenceSource],
+        progressAudit: GoalPlanProgressAudit?,
         qualityFeedback: String
     ) -> String {
         let sourceNote: String
         if input.usedSemanticBridge {
-            sourceNote = "The user wrote in Russian. Apple Translation was unavailable, so Lippi created an offline English planning translation before this request. Keep the repaired JSON in English and preserve the translated intent, dates, quantities, time limits, and constraints."
+            sourceNote = "The user wrote in \(brief.outputLanguageName). Apple Translation was unavailable, so Lippi created an offline English planning translation before this request. Keep the repaired JSON values in \(brief.outputLanguageName) and preserve the translated intent, dates, quantities, time limits, and constraints."
         } else if input.translatedFromUserLanguage {
-            sourceNote = "The user wrote in Russian. Apple Translation converted the goal and context to English before this request. Keep the repaired JSON in English."
+            sourceNote = "The user wrote in \(brief.outputLanguageName). Apple Translation converted the goal and context to English before this request. Keep the repaired JSON values in \(brief.outputLanguageName)."
         } else {
-            sourceNote = "The user provided English text. Keep the repaired JSON in English."
+            sourceNote = "The user request language is \(brief.outputLanguageName). Keep the repaired JSON values in that language."
         }
 
         return """
         Repair the previous answer into strict JSON only. Preserve grounded, context-specific ideas and fix the audit findings.
 
-        Goal in English: \(input.goal)
-        Context in English: \(input.context.isEmpty ? "No context provided" : input.context)
+        Original user goal: \(originalInput.goal)
+        Original user context: \(originalInput.context.isEmpty ? "No context provided" : originalInput.context)
+        Planning goal in English if translated: \(input.goal)
+        Planning context in English if translated: \(input.context.isEmpty ? "No context provided" : input.context)
         Planning horizon: \(originalInput.horizon.weeks) weeks
         Desired pace: \(originalInput.intensity.rawValue)
-        Output language: English
+        Output language: \(brief.outputLanguageName)
         Source-language handling: \(sourceNote)
         Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: originalInput.horizon.weeks)).
+        \(brief.promptSection())
+        Progress audit:
+        \(progressAuditPromptSection(progressAudit))
         Quality audit to fix: \(qualityFeedback)
         Reference excerpts:
         \(evidencePromptSection(evidence))
@@ -1730,7 +2861,7 @@ struct GoalRoadmapEngine {
           "successCriteria": ["string", "string"],
           "firstActions": ["string", "string"],
           "assumptions": ["string"],
-          "clarifyingQuestions": ["string"],
+          "clarifyingQuestions": ["guiding question", "guiding question"],
           "milestones": [
             {"title": "string", "timeframe": "string", "target": "string", "tasks": ["string", "string", "string"], "category": "work"}
           ],
@@ -1740,6 +2871,7 @@ struct GoalRoadmapEngine {
 
         Previous answer:
         \(String(original.prefix(5_000)))
+        The repaired answer must include two or three useful clarifyingQuestions in \(brief.outputLanguageName).
         """
     }
 
@@ -1751,6 +2883,10 @@ struct GoalRoadmapEngine {
         return evidence.map { source in
             "- \(source.title): \(source.excerpt)"
         }.joined(separator: "\n")
+    }
+
+    private func progressAuditPromptSection(_ audit: GoalPlanProgressAudit?) -> String {
+        audit?.promptSection() ?? "No previous Lippi task progress is available for this goal."
     }
 
     private func annotateLanguageBridge(_ roadmap: GoalRoadmap, lang: AppLang, translatedInput: Bool, semanticBridge: Bool) -> GoalRoadmap {
@@ -1775,15 +2911,17 @@ struct GoalRoadmapEngine {
         return try? JSONDecoder().decode(GoalRoadmapPayload.self, from: data)
     }
 
-    func buildDraftRoadmap(input: GoalPlannerInput, lang: AppLang) -> GoalRoadmap {
+    func buildDraftRoadmap(input: GoalPlannerInput, lang: AppLang, progressAudit: GoalPlanProgressAudit? = nil) -> GoalRoadmap {
+        let outputLang = input.responseLanguage(fallback: lang)
         let profile = GoalProfile(goal: input.goal, context: input.context)
-        let phaseTitles = localPhaseTitles(for: profile.category, lang: lang)
-        let tasks = localTaskBank(for: profile.category, lang: lang, intensity: input.intensity)
+        let phaseTitles = localPhaseTitles(for: profile.category, lang: outputLang)
+        let tasks = localTaskBank(for: profile.category, lang: outputLang, intensity: input.intensity)
         let weeks = input.horizon.weeks
         let phaseCount = min(4, max(3, weeks / 2))
         let chunk = max(1, weeks / phaseCount)
+        let isAdaptive = progressAudit?.shouldSuggestAdjustment == true
 
-        let milestones = (0..<phaseCount).map { index in
+        var milestones = (0..<phaseCount).map { index in
             let startWeek = index * chunk + 1
             let endWeek = index == phaseCount - 1 ? weeks : min(weeks, (index + 1) * chunk)
             let title = phaseTitles[safe: index] ?? phaseTitles.last ?? L10n.tr("goals.local.phase", lang)
@@ -1791,24 +2929,53 @@ struct GoalRoadmapEngine {
 
             return GoalMilestone(
                 title: title,
-                timeframe: timeframe(start: startWeek, end: endWeek, lang: lang),
-                target: targetText(goal: input.goal, index: index, category: profile.category, lang: lang),
+                timeframe: timeframe(start: startWeek, end: endWeek, lang: outputLang),
+                target: targetText(goal: input.goal, index: index, category: profile.category, lang: outputLang),
                 tasks: phaseTasks,
                 category: profile.category
             )
         }
 
+        if let progressAudit, isAdaptive, !milestones.isEmpty {
+            milestones[0].title = L10n.tr("goals.adapt.milestone.title", outputLang)
+            milestones[0].target = L10n.tr("goals.adapt.milestone.target", outputLang)
+            milestones[0].tasks = progressAudit.suggestions(lang: outputLang).prefixArray(2) + milestones[0].tasks.prefixArray(1)
+        }
+
+        var habits = localHabits(for: profile.category, lang: outputLang, intensity: input.intensity)
+        var risks = localRisks(for: profile.category, lang: outputLang)
+        var assumptions = draftAssumptions(input: input, lang: outputLang)
+        let brief = GoalRequestBrief.make(input: input, fallbackLang: outputLang)
+        let guidanceQuestions = GoalGuidanceQuestionBuilder.questions(for: input, brief: brief, lang: outputLang)
+
+        if isAdaptive {
+            habits.insert(
+                GoalHabit(title: L10n.tr("goals.adapt.habit.title", outputLang), detail: L10n.tr("goals.adapt.habit.detail", outputLang)),
+                at: 0
+            )
+            risks.insert(
+                GoalRisk(title: L10n.tr("goals.adapt.risk.title", outputLang), mitigation: L10n.tr("goals.adapt.risk.detail", outputLang)),
+                at: 0
+            )
+            assumptions.append(L10n.tr("goals.assumption.progress_audit", outputLang))
+        }
+
         return GoalRoadmap(
             title: input.goal,
-            summary: summaryText(goal: input.goal, horizon: input.horizon, intensity: input.intensity, category: profile.category, lang: lang),
+            summary: isAdaptive
+                ? L10n.fmt("goals.adapt.summary", outputLang, input.goal, progressAudit?.overdueTasks ?? 0, progressAudit?.activeTasks ?? 0)
+                : summaryText(goal: input.goal, horizon: input.horizon, intensity: input.intensity, category: profile.category, lang: outputLang),
             source: .localPlanner,
-            confidence: 0.52,
-            successCriteria: draftSuccessCriteria(goal: input.goal, category: profile.category, lang: lang),
-            firstActions: rotated(tasks, offset: 0).prefixArray(4),
-            assumptions: draftAssumptions(input: input, lang: lang),
+            confidence: isAdaptive ? 0.58 : 0.52,
+            successCriteria: draftSuccessCriteria(goal: input.goal, category: profile.category, lang: outputLang),
+            firstActions: isAdaptive
+                ? (progressAudit?.suggestions(lang: outputLang).prefixArray(2) ?? []) + rotated(tasks, offset: 0).prefixArray(2)
+                : rotated(tasks, offset: 0).prefixArray(4),
+            assumptions: assumptions,
+            clarifyingQuestions: guidanceQuestions,
             milestones: milestones,
-            habits: localHabits(for: profile.category, lang: lang, intensity: input.intensity),
-            risks: localRisks(for: profile.category, lang: lang)
+            habits: habits.prefixArray(4),
+            risks: risks.prefixArray(3)
         )
     }
 

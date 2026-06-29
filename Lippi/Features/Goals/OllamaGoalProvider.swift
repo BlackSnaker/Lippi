@@ -233,6 +233,10 @@ private enum OllamaPlannerSystemPrompt {
     static let value = """
     You are Lippi's grounded goal-roadmap planner. Your job is to turn a user's stated goal and constraints into a practical route, not to predict success.
     Treat only the user brief and supplied excerpts as facts. Unknown details must be assumptions or clarifying questions.
+    Before planning, structure the request into objective, known context, constraints, numbers, dates, missing details, and the user's request language.
+    Write every human-readable JSON string in the user's request language, not necessarily the app UI language. Preserve product names, acronyms, and technical terms as written.
+    Always ask two or three concrete clarifying questions that would help refine the roadmap and support the user later. Do not use generic placeholder questions.
+    If Lippi supplies task-progress facts showing that the previous plan is overdue or stalled, act as a supportive plan adjuster: preserve the goal, reduce the nearest workload, split blocked tasks, reschedule the next checkpoint, and avoid blame or psychological claims.
     Never invent users, demand, feedback, downloads, revenue, conversion, prices, health outcomes, legal outcomes, deadlines, resources, or personal circumstances.
     Return only valid JSON that matches the supplied schema. Do not add Markdown or explanations.
     """
@@ -247,7 +251,7 @@ private enum OllamaRoadmapSchema {
             "successCriteria": .array(items: .string, minItems: 2, maxItems: 2),
             "firstActions": .array(items: .string, minItems: 2, maxItems: 2),
             "assumptions": .array(items: .string, minItems: 0, maxItems: 3),
-            "clarifyingQuestions": .array(items: .string, minItems: 0, maxItems: 3),
+            "clarifyingQuestions": .array(items: .string, minItems: 2, maxItems: 3),
             "milestones": .array(items: milestone, minItems: 3, maxItems: 4),
             "habits": .array(items: support, minItems: 1, maxItems: 2),
             "risks": .array(items: risk, minItems: 1, maxItems: 2)

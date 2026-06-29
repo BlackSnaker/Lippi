@@ -2371,6 +2371,7 @@ struct ContentView: View {
         .environment(\.lippiHasGlobalBackdrop, true)
         .environment(\.lippiIsScrolling, scrollPerformance.isScrolling)
         .environment(\.lippiScrollPerformanceCoordinator, scrollPerformance)
+        .lippiPerformanceResponsive()
 
         .environment(\.locale, Locale(identifier: lang.localeIdentifier))
 
@@ -2657,13 +2658,14 @@ private struct PomodoroAlarmBanner: View {
 struct GlassTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
 
     @Binding var selection: AppTab
     var isInteractionEnabled: Bool = true
     let lang: AppLang
     @Namespace private var tabSelectionNamespace
 
-    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency }
+    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
 
     var body: some View {
         HStack(spacing: simplifiedEffects ? 4 : 6) {

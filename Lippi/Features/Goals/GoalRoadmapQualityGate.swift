@@ -57,6 +57,14 @@ enum GoalRoadmapQualityGate {
             findings.append("Give every milestone a clear, reviewable outcome instead of a short generic target.")
         }
 
+        let questions = roadmap.clarifyingQuestions ?? []
+        if questions.count < 2 {
+            findings.append("Return two or three concrete clarifying questions for refining the roadmap and future support.")
+        }
+        if questions.contains(where: isVagueQuestion) {
+            findings.append("Replace generic clarifying questions with specific questions about context, constraints, timing, blockers, or support cadence.")
+        }
+
         let normalizedTasks = allTasks.map(normalized)
         if Set(normalizedTasks).count != normalizedTasks.count {
             findings.append("Do not repeat the same task across milestones.")
@@ -183,6 +191,21 @@ enum GoalRoadmapQualityGate {
             "подготовить все"
         ]
         return vagueTasks.contains(value)
+    }
+
+    private static func isVagueQuestion(_ question: String) -> Bool {
+        let value = normalized(question)
+        if value.count < 12 { return true }
+
+        let vagueQuestions: Set<String> = [
+            "what else",
+            "anything else",
+            "any constraints",
+            "что еще",
+            "есть ли еще что то",
+            "какие ограничения"
+        ]
+        return vagueQuestions.contains(value)
     }
 
     private static func hasUnsupportedOutcomeClaim(in text: String, input: GoalPlannerInput) -> Bool {

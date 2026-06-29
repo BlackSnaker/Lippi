@@ -50,6 +50,20 @@ struct GoalRoadmapQualityGateTests {
         #expect(GoalRoadmapQualityGate.validated(roadmap, input: input, lang: .en) == nil)
     }
 
+    @Test("Rejects roadmap without useful clarifying questions")
+    func rejectsMissingClarifyingQuestions() {
+        let input = GoalPlannerInput(
+            goal: "Launch an iOS habit tracker MVP",
+            context: "Solo Swift developer with 8 hours per week and a $300 budget",
+            horizon: .eightWeeks,
+            intensity: .balanced
+        )
+        var roadmap = sampleRoadmap()
+        roadmap.clarifyingQuestions = ["What else?"]
+
+        #expect(GoalRoadmapQualityGate.validated(roadmap, input: input, lang: .en) == nil)
+    }
+
     private func sampleRoadmap() -> GoalRoadmap {
         GoalRoadmap(
             title: "Habit tracker MVP",
@@ -65,7 +79,10 @@ struct GoalRoadmapQualityGateTests {
                 "Create a SwiftUI project and a habit data model."
             ],
             assumptions: ["The preferred pricing approach still needs confirmation."],
-            clarifyingQuestions: ["Which habit loop is most important for the first release?"],
+            clarifyingQuestions: [
+                "Which habit loop is most important for the first release?",
+                "How many hours per week can you spend on testing the first build?"
+            ],
             milestones: [
                 GoalMilestone(
                     title: "Define the first release",

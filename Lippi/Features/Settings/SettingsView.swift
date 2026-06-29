@@ -93,7 +93,6 @@ struct SettingsView: View {
         case live
         case pomodoro
         case daily
-        case countdown
         case ai
         case eye
         case voice
@@ -141,8 +140,7 @@ struct SettingsView: View {
             var items: [SettingsJumpItem] = [
                 SettingsJumpItem(anchor: .quick, title: s("settings.quick.title"), icon: "bolt.circle.fill"),
                 SettingsJumpItem(anchor: .pomodoro, title: s("settings.pomodoro.title"), icon: "timer.circle.fill"),
-                SettingsJumpItem(anchor: .daily, title: s("settings.daily.title"), icon: "bell.and.waves.left.and.right.fill"),
-                SettingsJumpItem(anchor: .countdown, title: s("settings.countdown.title"), icon: "hourglass.circle.fill")
+                SettingsJumpItem(anchor: .daily, title: s("settings.daily.title"), icon: "bell.and.waves.left.and.right.fill")
             ]
             if supportsLiveActivitiesCard {
                 items.insert(SettingsJumpItem(anchor: .live, title: s("settings.live.title"), icon: "wave.3.right.circle.fill"), at: 1)
@@ -212,8 +210,6 @@ struct SettingsView: View {
                                     .id(SettingsAnchor.pomodoro)
                                 dailyRemindersCard
                                     .id(SettingsAnchor.daily)
-                                countdownCard
-                                    .id(SettingsAnchor.countdown)
                             }
                             if shouldShowAIScopeCards() {
                                 OllamaSettingsCard()
@@ -1152,18 +1148,6 @@ struct SettingsView: View {
                     .foregroundStyle(DS.text(0.62))
                     .padding(.top, 2)
             }
-        }
-    }
-
-    private var countdownCard: some View {
-        GlassCard {
-            sectionHeader(
-                s("settings.countdown.title"),
-                subtitle: s("settings.countdown.subtitle"),
-                icon: "hourglass.circle.fill",
-                accent: Color(hex: 0xBF5AF2)
-            )
-            CountdownSettingsSection()
         }
     }
 

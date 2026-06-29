@@ -140,7 +140,6 @@ struct TodayView: View {
                         todayPlanCard
                         quickActions
                         smartGoalsEntry
-                        CountdownCardView()
                         StatsCardView()
                     }
                     .padding(20)
