@@ -192,54 +192,68 @@ struct SettingsView: View {
                         LazyVStack(spacing: 16) {
                             heroCard
                                 .id(SettingsAnchor.hero)
+                                .lippiMotionScene(0)
                             scopeCard(proxy: proxy)
+                                .lippiMotionScene(1)
                             if shouldShowAccountScopeCards() {
                                 accountCard
                                     .id(SettingsAnchor.account)
+                                    .lippiMotionScene(2)
                                 languageCard
                                     .id(SettingsAnchor.language)
+                                    .lippiMotionScene(3)
                                 themeCard
                                     .id(SettingsAnchor.theme)
+                                    .lippiMotionScene(4)
                             }
                             if shouldShowFocusScopeCards() {
                                 quickActionsCard
                                     .id(SettingsAnchor.quick)
+                                    .lippiMotionScene(2)
                                 liveActivitiesCard
                                     .id(SettingsAnchor.live)
+                                    .lippiMotionScene(3)
                                 pomodoroCard
                                     .id(SettingsAnchor.pomodoro)
+                                    .lippiMotionScene(4)
                                 dailyRemindersCard
                                     .id(SettingsAnchor.daily)
+                                    .lippiMotionScene(5)
                             }
                             if shouldShowAIScopeCards() {
                                 OllamaSettingsCard()
                                     .id(SettingsAnchor.ai)
+                                    .lippiMotionScene(2)
                             }
                             if shouldShowHealthScopeCards() {
                                 eyeGymCard
                                     .id(SettingsAnchor.eye)
+                                    .lippiMotionScene(2)
                                 healthVoiceCard
                                     .id(SettingsAnchor.voice)
+                                    .lippiMotionScene(3)
                                 NeuralVoiceSettingsCard()
+                                    .lippiMotionScene(4)
                             }
                             if shouldShowDataScopeCards() {
                                 dataCard
                                     .id(SettingsAnchor.data)
+                                    .lippiMotionScene(2)
                             }
                         }
                         .padding(20)
                     }
                     .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 92) }
                     .lippiScrollPerformance()
-                    .transaction { $0.animation = nil }
                     .onChange(of: selectedScope) { _, newScope in
                         let target = primaryAnchor(for: newScope)
                         DispatchQueue.main.async {
-                            withAnimation(DS.motionSmooth) {
+                            withAnimation(DS.motionNavigate) {
                                 proxy.scrollTo(target, anchor: .top)
                             }
                         }
                     }
+                    .animation(DS.motionState, value: selectedScope)
                 }
                 #if os(iOS)
                 .scrollIndicators(.hidden)
@@ -448,7 +462,7 @@ struct SettingsView: View {
 
             let target = primaryAnchor(for: scope)
             DispatchQueue.main.async {
-                withAnimation(DS.motionSmooth) {
+                withAnimation(DS.motionNavigate) {
                     proxy.scrollTo(target, anchor: .top)
                 }
             }
@@ -477,7 +491,7 @@ struct SettingsView: View {
             #if os(iOS)
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             #endif
-            withAnimation(DS.motionSmooth) {
+            withAnimation(DS.motionNavigate) {
                 proxy.scrollTo(item.anchor, anchor: .top)
             }
         } label: {

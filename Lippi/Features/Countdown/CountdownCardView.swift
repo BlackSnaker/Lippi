@@ -123,7 +123,7 @@ struct CountdownCardView: View {
                     .overlay(RoundedRectangle(cornerRadius: 18).stroke(DS.stroke, lineWidth: 1))
                     .shadow(color: DS.depthShadow(0.12), radius: 6, x: 0, y: 3)
 
-                // ✅ 60fps ТОЛЬКО ЗДЕСЬ (кольцо)
+                // ✅ Display-sync только здесь: layout/тексты не гоняются на каждом кадре.
                 CountdownRingAnimated(
                     reduceMotion: reduceMotion,
                     sceneActive: isSceneActive && isCardVisible
@@ -144,7 +144,7 @@ struct CountdownCardView: View {
                 // ТЕКСТ таймера — от textTick (1/сек)
                 timerChip(ev)
 
-                // ✅ 60fps ТОЛЬКО ЗДЕСЬ (линейный бар)
+                // ✅ Display-sync только здесь: layout/тексты не гоняются на каждом кадре.
                 CountdownBarAnimated(
                     reduceMotion: reduceMotion,
                     sceneActive: isSceneActive && isCardVisible
@@ -227,22 +227,6 @@ struct CountdownCardView: View {
     // MARK: - Actions
     private var actions: some View {
         HStack(spacing: 10) {
-            #if canImport(ActivityKit)
-            if #available(iOS 16.2, *) {
-                Button {
-                    guard let ev = countdown.event else { return }
-                    let s = Date()
-                    Task {
-                        await PomodoroLiveManager.start(title: ev.title, phase: .focus, start: s, end: ev.date)
-                    }
-                } label: {
-                    Label(s("countdown.actions.to_island"), systemImage: "wave.3.right")
-                        .labelStyle(TightLabelStyle())
-                }
-                .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
-            }
-            #endif
-
             Button(role: .destructive) { countdown.clear() } label: {
                 Label(s("countdown.actions.reset"), systemImage: "trash")
                     .labelStyle(TightLabelStyle())
@@ -286,7 +270,7 @@ struct CountdownCardView: View {
 }
 
 // =======================================================
-// MARK: - Animated Ring (isolated 60fps)
+// MARK: - Animated Ring (isolated display-sync)
 // =======================================================
 private struct CountdownRingAnimated: View {
     let reduceMotion: Bool
@@ -294,8 +278,7 @@ private struct CountdownRingAnimated: View {
     let compute: (Date) -> Double
 
     private var frameInterval: TimeInterval {
-        if !sceneActive { return 1.0 }
-        return reduceMotion ? (1.0 / 12.0) : (1.0 / 24.0)
+        DS.animationFrameInterval(active: sceneActive, reduceMotion: reduceMotion)
     }
 
     var body: some View {
@@ -308,7 +291,7 @@ private struct CountdownRingAnimated: View {
 }
 
 // =======================================================
-// MARK: - Animated Bar (isolated 60fps)
+// MARK: - Animated Bar (isolated display-sync)
 // =======================================================
 private struct CountdownBarAnimated: View {
     let reduceMotion: Bool
@@ -316,8 +299,7 @@ private struct CountdownBarAnimated: View {
     let compute: (Date) -> Double
 
     private var frameInterval: TimeInterval {
-        if !sceneActive { return 1.0 }
-        return reduceMotion ? (1.0 / 12.0) : (1.0 / 24.0)
+        DS.animationFrameInterval(active: sceneActive, reduceMotion: reduceMotion)
     }
 
     var body: some View {

@@ -73,6 +73,7 @@ struct TasksView: View {
                             overdueCount: overdueCount,
                             dueTodayCount: dueTodayCount
                         )
+                            .lippiMotionScene(0)
                             .listRowInsets(.init(top: 8, leading: 16, bottom: 10, trailing: 16))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
@@ -80,6 +81,7 @@ struct TasksView: View {
 
                     if activeItems.isEmpty && doneItems.isEmpty {
                         emptyState
+                            .lippiMotionScene(1)
                             .listRowInsets(.init(top: 18, leading: 16, bottom: 18, trailing: 16))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
@@ -114,7 +116,6 @@ struct TasksView: View {
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
                 .lippiScrollPerformance()
-                .transaction { $0.animation = nil }
             }
             .navigationTitle(s("tasks.nav_title"))
             .navigationBarTitleDisplayMode(.large)
@@ -299,25 +300,41 @@ struct TasksView: View {
     private func row(_ item: TaskItem) -> some View {
         TaskRow(
             item: item,
-            onToggle: { store.toggle(item.id) },
+            onToggle: {
+                withAnimation(DS.motionState) {
+                    store.toggle(item.id)
+                }
+            },
             onEdit: { editing = item }
         )
         .equatable()
         .listRowBackground(Color.clear)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) { store.remove(item.id) } label: {
+            Button(role: .destructive) {
+                withAnimation(DS.motionState) {
+                    store.remove(item.id)
+                }
+            } label: {
                 Label(s("tasks.swipe.delete"), systemImage: "trash")
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            Button { store.toggle(item.id) } label: {
+            Button {
+                withAnimation(DS.motionState) {
+                    store.toggle(item.id)
+                }
+            } label: {
                 Label(item.isCompleted ? s("tasks.swipe.restore") : s("tasks.swipe.done"),
                       systemImage: item.isCompleted ? "arrow.uturn.backward" : "checkmark")
             }
             .tint(.green)
         }
         .contextMenu {
-            Button { store.toggle(item.id) } label: {
+            Button {
+                withAnimation(DS.motionState) {
+                    store.toggle(item.id)
+                }
+            } label: {
                 Label(
                     item.isCompleted ? s("tasks.menu.make_active") : s("tasks.menu.mark_done"),
                     systemImage: item.isCompleted ? "arrow.uturn.backward" : "checkmark.circle"
@@ -326,7 +343,11 @@ struct TasksView: View {
             Button { editing = item } label: {
                 Label(s("tasks.menu.edit"), systemImage: "square.and.pencil")
             }
-            Button(role: .destructive) { store.remove(item.id) } label: {
+            Button(role: .destructive) {
+                withAnimation(DS.motionState) {
+                    store.remove(item.id)
+                }
+            } label: {
                 Label(s("tasks.menu.delete"), systemImage: "trash")
             }
         }
@@ -338,6 +359,8 @@ struct TasksView: View {
 // MARK: - Task Row
 // =======================================================
 struct TaskRow: View, Equatable {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     let item: TaskItem
     var onToggle: () -> Void
     var onEdit: () -> Void
@@ -391,6 +414,9 @@ struct TaskRow: View, Equatable {
                     .font(.system(size: 19, weight: .semibold))
                     .foregroundStyle(item.isCompleted ? Color(hex: 0x30D158) : DS.textSecondary)
                     .frame(width: 40, height: 40)
+                    .scaleEffect(reduceMotion ? 1 : (item.isCompleted ? 1.08 : 1.0))
+                    .rotationEffect(.degrees(reduceMotion ? 0 : (item.isCompleted ? -4 : 0)))
+                    .animation(reduceMotion ? nil : DS.motionState, value: item.isCompleted)
                     .background(categoryTone.opacity(item.isCompleted ? 0.10 : 0.14), in: Circle())
                     .lippiSystemGlass(
                         in: Circle(),
@@ -442,7 +468,7 @@ struct TaskRow: View, Equatable {
         .padding(.vertical, 4)
         .listRowInsets(EdgeInsets())
         .opacity(item.isCompleted ? 0.72 : 1)
-        .transaction { $0.animation = nil }
+        .animation(reduceMotion ? nil : DS.motionState, value: item.isCompleted)
     }
 
     // MARK: - Helpers

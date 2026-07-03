@@ -44,6 +44,9 @@ struct StatsCardView: View {
                 footerHint
             }
         }
+        .animation(reduceMotion ? nil : DS.motionState, value: daysWindow)
+        .animation(reduceMotion ? nil : DS.motionState, value: metric)
+        .animation(reduceMotion ? nil : DS.motionState, value: selected?.date)
     }
 
     private var header: some View {
@@ -126,6 +129,7 @@ struct StatsCardView: View {
             Text(value)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(tPrimary)
+                .contentTransition(.numericText())
                 .singleLine()
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -22,8 +22,11 @@ struct BreakView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         heroCard
+                            .lippiMotionScene(0)
                         launchCard
+                            .lippiMotionScene(1)
                         hintsCard
+                            .lippiMotionScene(2)
                         Color.clear.frame(height: 84)
                     }
                     .padding(20)
@@ -99,12 +102,13 @@ struct BreakView: View {
                 }
 
                 BreakLaunchPreview()
-                .frame(height: 260)
+                    .frame(height: 260)
+                    .lippiFloating(active: true, amplitude: 1.4, duration: 4.6)
 
                 Text(s("break.launch.description"))
-                .font(.footnote)
-                .foregroundStyle(DS.text(0.68))
-                .fixedSize(horizontal: false, vertical: true)
+                    .font(.footnote)
+                    .foregroundStyle(DS.text(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Button {
                     BreakHaptics.tap()
@@ -233,7 +237,7 @@ private struct BreakGameFullscreenView: View {
             lastTick = now
             game.tick(dt: CGFloat(dt), viewportWidth: viewportWidth)
         }
-        displayLink.start()
+        displayLink.start(preferredFramesPerSecond: reduceMotion ? 60 : DS.preferredFramesPerSecond)
         #endif
     }
 
@@ -494,13 +498,19 @@ private final class BreakDisplayLinkDriver: NSObject, ObservableObject {
     var onFrame: ((TimeInterval) -> Void)?
     private var displayLink: CADisplayLink?
 
-    func start() {
+    func start(preferredFramesPerSecond: Int = DS.preferredFramesPerSecond) {
         guard displayLink == nil else { return }
         let link = CADisplayLink(target: self, selector: #selector(step(_:)))
+        let preferredFPS = min(preferredFramesPerSecond, DS.preferredFramesPerSecond)
         if #available(iOS 15.0, *) {
-            link.preferredFrameRateRange = CAFrameRateRange(minimum: 45, maximum: 60, preferred: 60)
+            let minimumFPS = preferredFPS >= 120 ? 80 : 45
+            link.preferredFrameRateRange = CAFrameRateRange(
+                minimum: Float(minimumFPS),
+                maximum: Float(preferredFPS),
+                preferred: Float(preferredFPS)
+            )
         } else {
-            link.preferredFramesPerSecond = 60
+            link.preferredFramesPerSecond = preferredFPS
         }
         link.add(to: .main, forMode: .common)
         displayLink = link

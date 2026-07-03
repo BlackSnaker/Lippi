@@ -2152,19 +2152,29 @@ struct VoiceAssistantLauncherButton: View {
                         .fill(DS.liquidSheen)
                 )
                 .overlay(
+                    LippiLiquidSheen(
+                        cornerRadius: 28,
+                        duration: state.isActive ? 2.8 : 5.8,
+                        intensity: state.isActive ? 1.05 : 0.70
+                    )
+                    .clipShape(Circle())
+                )
+                .overlay(
                     Circle()
                         .stroke(.white.opacity(0.28), lineWidth: 1)
                 )
 
-            Image(systemName: state.isActive ? "waveform.and.mic" : "mic.fill")
+            Image(systemName: state.liquidIcon)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.white)
+                .scaleEffect(state.isActive && !reduceMotion ? 1.06 : 1.0)
         }
         .contentShape(Circle())
         .shadow(color: state.liquidTones[0].opacity(reduceTransparency ? 0.18 : 0.42), radius: state.isActive ? 14 : 8, x: 0, y: 6)
         .scaleEffect(launcherScale)
-        .animation(reduceMotion ? nil : DS.motionQuick, value: state.isActive)
-        .animation(reduceMotion ? nil : DS.motionQuick, value: isPressed)
+        .lippiFloating(active: state.isActive, amplitude: 2.0, duration: 3.8)
+        .animation(reduceMotion ? nil : DS.motionMagic, value: state.isActive)
+        .animation(reduceMotion ? nil : DS.motionMagic, value: isPressed)
         .accessibilityLabel(Text(title))
         .accessibilityAddTraits(.isButton)
         .gesture(

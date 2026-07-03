@@ -8,6 +8,7 @@ import UIKit
 struct PomodoroView: View {
     @EnvironmentObject private var pomo: PomodoroManager
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var tick: Date = .now
     @State private var customMinutesText: String = ""
@@ -152,7 +153,9 @@ struct PomodoroView: View {
                                     .padding(.vertical, 10)
                                 }
                             }
+                            .animation(reduceMotion ? nil : DS.motionState, value: pomo.phase)
                         }
+                        .lippiMotionScene(0)
 
                         // =======================================================
                         // QUICK STARTS
@@ -193,6 +196,7 @@ struct PomodoroView: View {
                                 }
                             }
                         }
+                        .lippiMotionScene(1)
 
                         // =======================================================
                         // CUSTOM MINUTES
@@ -264,6 +268,7 @@ struct PomodoroView: View {
                                     .singleLine()
                             }
                         }
+                        .lippiMotionScene(2)
 
                         // =======================================================
                         // TRANSPORT
@@ -303,6 +308,7 @@ struct PomodoroView: View {
                                 }
                             }
                         }
+                        .lippiMotionScene(3)
 
                         // ✅ воздух под TabBar
                         Color.clear.frame(height: 84)
@@ -310,7 +316,6 @@ struct PomodoroView: View {
                     .padding(20)
                 }
                 .lippiScrollPerformance()
-                .transaction { $0.animation = nil }
             }
             .navigationTitle(s("pomodoro.nav_title"))
             .navigationBarTitleDisplayMode(.large)

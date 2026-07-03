@@ -190,9 +190,14 @@ struct DS {
     static let motionSmooth = Animation.spring(response: 0.34, dampingFraction: 0.95, blendDuration: 0.10)
     static let motionGentle = Animation.spring(response: 0.46, dampingFraction: 0.95, blendDuration: 0.12)
     static let motionEnter = Animation.spring(response: 0.40, dampingFraction: 0.94, blendDuration: 0.12)
+    static let motionMagic = Animation.spring(response: 0.56, dampingFraction: 0.88, blendDuration: 0.16)
+    static let motionNavigate = Animation.spring(response: 0.48, dampingFraction: 0.90, blendDuration: 0.14)
+    static let motionReveal = Animation.spring(response: 0.52, dampingFraction: 0.92, blendDuration: 0.14)
+    static let motionState = Animation.spring(response: 0.30, dampingFraction: 0.88, blendDuration: 0.08)
+    static let motionSweep = Animation.easeInOut(duration: 5.8)
     static let motionFadeQuick = Animation.easeOut(duration: 0.16)
 
-    static let pressScale: CGFloat = 0.988
+    static let pressScale: CGFloat = 0.974
     static let press = motionQuick
 
     // Extra polish
@@ -247,6 +252,32 @@ struct DS {
 
     static var systemGlassEffectsEnabled: Bool {
         !performanceEffectsReduced
+    }
+
+    static var displayMaximumFramesPerSecond: Int {
+        #if os(iOS)
+        max(60, UIScreen.main.maximumFramesPerSecond)
+        #else
+        60
+        #endif
+    }
+
+    static var preferredFramesPerSecond: Int {
+        runtimeConstrained ? min(60, displayMaximumFramesPerSecond) : displayMaximumFramesPerSecond
+    }
+
+    static var animationFrameInterval: TimeInterval {
+        1.0 / Double(max(60, preferredFramesPerSecond))
+    }
+
+    static func animationFrameInterval(active: Bool, reduceMotion: Bool) -> TimeInterval {
+        if !active { return 1.0 }
+        if reduceMotion { return 1.0 / 30.0 }
+        return animationFrameInterval
+    }
+
+    static func motionStaggerDelay(_ index: Int, step: Double = 0.045, cap: Double = 0.22) -> Double {
+        min(cap, max(0, Double(index)) * step)
     }
 
     static func text(_ opacity: Double = 1.0) -> Color {
@@ -352,6 +383,50 @@ extension View {
             )
         )
     }
+
+    func lippiMagicAppear(
+        _ enabled: Bool = true,
+        delay: Double = 0,
+        y: CGFloat = 12,
+        scale: CGFloat = 0.985
+    ) -> some View {
+        modifier(
+            LippiMagicAppearModifier(
+                enabled: enabled,
+                delay: delay,
+                y: y,
+                initialScale: scale
+            )
+        )
+    }
+
+    func lippiMotionScene(
+        _ index: Int = 0,
+        enabled: Bool = true,
+        y: CGFloat = 12
+    ) -> some View {
+        modifier(
+            LippiMotionSceneModifier(
+                index: index,
+                enabled: enabled,
+                y: y
+            )
+        )
+    }
+
+    func lippiFloating(
+        active: Bool = true,
+        amplitude: CGFloat = 2.5,
+        duration: Double = 5.4
+    ) -> some View {
+        modifier(
+            LippiFloatingModifier(
+                active: active,
+                amplitude: amplitude,
+                duration: duration
+            )
+        )
+    }
 }
 
 private struct LippiSystemGlassModifier<S: Shape>: ViewModifier {
@@ -380,6 +455,159 @@ private struct LippiSystemGlassModifier<S: Shape>: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+struct LippiLiquidSheen: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
+
+    var cornerRadius: CGFloat
+    var duration: Double = 6.0
+    var intensity: Double = 1.0
+
+    private var shouldRender: Bool {
+        !reduceTransparency && !isScrolling && !DS.runtimeConstrained
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = proxy.size
+
+            if shouldRender, size.width > 2, size.height > 2 {
+                LinearGradient(
+                    colors: [
+                        .clear,
+                        Color.white.opacity(0.00),
+                        Color.white.opacity(0.24 * intensity),
+                        DS.accent.opacity(0.10 * intensity),
+                        Color.white.opacity(0.08 * intensity),
+                        .clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(width: max(58, size.width * 0.38), height: size.height * 1.9)
+                .rotationEffect(.degrees(18))
+                .offset(
+                    x: -size.width * 0.18,
+                    y: -size.height * 0.42
+                )
+                .blendMode(.screen)
+                .opacity(0.38)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct LippiMagicAppearModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.lippiIsScrolling) private var isScrolling
+
+    let enabled: Bool
+    let delay: Double
+    let y: CGFloat
+    let initialScale: CGFloat
+    @State private var didAppear = false
+
+    private var shouldAnimate: Bool {
+        enabled && !reduceMotion && !isScrolling
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shouldAnimate ? (didAppear ? 1 : 0.001) : 1)
+            .offset(y: shouldAnimate ? (didAppear ? 0 : y) : 0)
+            .scaleEffect(shouldAnimate ? (didAppear ? 1 : initialScale) : 1)
+            .onAppear {
+                guard enabled else {
+                    didAppear = true
+                    return
+                }
+                guard shouldAnimate else {
+                    didAppear = true
+                    return
+                }
+                guard !didAppear else { return }
+                withAnimation(DS.motionMagic.delay(delay)) {
+                    didAppear = true
+                }
+            }
+    }
+}
+
+private struct LippiMotionSceneModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
+
+    let index: Int
+    let enabled: Bool
+    let y: CGFloat
+    @State private var didAppear = false
+
+    private var shouldAnimate: Bool {
+        enabled && !reduceMotion && !reduceTransparency && !isScrolling && !DS.runtimeConstrained
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shouldAnimate ? (didAppear ? 1 : 0.001) : 1)
+            .offset(y: shouldAnimate ? (didAppear ? 0 : y) : 0)
+            .scaleEffect(shouldAnimate ? (didAppear ? 1 : 0.982) : 1)
+            .onAppear {
+                guard enabled else {
+                    didAppear = true
+                    return
+                }
+                guard shouldAnimate else {
+                    didAppear = true
+                    return
+                }
+                guard !didAppear else { return }
+                withAnimation(DS.motionReveal.delay(DS.motionStaggerDelay(index))) {
+                    didAppear = true
+                }
+            }
+    }
+}
+
+private struct LippiFloatingModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
+
+    let active: Bool
+    let amplitude: CGFloat
+    let duration: Double
+    @State private var phase = false
+
+    private var shouldAnimate: Bool {
+        active && !reduceMotion && !reduceTransparency && !isScrolling && !DS.runtimeConstrained
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .offset(y: shouldAnimate ? (phase ? -amplitude : amplitude * 0.35) : 0)
+            .scaleEffect(shouldAnimate ? (phase ? 1.006 : 0.998) : 1)
+            .onAppear {
+                guard shouldAnimate else { return }
+                withAnimation(.easeInOut(duration: duration).repeatForever(autoreverses: true)) {
+                    phase = true
+                }
+            }
+            .onChange(of: shouldAnimate) { _, newValue in
+                guard newValue else {
+                    phase = false
+                    return
+                }
+                withAnimation(.easeInOut(duration: duration).repeatForever(autoreverses: true)) {
+                    phase = true
+                }
+            }
     }
 }
 
@@ -577,6 +805,9 @@ struct GlassCard<Content: View>: View {
     private var useFlatEffects: Bool { style == .flat || performanceMode || scrollPerformanceMode }
     private var useLightEffects: Bool { useFlatEffects || style == .lightweight || isScrolling }
     private var useFullEffects: Bool { style == .full && !performanceMode && !scrollPerformanceMode }
+    private var useMagicSheen: Bool {
+        style == .full && !reduceTransparency && !reduceMotion && !scrollPerformanceMode
+    }
     private var systemGlassEnabled: Bool {
         !reduceTransparency && !isScrolling && (!performanceMode || forceSystemGlass)
     }
@@ -603,6 +834,16 @@ struct GlassCard<Content: View>: View {
             .overlay(cardBorder.allowsHitTesting(false))
             .overlay(alignment: .bottomTrailing) {
                 fullModeBottomAccent.allowsHitTesting(false)
+            }
+            .overlay {
+                if useMagicSheen {
+                    LippiLiquidSheen(
+                        cornerRadius: cornerRadius,
+                        duration: 6.4,
+                        intensity: 0.82
+                    )
+                    .clipShape(cardShape)
+                }
             }
             // двойная тень: мягкая “подушка” + более близкая
             .shadow(
@@ -837,7 +1078,8 @@ struct LippiButtonStyle: ButtonStyle {
             .clipShape(Capsule())
             .opacity(isEnabled ? 1.0 : disabledOpacity)
             .saturation(isEnabled ? 1.0 : 0.86)
-            .brightness(isEnabled ? 0 : -0.02)
+            .brightness(isEnabled ? (pressed && !simplifiedEffects ? 0.018 : 0) : -0.02)
+            .offset(y: reduceMotion ? 0 : (pressed ? 1.2 : 0))
             .scaleEffect(reduceMotion ? 1 : (pressed ? DS.pressScale : 1))
             .shadow(
                 color: shadowColor(pressed: pressed),
@@ -845,7 +1087,7 @@ struct LippiButtonStyle: ButtonStyle {
                 x: 0,
                 y: pressed ? 1 : (kind == .primary ? (simplifiedEffects ? 2 : 4) : (simplifiedEffects ? 1 : 2))
             )
-            .animation(reduceMotion ? nil : DS.press, value: pressed)
+            .animation(reduceMotion ? nil : DS.motionMagic, value: pressed)
             .onChange(of: configuration.isPressed) { _, newValue in
                 if newValue, isEnabled { DS.hapticSoft() }
             }
@@ -1119,12 +1361,12 @@ struct AnimatedBackground: View {
     @Environment(\.displayScale) private var displayScale
 
     // Тюнинг производительности
-    private let targetFPS: Double = 12
     private let globalBlurCap: CGFloat = 28
     private let blobEdgeSoftness: CGFloat = 0.72
 
     // In Simulator/Low Power/thermal pressure we keep the look, but stop live redraws.
     private var reducedEffects: Bool { DS.performanceEffectsReduced }
+    private var targetFPS: Double { DS.preferredFramesPerSecond >= 120 ? 24 : 18 }
     private var effectiveFPS: Double { reducedEffects ? 8 : targetFPS }
     private var enableGlowBlend: Bool { !reducedEffects && !reduceMotion } // plusLighter дорогой при скролле
 

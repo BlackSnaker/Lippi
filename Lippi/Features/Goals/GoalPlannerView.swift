@@ -17,6 +17,7 @@ struct GoalPlannerView: View {
     @EnvironmentObject private var store: TaskStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage("goal.planner.lastRoadmap") private var savedRoadmap: String = ""
 
@@ -58,18 +59,25 @@ struct GoalPlannerView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         smartGoalChatCard
+                            .lippiMotionScene(0)
 
                         if let roadmap {
                             if let audit = progressAudit(for: roadmap), audit.shouldSuggestAdjustment {
                                 adaptationCard(audit)
+                                    .lippiMotionScene(1)
                             }
                             roadmapOverview(roadmap)
+                                .lippiMotionScene(2)
                             clarityCard(roadmap)
+                                .lippiMotionScene(3)
                             if !(roadmap.evidence ?? []).isEmpty {
                                 evidenceCard(roadmap)
+                                    .lippiMotionScene(4)
                             }
                             milestonesCard(roadmap)
+                                .lippiMotionScene(5)
                             habitsAndRisksCard(roadmap)
+                                .lippiMotionScene(6)
                         }
 
                         Color.clear.frame(height: 72)
@@ -163,6 +171,12 @@ struct GoalPlannerView: View {
                     } else {
                         if let generationIssue {
                             chatIssuePanel(generationIssue)
+                        }
+
+                        if let roadmap,
+                           let audit = progressAudit(for: roadmap),
+                           audit.shouldSuggestAdjustment {
+                            chatAdaptationPanel(audit)
                         }
 
                         if roadmap != nil {
@@ -511,9 +525,17 @@ struct GoalPlannerView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(DS.glassFill(0.08))
                 .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(DS.brandSoftGradient).opacity(0.18))
+                .overlay(
+                    LippiLiquidSheen(
+                        cornerRadius: 22,
+                        duration: 3.4,
+                        intensity: 0.84
+                    )
+                )
 
             VStack(spacing: 14) {
                 processingEmblem.scaleEffect(0.78)
+                    .lippiFloating(active: isGenerating, amplitude: 1.6, duration: 2.4)
 
                 VStack(spacing: 4) {
                     Text(s("goals.processing.title"))
@@ -526,7 +548,7 @@ struct GoalPlannerView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                TimelineView(.animation(minimumInterval: reduceMotion ? 1.0 / 12.0 : 1.0 / 30.0)) { timeline in
                     let activeStep = Int(timeline.date.timeIntervalSinceReferenceDate / 1.15) % processingSteps.count
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -544,6 +566,7 @@ struct GoalPlannerView: View {
             forceSystemGlass: !reduceTransparency
         )
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(DS.glassStroke(0.13), lineWidth: 1))
+        .lippiMagicAppear(delay: 0.02, y: 10, scale: 0.975)
     }
 
     private var chatReadyPanel: some View {
@@ -552,6 +575,27 @@ struct GoalPlannerView: View {
             icon: "checkmark.seal.fill",
             tone: Color(hex: 0x30D158)
         )
+    }
+
+    private func chatAdaptationPanel(_ audit: GoalPlanProgressAudit) -> some View {
+        VStack(alignment: .leading, spacing: 11) {
+            chatMessageBubble(
+                text: audit.chatSummary(lang: lang),
+                icon: "arrow.triangle.2.circlepath.circle.fill",
+                tone: Color(hex: 0xFF9F0A)
+            )
+
+            Button {
+                Task { await generateRoadmap(adaptingToProgress: true) }
+            } label: {
+                Label(s("goals.adapt.chat_action"), systemImage: "wand.and.stars")
+                    .labelStyle(TightLabelStyle())
+                    .frame(maxWidth: .infinity)
+            }
+            .disabled(!canGenerate)
+            .buttonStyle(LippiButtonStyle(kind: .secondary))
+        }
+        .lippiMagicAppear(delay: 0.04, y: 8, scale: 0.98)
     }
 
     private func chatIssuePanel(_ message: String) -> some View {
@@ -616,7 +660,7 @@ struct GoalPlannerView: View {
     }
 
     private var processingEmblem: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+        TimelineView(.animation(minimumInterval: DS.animationFrameInterval(active: isGenerating, reduceMotion: reduceMotion))) { timeline in
             let fraction = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.45) / 1.45
 
             ZStack {
@@ -1060,6 +1104,19 @@ struct GoalPlannerView: View {
                     adaptationMetric(value: audit.completedTasks, title: s("goals.adapt.metric.done"), tone: Color(hex: 0x30D158))
                 }
 
+                if !audit.missedTasks.isEmpty {
+                    VStack(alignment: .leading, spacing: 9) {
+                        Label(s("goals.adapt.missed_title"), systemImage: "clock.badge.exclamationmark")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(DS.text(0.76))
+                            .labelStyle(TightLabelStyle())
+
+                        ForEach(audit.missedTasks.prefixArray(3), id: \.self) { task in
+                            missedTaskRow(task)
+                        }
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 9) {
                     ForEach(audit.suggestions(lang: lang), id: \.self) { suggestion in
                         readableItemRow(
@@ -1082,6 +1139,40 @@ struct GoalPlannerView: View {
                 .buttonStyle(LippiButtonStyle(kind: .secondary))
             }
         }
+    }
+
+    private func missedTaskRow(_ task: GoalMissedTask) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(safeSystemName: task.category.symbol, fallback: "clock")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(hex: 0xFF9F0A))
+                .frame(width: 28, height: 28)
+                .background(Color(hex: 0xFF9F0A).opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .lippiSystemGlass(
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                    tint: Color(hex: 0xFF9F0A).opacity(0.08)
+                )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(task.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(task.statusText(lang: lang))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(11)
+        .background(DS.glassFill(0.07), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            tint: Color(hex: 0xFF9F0A).opacity(0.06)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
     }
 
     private func adaptationMetric(value: Int, title: String, tone: Color) -> some View {
@@ -2093,6 +2184,25 @@ struct GoalRisk: Identifiable, Codable, Hashable {
     var mitigation: String
 }
 
+struct GoalMissedTask: Codable, Hashable {
+    var title: String
+    var dueDate: Date
+    var daysOverdue: Int
+    var createdAgeDays: Int
+    var category: TaskCategory
+
+    func statusText(lang: AppLang) -> String {
+        let due = dueDate.formatted(.dateTime.locale(Locale(identifier: lang.localeIdentifier)).day().month(.abbreviated).hour().minute())
+        let days = max(0, daysOverdue)
+        return L10n.fmt("goals.adapt.missed_status", lang, due, days)
+    }
+
+    func promptLine(lang: AppLang) -> String {
+        let due = dueDate.formatted(.dateTime.locale(Locale(identifier: lang.localeIdentifier)).year().month().day().hour().minute())
+        return "\(title) | due: \(due) | overdue days: \(max(0, daysOverdue)) | task age days: \(max(0, createdAgeDays)) | category: \(category.rawValue)"
+    }
+}
+
 struct GoalPlanProgressAudit: Codable, Hashable {
     var trackedTasks: Int
     var completedTasks: Int
@@ -2101,6 +2211,7 @@ struct GoalPlanProgressAudit: Codable, Hashable {
     var daysSinceRoadmapCreated: Int
     var oldestActiveTaskAgeDays: Int
     var overdueExamples: [String]
+    var missedTasks: [GoalMissedTask]
     var nextActiveTask: String?
 
     var completionRate: Double {
@@ -2137,6 +2248,19 @@ struct GoalPlanProgressAudit: Codable, Hashable {
             guard let due = task.dueDate else { return false }
             return due < now
         }
+        let missedTasks = overdue
+            .sorted(by: dueSort)
+            .prefix(4)
+            .map { task in
+                let due = task.dueDate ?? now
+                return GoalMissedTask(
+                    title: task.title,
+                    dueDate: due,
+                    daysOverdue: max(0, calendar.dateComponents([.day], from: due, to: now).day ?? 0),
+                    createdAgeDays: max(0, calendar.dateComponents([.day], from: task.createdAt, to: now).day ?? 0),
+                    category: task.category
+                )
+            }
         let oldestActiveAge = active
             .map { max(0, calendar.dateComponents([.day], from: $0.createdAt, to: now).day ?? 0) }
             .max() ?? 0
@@ -2150,6 +2274,7 @@ struct GoalPlanProgressAudit: Codable, Hashable {
             daysSinceRoadmapCreated: daysSinceRoadmap,
             oldestActiveTaskAgeDays: oldestActiveAge,
             overdueExamples: overdue.sorted(by: dueSort).map(\.title).prefixArray(3),
+            missedTasks: missedTasks,
             nextActiveTask: active.sorted(by: dueSort).first?.title
         )
     }
@@ -2171,12 +2296,30 @@ struct GoalPlanProgressAudit: Codable, Hashable {
         return result.prefixArray(3)
     }
 
+    func chatSummary(lang: AppLang) -> String {
+        if overdueTasks > 0 {
+            let examples = missedTasks.map(\.title).prefixArray(2).joined(separator: ", ")
+            let sample = examples.isEmpty ? L10n.tr("goals.adapt.missed_generic", lang) : examples
+            return L10n.fmt("goals.adapt.chat_summary_overdue", lang, overdueTasks, sample)
+        }
+        if isStalledWithoutFirstWin {
+            return L10n.tr("goals.adapt.chat_summary_stalled", lang)
+        }
+        if isOverloaded {
+            return L10n.tr("goals.adapt.chat_summary_overloaded", lang)
+        }
+        return L10n.tr("goals.adapt.chat_summary_review", lang)
+    }
+
     func promptSection() -> String {
         guard shouldSuggestAdjustment else {
             return "No correction signal from tracked Lippi tasks."
         }
 
         let examples = overdueExamples.isEmpty ? "none" : overdueExamples.joined(separator: "; ")
+        let missed = missedTasks.isEmpty
+            ? "none"
+            : missedTasks.map { "- \($0.promptLine(lang: .en))" }.joined(separator: "\n")
         let next = nextActiveTask?.trimmed.isEmpty == false ? nextActiveTask! : "not detected"
 
         return """
@@ -2189,9 +2332,11 @@ struct GoalPlanProgressAudit: Codable, Hashable {
         - oldest active task age in days: \(oldestActiveTaskAgeDays)
         - overdue examples: \(examples)
         - next active task: \(next)
+        - missed task details:
+        \(missed)
 
         Adaptation instruction:
-        The user appears behind the previous plan based only on task facts. Preserve the goal, reduce the immediate workload, split or reschedule blocked tasks, make the next 48 hours easier to start, and explain uncertainty as assumptions or clarifying questions. Do not blame the user, infer motivation, or invent reasons for the delay.
+        The user skipped or missed one or more planned Lippi tasks based only on due-date facts. Preserve the goal, name the missed items as factual task-progress signals, reduce the immediate workload, split or reschedule blocked tasks, make the next 48 hours easier to start, and ask whether the skipped items are still relevant if needed. Do not blame the user, infer motivation, or invent reasons for the delay.
         """
     }
 
@@ -2522,7 +2667,8 @@ struct GoalRoadmapEngine {
         - Return exactly two success criteria and two first actions. A success criterion is either a user-supplied metric or an observable deliverable.
         - Return two or three clarifyingQuestions. They must be guiding questions that help refine the roadmap and future Lippi support, not generic placeholders.
         - Unknown information belongs in assumptions or clarifying questions. Do not turn unknown facts into claims.
-        - If the progress audit says the previous plan is behind, adapt the roadmap instead of restarting blindly: reduce the next 48-hour load, split blocked items, reschedule the closest milestone, and keep the tone supportive.
+        - If the progress audit lists missed or overdue Lippi tasks, adapt the roadmap instead of restarting blindly: preserve the goal, reduce the next 48-hour load, split the skipped items into smaller actions, reschedule the closest milestone, and keep the tone supportive.
+        - Do not invent why the user skipped tasks. Treat missed task titles and due dates only as task facts, then ask a clarifying question if the cause matters.
         - For a business goal, plan discovery or validation work, not imagined users, downloads, demand, revenue, conversion, or profit. Do not invent any metric, deadline, resource, prerequisite, feedback, or outcome.
         - Keep health, legal, and financial steps non-diagnostic and non-guaranteed. Use reference material as high-level guidance only.
         - Allowed categories: work, study, health, rest, home, other.
@@ -2774,7 +2920,7 @@ struct GoalRoadmapEngine {
         Build a small route with distinct, reviewable milestones and concrete tasks. Unknown facts belong in assumptions or clarifying questions.
         Always include two or three helpful clarifying questions for refining the roadmap and future support.
         Write every human-readable JSON value in the detected user request language. Keep names, brands, product terms, and acronyms as written.
-        When Lippi supplies a progress audit showing overdue or stalled plan tasks, adapt the plan: preserve the goal, reduce the immediate workload, split or reschedule blocked next actions, and avoid blaming or psychoanalyzing the user.
+        When Lippi supplies a progress audit showing missed, overdue, or stalled plan tasks, adapt the plan: preserve the goal, reduce the immediate workload, split or reschedule skipped next actions, and avoid blaming, psychoanalyzing, or inventing reasons for the delay.
         Never invent metrics, users, downloads, demand, revenue, resources, prerequisites, personal circumstances, or guarantees.
         """
     }
@@ -2812,7 +2958,7 @@ struct GoalRoadmapEngine {
 
         JSON shape: {"title":"string","summary":"string","confidence":0.7,"successCriteria":["string","string"],"firstActions":["string","string"],"assumptions":["string"],"clarifyingQuestions":["guiding question","guiding question"],"milestones":[{"title":"string","timeframe":"string","target":"reviewable output","tasks":["action plus artifact","action plus decision"],"category":"work"}],"habits":[{"title":"string","detail":"cadence"}],"risks":[{"title":"string","mitigation":"specific response"}]}
 
-        Rules: use 3 milestones for 4 or 8 weeks and 4 for 12 weeks; every milestone has two or three different action-plus-artifact tasks; return exactly two success criteria and first actions; return two or three guiding clarifying questions; use assumptions instead of invented facts; if the progress audit says the user is behind, make the nearest milestone smaller and easier to restart; all human-readable JSON strings must be in \(brief.outputLanguageName); no vague tasks, performance predictions, medical/legal/financial instructions, or guarantees. Categories: work, study, health, rest, home, other.
+        Rules: use 3 milestones for 4 or 8 weeks and 4 for 12 weeks; every milestone has two or three different action-plus-artifact tasks; return exactly two success criteria and first actions; return two or three guiding clarifying questions; use assumptions instead of invented facts; if the progress audit lists missed tasks, make the nearest milestone smaller, reschedule the skipped items, and ask what blocked them without inventing a reason; all human-readable JSON strings must be in \(brief.outputLanguageName); no vague tasks, performance predictions, medical/legal/financial instructions, or guarantees. Categories: work, study, health, rest, home, other.
         """
     }
 

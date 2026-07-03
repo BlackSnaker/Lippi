@@ -138,9 +138,12 @@ struct TodayView: View {
                     LazyVStack(spacing: 16) {
                         headerCard
                         todayPlanCard
+                            .lippiMotionScene(1)
                         quickActions
+                            .lippiMotionScene(2)
                         smartGoalsEntry
                         StatsCardView()
+                            .lippiMotionScene(4)
                     }
                     .padding(20)
                 }
@@ -149,7 +152,6 @@ struct TodayView: View {
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
                 .lippiScrollPerformance()
-                .transaction { $0.animation = nil }
             }
             .navigationTitle(s("today.nav_title"))
             .navigationBarTitleDisplayMode(.large)
@@ -241,6 +243,7 @@ struct TodayView: View {
                 }
             }
         }
+        .lippiMagicAppear(delay: 0.03, y: 14, scale: 0.975)
     }
 
     private var smartGoalsEntry: some View {
@@ -292,6 +295,7 @@ struct TodayView: View {
             }
         }
         .buttonStyle(.plain)
+        .lippiMagicAppear(delay: 0.10, y: 12, scale: 0.98)
     }
 
     private var statusPill: some View {
@@ -394,17 +398,6 @@ struct TodayView: View {
                     .buttonStyle(LippiButtonStyle(kind: .primary, compact: true))
                 }
 
-                #if canImport(ActivityKit)
-                if #available(iOS 16.2, *), let task {
-                    Button {
-                        Task { await LiveActivityManager.startTask(task) }
-                    } label: {
-                        Label(s("today.next.to_island"), systemImage: "wave.3.right")
-                            .labelStyle(TightLabelStyle())
-                    }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
-                }
-                #endif
             }
         }
         .padding(.leading, 14)
@@ -579,9 +572,13 @@ struct TodayView: View {
                 ScrollView {
                     LazyVStack(spacing: 14) {
                         importantNowHero
+                            .lippiMotionScene(0)
                         importantNowFocusCard
+                            .lippiMotionScene(1)
                         importantNowDeadlinesCard
+                            .lippiMotionScene(2)
                         importantNowActionCard
+                            .lippiMotionScene(3)
 
                         Color.clear.frame(height: 18)
                     }
@@ -603,6 +600,7 @@ struct TodayView: View {
                 }
             }
         }
+        .lippiMagicAppear(delay: 0.05, y: 12, scale: 0.98)
     }
 
     private var importantNowHero: some View {

@@ -248,6 +248,7 @@ struct EyeExerciseGameView: View {
     // moving/tracking
     @State private var movingVelocity: CGSize = .zero
     @State private var isTrackingActive: Bool = false
+    @State private var lastTickDate: Date?
 
     // reaction stats
     @State private var reactions: [Double] = []
@@ -264,6 +265,7 @@ struct EyeExerciseGameView: View {
 
     private var cfg: EyeExerciseSettings { store.settings }
     private var progress: Double { Double(hits + misses) / Double(max(1, cfg.targetsPerSession)) }
+    private var frameInterval: TimeInterval { DS.animationFrameInterval(active: true, reduceMotion: reduceMotion) }
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
 
@@ -309,7 +311,7 @@ struct EyeExerciseGameView: View {
             .padding(20)
         }
         .onAppear { bootstrap() }
-        .onReceive(Timer.publish(every: 0.08, on: .main, in: .common).autoconnect()) { t in
+        .onReceive(Timer.publish(every: frameInterval, tolerance: frameInterval * 0.25, on: .main, in: .common).autoconnect()) { t in
             guard state == .playing || state == .onBreak else { return }
             tick(t)
         }
@@ -580,6 +582,9 @@ struct EyeExerciseGameView: View {
     // MARK: - Ticks & Spawning
     // ===================================================
     private func tick(_ t: Date) {
+        let deltaTime = min(1.0 / 15.0, max(1.0 / 240.0, t.timeIntervalSince(lastTickDate ?? t)))
+        lastTickDate = t
+
         guard state == .playing && !paused else {
             if state == .onBreak, let until = breakUntil, t >= until { endBreak() }
             return
@@ -598,7 +603,7 @@ struct EyeExerciseGameView: View {
         }
         // moving/ tracking continuous movement
         if selectedMode == .moving || selectedMode == .tracking {
-            moveTarget(step: 5) // px per tick (~20fps)
+            moveTarget(deltaTime: deltaTime)
         }
     }
 
@@ -671,9 +676,10 @@ struct EyeExerciseGameView: View {
         return q
     }
 
-    private func moveTarget(step: CGFloat) {
+    private func moveTarget(deltaTime: TimeInterval) {
         guard areaSize.width > 0 else { return }
         if movingVelocity == .zero { randomizeVelocity() }
+        let step = CGFloat(deltaTime * 62.5)
         var new = targetPos
         new.x += movingVelocity.width * step
         new.y += movingVelocity.height * step

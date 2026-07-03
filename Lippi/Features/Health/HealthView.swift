@@ -53,9 +53,13 @@ struct HealthView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         heroCard
+                            .lippiMotionScene(0)
                         coachCard
+                            .lippiMotionScene(1)
                         analyticsCard
+                            .lippiMotionScene(2)
                         voiceAssistantCard
+                            .lippiMotionScene(3)
                         Color.clear.frame(height: 84)
                     }
                     .padding(20)
@@ -94,6 +98,8 @@ struct HealthView: View {
                 startSession()
             }
         }
+        .animation(reduceMotion ? nil : DS.motionState, value: isRunning)
+        .animation(reduceMotion ? nil : DS.motionState, value: selectedPreset)
     }
 
     private var heroCard: some View {

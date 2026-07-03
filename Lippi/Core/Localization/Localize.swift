@@ -173,6 +173,7 @@ enum L10n {
     }
 
     private static let extraLooseRU: [String: String] = [
+        "tab.more": "Ещё",
         "today.greeting.morning": "Доброе утро",
         "today.greeting.day": "Добрый день",
         "today.greeting.evening": "Добрый вечер",
@@ -361,6 +362,14 @@ enum L10n {
         "goals.adapt.metric.active": "Активно",
         "goals.adapt.metric.done": "Готово",
         "goals.adapt.action": "Подкорректировать с ИИ",
+        "goals.adapt.chat_action": "Пересобрать ближайшие шаги",
+        "goals.adapt.missed_title": "Пропущенные пункты",
+        "goals.adapt.missed_status": "Срок был %@ • %d дн. просрочки",
+        "goals.adapt.missed_generic": "несколько пунктов плана",
+        "goals.adapt.chat_summary_overdue": "Я вижу, что %d пункт(а) плана пропущены: %@. Могу пересобрать ближайшие шаги мягче: меньше объём на 48 часов, понятный следующий результат и уточняющий вопрос без догадок о причинах.",
+        "goals.adapt.chat_summary_stalled": "Похоже, первый шаг пока не случился. Я могу уменьшить старт до короткого действия и заново собрать ближайший этап.",
+        "goals.adapt.chat_summary_overloaded": "План выглядит тяжелее текущего ритма. Я могу сократить ближайший этап и оставить только самое важное.",
+        "goals.adapt.chat_summary_review": "Можно пересмотреть план по фактам выполнения и сделать следующий шаг легче.",
         "goals.adapt.suggestion.reschedule": "Сдвинуть просроченные пункты и оставить на ближайшие 48 часов один проверяемый результат.",
         "goals.adapt.suggestion.first_win": "Уменьшить первый шаг до действия на 15-25 минут, чтобы вернуть движение без давления.",
         "goals.adapt.suggestion.scope": "Разделить тяжёлый пункт на маленькую проверку, решение и следующий фокус-блок.",
@@ -1058,6 +1067,7 @@ enum L10n {
     ]
 
     private static let extraLooseEN: [String: String] = [
+        "tab.more": "More",
         "today.greeting.morning": "Good morning",
         "today.greeting.day": "Good afternoon",
         "today.greeting.evening": "Good evening",
@@ -1246,6 +1256,14 @@ enum L10n {
         "goals.adapt.metric.active": "Active",
         "goals.adapt.metric.done": "Done",
         "goals.adapt.action": "Adjust with AI",
+        "goals.adapt.chat_action": "Rebuild nearest steps",
+        "goals.adapt.missed_title": "Missed items",
+        "goals.adapt.missed_status": "Due %@ • %d days overdue",
+        "goals.adapt.missed_generic": "several plan items",
+        "goals.adapt.chat_summary_overdue": "I can see that %d plan item(s) were missed: %@. I can rebuild the nearest steps more gently: less load for 48 hours, one clear next result, and a clarifying question without guessing the reason.",
+        "goals.adapt.chat_summary_stalled": "It looks like the first step has not happened yet. I can shrink the start into a short action and rebuild the nearest phase.",
+        "goals.adapt.chat_summary_overloaded": "The plan looks heavier than the current rhythm. I can reduce the nearest phase and keep only what matters most.",
+        "goals.adapt.chat_summary_review": "The plan can be reviewed from completion facts and turned into an easier next step.",
         "goals.adapt.suggestion.reschedule": "Move overdue items and keep one reviewable result for the next 48 hours.",
         "goals.adapt.suggestion.first_win": "Shrink the first step to a 15-25 minute action so momentum can restart without pressure.",
         "goals.adapt.suggestion.scope": "Split the heavy item into a small check, one decision, and the next focus block.",

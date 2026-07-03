@@ -45,18 +45,23 @@ public struct EyeHealthHomeView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         header
+                            .lippiMotionScene(0)
 
                         // ——— Быстрый старт ———
                         quickStartCard
+                            .lippiMotionScene(1)
 
                         // ——— Прогресс ———
                         GlassCard(style: .lightweight) { progressBlock }
+                            .lippiMotionScene(2)
 
                         // ——— Достижения ———
                         GlassCard(style: .lightweight) { achievementsBlock }
+                            .lippiMotionScene(3)
 
                         // ——— Советы ———
                         GlassCard(style: .lightweight) { tipsBlock }
+                            .lippiMotionScene(4)
 
                         Color.clear.frame(height: 84)
                     }
@@ -596,8 +601,11 @@ struct EyeStatsView: View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 GlassCard(style: .lightweight) { HistoryMiniChart().environmentObject(eye).frame(height: 180) }
+                    .lippiMotionScene(0)
                 GlassCard(style: .lightweight) { totals }
+                    .lippiMotionScene(1)
                 GlassCard(style: .lightweight) { sessionsList }
+                    .lippiMotionScene(2)
             }
             .padding(20)
         }

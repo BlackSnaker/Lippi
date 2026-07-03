@@ -55,6 +55,7 @@ struct AddEditTaskView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         heroHeader
+                            .lippiMotionScene(0)
 
                         // ---------- Основное ----------
                         GlassCard {
@@ -80,6 +81,7 @@ struct AddEditTaskView: View {
                                 notesEditor
                             }
                         }
+                        .lippiMotionScene(1)
 
                         // ---------- Срок ----------
                         GlassCard {
@@ -125,6 +127,7 @@ struct AddEditTaskView: View {
                             }
                         }
                         .animation(reduceMotion ? nil : DS.motionSmooth, value: hasDueDate)
+                        .lippiMotionScene(2)
 
                         // ---------- Категория ----------
                         GlassCard {
@@ -175,6 +178,8 @@ struct AddEditTaskView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(DS.glassStroke(0.12)))
                             }
                         }
+                        .animation(reduceMotion ? nil : DS.motionState, value: category)
+                        .lippiMotionScene(3)
 
                         // воздух перед липкой кнопкой
                         Color.clear.frame(height: 96)
@@ -221,6 +226,7 @@ struct AddEditTaskView: View {
                     in: Rectangle(),
                     tint: DS.accent.opacity(0.06)
                 )
+                .lippiMagicAppear(delay: 0.10, y: 16, scale: 0.97)
             }
         }
     }

@@ -19,12 +19,19 @@ struct AppRootView: View {
         Group {
             if auth.isRestoring {
                 AuthLoadingView()
+                    .transition(.opacity)
             } else if auth.isAuthenticated {
                 ContentView()
+                    .transition(.opacity.combined(with: .scale(scale: 0.992)))
             } else {
                 AuthView()
+                    .transition(.opacity.combined(with: .scale(scale: 0.988)))
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
+        .animation(DS.motionNavigate, value: auth.isRestoring)
+        .animation(DS.motionNavigate, value: auth.isAuthenticated)
         .task {
             auth.bootstrapIfNeeded()
         }
@@ -47,6 +54,8 @@ private struct AuthLoadingView: View {
                     .foregroundStyle(DS.text(0.7))
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
     }
 }
 
@@ -73,15 +82,22 @@ struct AuthView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     brandCard
+                        .lippiMotionScene(0)
                     languageCard
+                        .lippiMotionScene(1)
                     modeCard
+                        .lippiMotionScene(2)
                     formCard
+                        .lippiMotionScene(3)
                     securityCard
+                        .lippiMotionScene(4)
                 }
                 .padding(20)
             }
             .scrollIndicators(.hidden)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
         .alert(t(.auth_error_title), isPresented: Binding(
             get: { auth.errorMessage != nil },
             set: { if !$0 { auth.errorMessage = nil } }
@@ -214,7 +230,9 @@ struct AuthView: View {
                 HStack(spacing: 8) {
                     ForEach(AuthMode.allCases, id: \.rawValue) { item in
                         Button {
-                            mode = item
+                            withAnimation(DS.motionState) {
+                                mode = item
+                            }
                         } label: {
                             Text(modeTitle(item))
                                 .font(.footnote.weight(.semibold))
@@ -234,10 +252,12 @@ struct AuthView: View {
                         .buttonStyle(.plain)
                     }
                 }
+                .animation(DS.motionState, value: mode)
 
                 Text(modeSubtitle(mode))
                     .font(.caption)
                     .foregroundStyle(DS.text(0.62))
+                    .contentTransition(.opacity)
             }
         }
     }
@@ -259,6 +279,7 @@ struct AuthView: View {
                             .autocorrectionDisabled(true)
                             .fieldGlass()
                     }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
                 labeledField(title: t(.auth_field_email), icon: "envelope.fill") {
@@ -307,8 +328,11 @@ struct AuthView: View {
                     ProgressView()
                         .tint(DS.text(0.9))
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .transition(.opacity.combined(with: .scale(scale: 0.94)))
                 }
             }
+            .animation(DS.motionState, value: mode)
+            .animation(DS.motionState, value: auth.isBusy)
         }
     }
 

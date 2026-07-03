@@ -81,9 +81,9 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-June%2029%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-Chat%20First-64D2FF?style=for-the-badge">
-    <img alt="Performance" src="https://img.shields.io/badge/Target-60%20FPS-30D158?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%203%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-Adaptive%20Coach-64D2FF?style=for-the-badge">
+    <img alt="Performance" src="https://img.shields.io/badge/Motion-ProMotion%20Ready-30D158?style=for-the-badge">
     <img alt="AI" src="https://img.shields.io/badge/AI-Grounded%20Roadmaps-BF5AF2?style=for-the-badge">
   </p>
   <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
@@ -119,6 +119,43 @@
       <br><br>
       <strong>Плавный скролл</strong><br>
       <sub>Во время жестов тяжёлые эффекты упрощаются и возвращаются после остановки.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 3, 2026 - Full-screen Liquid Glass, calmer motion, and smarter navigation
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>This release makes Lippi feel more native, calmer, and easier to read across the whole app.</strong></p>
+      <ul>
+        <li><strong>True full-screen app shell:</strong> the root app states, launch/auth flow, background, and main interface now occupy the full display area.</li>
+        <li><strong>Bottom toolbar inside the app scene:</strong> the navigation bar now lives as a full-screen overlay instead of a detached safe-area inset, while still respecting the home indicator.</li>
+        <li><strong>Denser Liquid Glass toolbar:</strong> the bottom bar received a stronger frosted base, clearer tint, better outline, and deeper shadow so it stays readable on bright and complex backgrounds.</li>
+        <li><strong>Cleaner navigation:</strong> only the three primary destinations stay visible - Today, Tasks, and Pomodoro. Breaks, Health, Eyes, and Settings are tucked into a compact overflow menu.</li>
+        <li><strong>Calmer motion:</strong> the distracting left-to-right breathing/sheen animation was removed from shared glass surfaces. The interface keeps polish without visual noise.</li>
+        <li><strong>Less clutter:</strong> the manual "To Island" buttons were removed from Today and Countdown. Dynamic Island support remains available where it belongs in the system flow.</li>
+        <li><strong>ProMotion-oriented responsiveness:</strong> shared animation timing and isolated display-sync views were tuned for smoother 60/120 Hz rendering while keeping heavy effects quiet during scrolling.</li>
+        <li><strong>More resilient Smart Goals:</strong> the roadmap planner better accounts for overdue or stalled tasks and can suggest realistic plan corrections instead of pretending everything is on track.</li>
+        <li><strong>Verification:</strong> the code was checked with <code>git diff --check</code> and multiple successful <code>xcodebuild build</code> runs.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Этот релиз делает Lippi более нативным, спокойным и удобным для восприятия на всех основных экранах.</strong></p>
+      <ul>
+        <li><strong>Настоящий полноэкранный интерфейс:</strong> корневые состояния приложения, вход, загрузка, фон и основной интерфейс теперь занимают всю площадь дисплея.</li>
+        <li><strong>Нижний тулбар внутри сцены:</strong> меню навигации больше не живет отдельной safe-area-вставкой, а находится в полноэкранном слое приложения и аккуратно учитывает home indicator.</li>
+        <li><strong>Более плотный Liquid Glass toolbar:</strong> нижняя панель получила более матовую стеклянную основу, заметный tint, читаемый контур и глубже тень, чтобы не растворяться на сложном фоне.</li>
+        <li><strong>Лаконичная навигация:</strong> в поле зрения остались только три главные кнопки - «Сегодня», «Задачи» и Pomodoro. Перерывы, здоровье, глаза и настройки спрятаны в компактное меню.</li>
+        <li><strong>Спокойнее анимации:</strong> убран отвлекающий проходящий слева направо «дышащий» блик на стеклянных поверхностях. Интерфейс остался живым, но без визуального шума.</li>
+        <li><strong>Меньше лишних кнопок:</strong> кнопки «В остров» удалены из Today и Countdown. Поддержка Dynamic Island сохранена в системных сценариях, где она действительно нужна.</li>
+        <li><strong>Плавность под ProMotion:</strong> общая система анимаций и отдельные display-sync элементы настроены для более гладкого рендера на 60/120 Гц, а тяжелые эффекты успокаиваются во время скролла.</li>
+        <li><strong>Умнее «Умные цели»:</strong> планировщик лучше учитывает просроченные и зависшие задачи и может предлагать реалистичную корректировку плана, а не делать вид, что все идет идеально.</li>
+        <li><strong>Проверка:</strong> код проверен через <code>git diff --check</code> и несколько успешных запусков <code>xcodebuild build</code>.</li>
+      </ul>
     </td>
   </tr>
 </table>
