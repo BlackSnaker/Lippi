@@ -1919,6 +1919,7 @@ extension EnvironmentValues {
 enum AppTab: Hashable {
     case today, tasks, pomodoro, `break`, health, eye, settings
 
+    static let navigationOrder: [AppTab] = [.today, .tasks, .pomodoro, .break, .health, .eye, .settings]
     static let primaryTabs: [AppTab] = [.today, .tasks, .pomodoro]
     static let overflowTabs: [AppTab] = [.break, .health, .eye, .settings]
 
@@ -1961,6 +1962,10 @@ enum AppTab: Hashable {
     var isOverflow: Bool {
         Self.overflowTabs.contains(self)
     }
+
+    var navigationIndex: Int {
+        Self.navigationOrder.firstIndex(of: self) ?? 0
+    }
 }
 
 struct ContentView: View {
@@ -1984,6 +1989,7 @@ struct ContentView: View {
     @State private var showGoalPlanner = false
     @State private var showVoiceAssistant = false
     @State private var isSwitchingTabs = false
+    @State private var tabTransitionDirection: CGFloat = 1
     @State private var tabTransitionTask: Task<Void, Never>?
     @State private var taskCompletionObserver: NSObjectProtocol?
 
@@ -2011,15 +2017,20 @@ struct ContentView: View {
 
     private var tabSwitchAnimation: Animation {
         reduceMotion
-        ? .linear(duration: 0.08)
-        : DS.motionNavigate
+        ? .easeOut(duration: 0.16)
+        : .spring(response: 0.62, dampingFraction: 0.96, blendDuration: 0.18)
     }
 
     private var screenTransition: AnyTransition {
         guard !reduceMotion else { return .opacity }
+        let direction = tabTransitionDirection
         return .asymmetric(
-            insertion: .opacity.combined(with: .scale(scale: 0.986, anchor: .center)),
+            insertion: .opacity
+                .combined(with: .offset(x: 18 * direction, y: 4))
+                .combined(with: .scale(scale: 0.992, anchor: .center)),
             removal: .opacity
+                .combined(with: .offset(x: -8 * direction, y: -2))
+                .combined(with: .scale(scale: 0.998, anchor: .center))
         )
     }
 
@@ -2027,6 +2038,7 @@ struct ContentView: View {
         guard newTab != tab else { return }
 
         scrollPerformance.stop()
+        tabTransitionDirection = newTab.navigationIndex >= tab.navigationIndex ? 1 : -1
         isSwitchingTabs = true
 
         withAnimation(tabSwitchAnimation) {
@@ -2034,7 +2046,7 @@ struct ContentView: View {
         }
 
         tabTransitionTask?.cancel()
-        let delay: UInt64 = reduceMotion ? 60_000_000 : 110_000_000
+        let delay: UInt64 = reduceMotion ? 180_000_000 : 520_000_000
         tabTransitionTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: delay)
             isSwitchingTabs = false
@@ -2714,14 +2726,13 @@ private struct PomodoroAlarmBanner: View {
 struct GlassTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.lippiIsScrolling) private var isScrolling
 
     @Binding var selection: AppTab
     var isInteractionEnabled: Bool = true
     let lang: AppLang
     @Namespace private var tabSelectionNamespace
 
-    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
+    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency }
 
     var body: some View {
         HStack(spacing: 5) {
@@ -2751,11 +2762,13 @@ struct GlassTabBar: View {
         .background(tabBarBackground)
         .lippiSystemGlass(
             in: tabBarShape,
-            tint: DS.accent.opacity(simplifiedEffects ? 0.08 : 0.16),
-            enabled: !simplifiedEffects
+            tint: DS.accent.opacity(simplifiedEffects ? 0.14 : 0.28),
+            enabled: !reduceTransparency,
+            forceSystemGlass: !reduceTransparency
         )
+        .overlay(tabBarRefractionOverlay)
         .overlay(tabBarOverlay)
-        .shadow(color: DS.depthShadow(simplifiedEffects ? 0.16 : 0.24), radius: simplifiedEffects ? 8 : 14, x: 0, y: simplifiedEffects ? 4 : 8)
+        .shadow(color: DS.depthShadow(simplifiedEffects ? 0.20 : 0.34), radius: simplifiedEffects ? 9 : 18, x: 0, y: simplifiedEffects ? 5 : 10)
         .animation(reduceMotion ? nil : DS.motionMagic, value: selection)
         .accessibilityElement(children: .contain)
     }
@@ -2769,43 +2782,154 @@ struct GlassTabBar: View {
         let shape = tabBarShape
         if simplifiedEffects {
             shape
-                .fill(DS.glassFill(0.14, lightOpacity: 0.72))
+                .fill(.thickMaterial)
+                .overlay(
+                    shape
+                        .fill(DS.glassFill(0.30, lightOpacity: 0.93))
+                )
                 .overlay(
                     shape
                         .fill(DS.glassTint)
-                        .opacity(0.26)
+                        .opacity(0.50)
                 )
-        } else {
-            shape
-                .fill(DS.glassFill(0.18, lightOpacity: 0.80))
                 .overlay(
                     shape
                         .fill(DS.glassDepth)
                         .opacity(0.26)
                 )
+        } else {
+            shape
+                .fill(.thickMaterial)
+                .overlay(
+                    shape
+                        .fill(DS.glassFill(0.42, lightOpacity: 0.95))
+                )
+                .overlay(
+                    shape
+                        .fill(DS.glassDepth)
+                        .opacity(0.62)
+                )
                 .overlay(
                     shape
                         .fill(DS.glassTint)
-                        .opacity(0.48)
+                        .opacity(0.86)
+                )
+                .overlay(
+                    shape
+                        .fill(DS.surfaceLift)
+                        .blendMode(.screen)
+                        .opacity(0.32)
                 )
                 .overlay(
                     shape
                         .fill(DS.brandIridescent)
                         .blendMode(.screen)
-                        .opacity(0.10)
+                        .opacity(0.18)
                 )
                 .overlay(alignment: .top) {
                     shape
                         .fill(
                             LinearGradient(
-                                colors: [.white.opacity(0.24), .white.opacity(0.0)],
+                                colors: [.white.opacity(0.54), .white.opacity(0.20), .white.opacity(0.0)],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
                         )
-                        .frame(height: 18)
+                        .frame(height: 20)
                         .clipShape(shape)
                 }
+                .overlay(alignment: .bottom) {
+                    shape
+                        .fill(
+                            LinearGradient(
+                                colors: [.clear, DS.accent.opacity(0.18), .white.opacity(0.14)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(height: 18)
+                        .clipShape(shape)
+                        .blendMode(.screen)
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var tabBarRefractionOverlay: some View {
+        if !simplifiedEffects {
+            GeometryReader { proxy in
+                let size = proxy.size
+
+                ZStack {
+                    RadialGradient(
+                        colors: [
+                            .white.opacity(0.34),
+                            DS.accent.opacity(0.16),
+                            .clear
+                        ],
+                        center: .topLeading,
+                        startRadius: 2,
+                        endRadius: max(size.width, size.height) * 0.72
+                    )
+                    .frame(width: size.width * 0.62, height: size.height * 1.9)
+                    .offset(x: -size.width * 0.26, y: -size.height * 0.56)
+                    .blendMode(.screen)
+
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .clear,
+                                    .white.opacity(0.44),
+                                    DS.accent.opacity(0.22),
+                                    .clear
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: size.width * 0.40, height: 2.2)
+                        .rotationEffect(.degrees(-9))
+                        .offset(x: -size.width * 0.16, y: -size.height * 0.28)
+                        .blendMode(.screen)
+
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .clear,
+                                    DS.accent.opacity(0.20),
+                                    .white.opacity(0.34),
+                                    .clear
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: size.width * 0.32, height: 2.0)
+                        .rotationEffect(.degrees(10))
+                        .offset(x: size.width * 0.22, y: size.height * 0.20)
+                        .blendMode(.screen)
+
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0.00),
+                            .init(color: .white.opacity(0.16), location: 0.42),
+                            .init(color: DS.accent.opacity(0.16), location: 0.55),
+                            .init(color: .clear, location: 1.00)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(width: size.width * 0.48, height: size.height * 1.5)
+                    .rotationEffect(.degrees(14))
+                    .offset(x: size.width * 0.08, y: -size.height * 0.10)
+                    .blendMode(.screen)
+                }
+            }
+            .clipShape(tabBarShape)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
     }
 
@@ -2814,14 +2938,26 @@ struct GlassTabBar: View {
         let shape = tabBarShape
         if simplifiedEffects {
             shape
-                .stroke(DS.glassStroke(0.18), lineWidth: 1)
+                .stroke(DS.glassStroke(0.34, lightOpacity: 0.18), lineWidth: 1.1)
         } else {
             shape
-                .stroke(DS.glassStroke(0.24), lineWidth: 1)
+                .stroke(DS.glassStroke(0.50, lightOpacity: 0.24), lineWidth: 1.2)
                 .overlay(
                     RoundedRectangle(cornerRadius: 27, style: .continuous)
-                        .stroke(.white.opacity(0.12), lineWidth: 1)
+                        .stroke(.white.opacity(0.34), lineWidth: 1)
                         .padding(1)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(DS.depthShadow(0.16, lightOpacity: 0.12), lineWidth: 1)
+                        .padding(2)
+                        .blendMode(.multiply)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.8)
+                        .padding(4)
+                        .blendMode(.screen)
                 )
         }
     }
@@ -2868,18 +3004,18 @@ private struct TabButton: View {
             .background(pillBackground)
             .lippiSystemGlass(
                 in: Capsule(style: .continuous),
-                tint: isSelected ? DS.accent.opacity(0.10) : DS.accent.opacity(0.03),
+                tint: isSelected ? DS.accent.opacity(0.22) : DS.accent.opacity(0.10),
                 interactive: true,
-                enabled: isSelected && !simplifiedEffects
+                enabled: !simplifiedEffects
             )
             .overlay(pillOverlay)
-            .foregroundStyle(isSelected ? DS.textPrimary : DS.text(simplifiedEffects ? 0.62 : 0.70))
+            .foregroundStyle(isSelected ? DS.textPrimary : DS.text(simplifiedEffects ? 0.72 : 0.80))
             .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.012 : 0.992))
             .animation(
                 reduceMotion ? nil : DS.motionMagic,
                 value: isSelected
             )
-            .shadow(color: isSelected && !simplifiedEffects ? DS.depthShadow(0.12) : .clear, radius: isSelected ? 4 : 0, x: 0, y: 2)
+            .shadow(color: isSelected && !simplifiedEffects ? DS.depthShadow(0.18) : .clear, radius: isSelected ? 6 : 0, x: 0, y: 3)
         }
         .buttonStyle(.plain)
         .disabled(!isInteractionEnabled)
@@ -2892,15 +3028,30 @@ private struct TabButton: View {
     private var pillBackground: some View {
         if simplifiedEffects {
             Capsule()
-                .fill(isSelected ? DS.glassFill(0.12, lightOpacity: 0.28) : DS.glassFill(0.001))
+                .fill(isSelected ? DS.glassFill(0.22, lightOpacity: 0.54) : DS.glassFill(0.12, lightOpacity: 0.34))
         } else {
             Capsule()
-                .fill(isSelected ? DS.glassFill(0.13, lightOpacity: 0.30) : DS.glassFill(0.001))
+                .fill(isSelected ? DS.glassFill(0.28, lightOpacity: 0.68) : DS.glassFill(0.14, lightOpacity: 0.38))
+                .overlay {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(isSelected ? 0.28 : 0.12),
+                                    .clear,
+                                    DS.depthShadow(isSelected ? 0.10 : 0.05)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
                 .overlay {
                     if isSelected {
                         Capsule()
-                            .fill(DS.accent.opacity(0.14))
+                            .fill(DS.accent.opacity(0.24))
                             .matchedGeometryEffect(id: "selected-tab-pill", in: namespace)
+                            .blendMode(.screen)
                     }
                 }
         }
@@ -2908,10 +3059,17 @@ private struct TabButton: View {
 
     @ViewBuilder
     private var pillOverlay: some View {
-        if isSelected {
-            Capsule()
-                .strokeBorder(DS.glassStroke(0.16), lineWidth: 1)
-        }
+        Capsule()
+            .strokeBorder(isSelected ? DS.glassStroke(0.34) : DS.glassStroke(0.16), lineWidth: 1)
+            .overlay(alignment: .top) {
+                if isSelected && !simplifiedEffects {
+                    Capsule()
+                        .fill(.white.opacity(0.30))
+                        .frame(height: 1.2)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 4)
+                }
+            }
     }
 }
 
@@ -2957,15 +3115,15 @@ private struct OverflowTabMenu: View {
             .background(menuBackground)
             .lippiSystemGlass(
                 in: Capsule(style: .continuous),
-                tint: isSelected ? DS.accent.opacity(0.10) : DS.accent.opacity(0.03),
+                tint: isSelected ? DS.accent.opacity(0.22) : DS.accent.opacity(0.10),
                 interactive: true,
-                enabled: isSelected && !simplifiedEffects
+                enabled: !simplifiedEffects
             )
             .overlay(menuOverlay)
-            .foregroundStyle(isSelected ? DS.textPrimary : DS.text(simplifiedEffects ? 0.62 : 0.70))
+            .foregroundStyle(isSelected ? DS.textPrimary : DS.text(simplifiedEffects ? 0.72 : 0.80))
             .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.012 : 0.992))
             .animation(reduceMotion ? nil : DS.motionMagic, value: isSelected)
-            .shadow(color: isSelected && !simplifiedEffects ? DS.depthShadow(0.12) : .clear, radius: isSelected ? 4 : 0, x: 0, y: 2)
+            .shadow(color: isSelected && !simplifiedEffects ? DS.depthShadow(0.18) : .clear, radius: isSelected ? 6 : 0, x: 0, y: 3)
         }
         .buttonStyle(.plain)
         .disabled(!isInteractionEnabled)
@@ -2977,15 +3135,30 @@ private struct OverflowTabMenu: View {
     private var menuBackground: some View {
         if simplifiedEffects {
             Capsule()
-                .fill(isSelected ? DS.glassFill(0.12, lightOpacity: 0.28) : DS.glassFill(0.001))
+                .fill(isSelected ? DS.glassFill(0.22, lightOpacity: 0.54) : DS.glassFill(0.12, lightOpacity: 0.34))
         } else {
             Capsule()
-                .fill(isSelected ? DS.glassFill(0.13, lightOpacity: 0.30) : DS.glassFill(0.001))
+                .fill(isSelected ? DS.glassFill(0.28, lightOpacity: 0.68) : DS.glassFill(0.14, lightOpacity: 0.38))
+                .overlay {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(isSelected ? 0.28 : 0.12),
+                                    .clear,
+                                    DS.depthShadow(isSelected ? 0.10 : 0.05)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
                 .overlay {
                     if isSelected {
                         Capsule()
-                            .fill(DS.accent.opacity(0.14))
+                            .fill(DS.accent.opacity(0.24))
                             .matchedGeometryEffect(id: "selected-tab-pill", in: namespace)
+                            .blendMode(.screen)
                     }
                 }
         }
@@ -2993,10 +3166,17 @@ private struct OverflowTabMenu: View {
 
     @ViewBuilder
     private var menuOverlay: some View {
-        if isSelected {
-            Capsule()
-                .strokeBorder(DS.glassStroke(0.16), lineWidth: 1)
-        }
+        Capsule()
+            .strokeBorder(isSelected ? DS.glassStroke(0.34) : DS.glassStroke(0.16), lineWidth: 1)
+            .overlay(alignment: .top) {
+                if isSelected && !simplifiedEffects {
+                    Capsule()
+                        .fill(.white.opacity(0.30))
+                        .frame(height: 1.2)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 4)
+                }
+            }
     }
 }
 
