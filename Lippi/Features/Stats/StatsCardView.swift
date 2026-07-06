@@ -23,6 +23,7 @@ private enum StatsMetric: String, CaseIterable, Identifiable {
 struct StatsCardView: View {
     @EnvironmentObject private var stats: StatsStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var daysWindow: Int = 7
     @State private var metric: StatsMetric = .both
@@ -136,7 +137,7 @@ struct StatsCardView: View {
         .padding(12)
         .background(kpiBackground)
         .overlay(kpiOverlay)
-        .shadow(color: DS.depthShadow(0.14), radius: 6, x: 0, y: 3)
+        .shadow(color: isScrolling ? .clear : DS.depthShadow(0.14), radius: isScrolling ? 0 : 6, x: 0, y: isScrolling ? 0 : 3)
     }
 
     private var kpiBackground: some View {
@@ -217,7 +218,7 @@ struct StatsCardView: View {
         .padding(10)
         .background(panelBackground(panel))
         .overlay(panelOverlay(panel))
-        .shadow(color: DS.depthShadow(0.14), radius: 8, x: 0, y: 5)
+        .shadow(color: isScrolling ? .clear : DS.depthShadow(0.14), radius: isScrolling ? 0 : 8, x: 0, y: isScrolling ? 0 : 5)
         .chartOverlay { proxy in
             overlayGesture(proxy: proxy, data: data)
         }
@@ -335,6 +336,7 @@ struct StatsCardView: View {
 
 private struct SimpleBars: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.lippiIsScrolling) private var isScrolling
     let data: [DayStats]
     let metric: StatsMetric
     @Binding var selected: DayStats?
@@ -362,7 +364,7 @@ private struct SimpleBars: View {
             .padding(.top, 8)
             .background(backgroundPanel)
             .overlay(overlayPanel)
-            .shadow(color: DS.depthShadow(0.14), radius: 8, x: 0, y: 5)
+            .shadow(color: isScrolling ? .clear : DS.depthShadow(0.14), radius: isScrolling ? 0 : 8, x: 0, y: isScrolling ? 0 : 5)
         }
     }
 

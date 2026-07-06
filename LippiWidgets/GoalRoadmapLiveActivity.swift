@@ -43,13 +43,17 @@ struct GoalRoadmapLiveActivityWidget: Widget {
             } compactLeading: {
                 GoalRoadmapIslandBadge(state: context.state, size: 22)
             } compactTrailing: {
-                GoalRoadmapElapsed(state: context.state, compact: true)
+                Color.clear
+                    .frame(width: 1, height: 1)
             } minimal: {
                 GoalRoadmapIslandBadge(state: context.state, size: 18)
             }
             .widgetURL(GoalRoadmapIslandLink.open.url)
             .keylineTint(GoalRoadmapIslandStyle.accent(for: context.state))
             .contentMargins(.all, 0, for: .expanded)
+            .contentMargins(.all, 0, for: .compactLeading)
+            .contentMargins(.all, 0, for: .compactTrailing)
+            .contentMargins(.all, 0, for: .minimal)
         }
     }
 }

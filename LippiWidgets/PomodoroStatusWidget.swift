@@ -150,6 +150,7 @@ struct PomodoroStatusWidgetView: View {
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
+                .minimumScaleFactor(0.72)
 
             timerText(fontSize: 24)
 
@@ -166,6 +167,7 @@ struct PomodoroStatusWidgetView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.76)
 
                 timerText(fontSize: 28)
 
@@ -173,6 +175,7 @@ struct PomodoroStatusWidgetView: View {
                     .font(.footnote)
                     .foregroundStyle(.white.opacity(0.76))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.78)
 
                 progressBar(maxWidth: 132)
             }
@@ -189,22 +192,40 @@ struct PomodoroStatusWidgetView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 24, height: 24)
-                .background(entry.phase.accent.opacity(0.38), in: Circle())
+                .background {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    entry.phase.glow.opacity(0.66),
+                                    entry.phase.accent.opacity(0.42),
+                                    .white.opacity(0.12)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+                .overlay(Circle().stroke(.white.opacity(0.34), lineWidth: 1))
+                .shadow(color: entry.phase.glow.opacity(0.20), radius: 8, x: 0, y: 4)
 
             Text("POMODORO")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.white.opacity(0.8))
                 .tracking(0.7)
+                .lineLimit(1)
+                .minimumScaleFactor(0.70)
 
             Spacer(minLength: 0)
 
             Text("Раунд \(entry.round)")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.70)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(entry.phase.accent.opacity(0.4), in: Capsule())
-                .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
+                .widgetGlassPanel(Capsule(), accent: entry.phase.accent, intensity: 0.20)
         }
     }
 
@@ -222,23 +243,36 @@ struct PomodoroStatusWidgetView: View {
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
+                .minimumScaleFactor(0.76)
         } else {
             Text("Готов к старту")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.86))
                 .lineLimit(1)
+                .minimumScaleFactor(0.74)
         }
     }
 
     private func progressBar(maxWidth: CGFloat?) -> some View {
         ZStack(alignment: .leading) {
             Capsule()
-                .fill(.white.opacity(0.16))
+                .fill(.white.opacity(0.18))
+                .overlay(
+                    Capsule()
+                        .stroke(.white.opacity(0.18), lineWidth: 1)
+                )
                 .frame(height: 8)
 
             Capsule()
-                .fill(entry.phase.accent)
+                .fill(
+                    LinearGradient(
+                        colors: [entry.phase.glow, entry.phase.accent],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
                 .frame(width: fillWidth(maxWidth: maxWidth), height: 8)
+                .shadow(color: entry.phase.glow.opacity(0.35), radius: 6, x: 0, y: 2)
         }
         .frame(maxWidth: maxWidth, maxHeight: 8)
     }
@@ -258,6 +292,12 @@ private struct PomodoroProgressRing: View {
         ZStack {
             Circle()
                 .stroke(.white.opacity(0.16), lineWidth: 10)
+                .background(
+                    Circle()
+                        .fill(.white.opacity(0.06))
+                        .overlay(Circle().fill(accent.opacity(0.08)))
+                )
+                .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
 
             Circle()
                 .trim(from: 0, to: max(progress, 0.02))
@@ -290,6 +330,7 @@ struct PomodoroStatusWidget: Widget {
         .description("Фаза фокуса, таймер и текущий раунд.")
         .supportedFamilies([.systemSmall, .systemMedium])
         .containerBackgroundRemovable(false)
+        .contentMarginsDisabled()
     }
 }
 

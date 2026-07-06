@@ -1986,6 +1986,7 @@ struct ContentView: View {
     @StateObject private var dailyReminder = DailyReminderStore()
     @StateObject private var scrollPerformance = ScrollPerformanceCoordinator()
     @State private var tab: AppTab = .today
+    @State private var previousTab: AppTab?
     @State private var showGoalPlanner = false
     @State private var showVoiceAssistant = false
     @State private var isSwitchingTabs = false
@@ -2017,40 +2018,82 @@ struct ContentView: View {
 
     private var tabSwitchAnimation: Animation {
         reduceMotion
-        ? .easeOut(duration: 0.16)
-        : .spring(response: 0.62, dampingFraction: 0.96, blendDuration: 0.18)
-    }
-
-    private var screenTransition: AnyTransition {
-        guard !reduceMotion else { return .opacity }
-        let direction = tabTransitionDirection
-        return .asymmetric(
-            insertion: .opacity
-                .combined(with: .offset(x: 18 * direction, y: 4))
-                .combined(with: .scale(scale: 0.992, anchor: .center)),
-            removal: .opacity
-                .combined(with: .offset(x: -8 * direction, y: -2))
-                .combined(with: .scale(scale: 0.998, anchor: .center))
-        )
+        ? .easeOut(duration: 0.14)
+        : DS.motionTabSwitch
     }
 
     private func switchTab(to newTab: AppTab) {
         guard newTab != tab else { return }
 
+        let outgoingTab = tab
+        let animation = tabSwitchAnimation
+        let cleanupDelay: UInt64 = reduceMotion ? 180_000_000 : 470_000_000
+
         scrollPerformance.stop()
         tabTransitionDirection = newTab.navigationIndex >= tab.navigationIndex ? 1 : -1
-        isSwitchingTabs = true
 
-        withAnimation(tabSwitchAnimation) {
+        tabTransitionTask?.cancel()
+
+        var instant = Transaction(animation: nil)
+        instant.disablesAnimations = true
+        withTransaction(instant) {
+            previousTab = outgoingTab
+            isSwitchingTabs = false
             tab = newTab
         }
 
-        tabTransitionTask?.cancel()
-        let delay: UInt64 = reduceMotion ? 180_000_000 : 520_000_000
         tabTransitionTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: delay)
-            isSwitchingTabs = false
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+
+            withAnimation(animation) {
+                isSwitchingTabs = true
+            }
+
+            try? await Task.sleep(nanoseconds: cleanupDelay)
+            guard !Task.isCancelled else { return }
+
+            var cleanup = Transaction(animation: nil)
+            cleanup.disablesAnimations = true
+            withTransaction(cleanup) {
+                previousTab = nil
+                isSwitchingTabs = false
+            }
         }
+    }
+
+    private func tabScreenLayer(_ tab: AppTab) -> some View {
+        screenView(tab)
+            .padding(.top, 6)
+            .compositingGroup()
+    }
+
+    private var incomingScreenOpacity: Double {
+        previousTab == nil || isSwitchingTabs ? 1.0 : 0.001
+    }
+
+    private var incomingScreenOffset: CGSize {
+        guard previousTab != nil, !reduceMotion else { return .zero }
+        return isSwitchingTabs ? .zero : CGSize(width: 24 * tabTransitionDirection, height: 3)
+    }
+
+    private var incomingScreenScale: CGFloat {
+        guard previousTab != nil, !reduceMotion else { return 1.0 }
+        return isSwitchingTabs ? 1.0 : 0.992
+    }
+
+    private var outgoingScreenOpacity: Double {
+        isSwitchingTabs ? 0.001 : 1.0
+    }
+
+    private var outgoingScreenOffset: CGSize {
+        guard !reduceMotion else { return .zero }
+        return isSwitchingTabs ? CGSize(width: -10 * tabTransitionDirection, height: -1) : .zero
+    }
+
+    private var outgoingScreenScale: CGFloat {
+        guard !reduceMotion else { return 1.0 }
+        return isSwitchingTabs ? 0.998 : 1.0
     }
 
     private func localizedTabTitle(_ tab: AppTab) -> String {
@@ -2377,13 +2420,26 @@ struct ContentView: View {
             AppBackdrop(renderMode: .force)
 
             ZStack {
-                screenView(tab)
-                    .id(tab)
-                    .padding(.top, 6)
-                    .transition(screenTransition)
-                    .transaction { tx in
-                        if scrollPerformance.isScrolling { tx.animation = nil }
-                    }
+                if let previousTab {
+                    tabScreenLayer(previousTab)
+                        .id("previous-\(previousTab.navigationIndex)")
+                        .opacity(outgoingScreenOpacity)
+                        .offset(outgoingScreenOffset)
+                        .scaleEffect(outgoingScreenScale)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                        .zIndex(0)
+                }
+
+                tabScreenLayer(tab)
+                    .id("current-\(tab.navigationIndex)")
+                    .opacity(incomingScreenOpacity)
+                    .offset(incomingScreenOffset)
+                    .scaleEffect(incomingScreenScale)
+                    .zIndex(1)
+            }
+            .transaction { tx in
+                if scrollPerformance.isScrolling { tx.animation = nil }
             }
             .clipped()
         }
@@ -2769,7 +2825,7 @@ struct GlassTabBar: View {
         .overlay(tabBarRefractionOverlay)
         .overlay(tabBarOverlay)
         .shadow(color: DS.depthShadow(simplifiedEffects ? 0.20 : 0.34), radius: simplifiedEffects ? 9 : 18, x: 0, y: simplifiedEffects ? 5 : 10)
-        .animation(reduceMotion ? nil : DS.motionMagic, value: selection)
+        .animation(reduceMotion ? nil : DS.motionTabSwitch, value: selection)
         .accessibilityElement(children: .contain)
     }
 
@@ -2988,7 +3044,7 @@ private struct TabButton: View {
                     .frame(width: 21, height: 21)
                     .symbolRenderingMode(.hierarchical)
                     .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.04 : 1.0))
-                    .animation(reduceMotion ? nil : DS.motionMagic, value: isSelected)
+                    .animation(reduceMotion ? nil : DS.motionTabSwitch, value: isSelected)
 
                 if isSelected {
                     Text(title)
@@ -3012,7 +3068,7 @@ private struct TabButton: View {
             .foregroundStyle(isSelected ? DS.textPrimary : DS.text(simplifiedEffects ? 0.72 : 0.80))
             .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.012 : 0.992))
             .animation(
-                reduceMotion ? nil : DS.motionMagic,
+                reduceMotion ? nil : DS.motionTabSwitch,
                 value: isSelected
             )
             .shadow(color: isSelected && !simplifiedEffects ? DS.depthShadow(0.18) : .clear, radius: isSelected ? 6 : 0, x: 0, y: 3)
@@ -3122,7 +3178,7 @@ private struct OverflowTabMenu: View {
             .overlay(menuOverlay)
             .foregroundStyle(isSelected ? DS.textPrimary : DS.text(simplifiedEffects ? 0.72 : 0.80))
             .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.012 : 0.992))
-            .animation(reduceMotion ? nil : DS.motionMagic, value: isSelected)
+            .animation(reduceMotion ? nil : DS.motionTabSwitch, value: isSelected)
             .shadow(color: isSelected && !simplifiedEffects ? DS.depthShadow(0.18) : .clear, radius: isSelected ? 6 : 0, x: 0, y: 3)
         }
         .buttonStyle(.plain)

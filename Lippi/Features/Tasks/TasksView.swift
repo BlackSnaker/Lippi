@@ -8,6 +8,7 @@ import UIKit
 struct TasksView: View {
     @EnvironmentObject private var store: TaskStore
     @EnvironmentObject private var stats: StatsStore
+    @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var editing: TaskItem?
     @State private var query = ""
@@ -294,7 +295,7 @@ struct TasksView: View {
             in: RoundedRectangle(cornerRadius: 24, style: .continuous),
             tint: DS.accent.opacity(0.10)
         )
-        .shadow(color: DS.depthShadow(0.14), radius: 6, x: 0, y: 3)
+        .shadow(color: isScrolling ? .clear : DS.depthShadow(0.14), radius: isScrolling ? 0 : 6, x: 0, y: isScrolling ? 0 : 3)
     }
 
     private func row(_ item: TaskItem) -> some View {

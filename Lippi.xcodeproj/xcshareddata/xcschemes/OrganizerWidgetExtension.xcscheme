@@ -59,21 +59,12 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "18DE6F4B2E6DB52200319865"
-            BuildableName = "OrganizerWidgetExt.appex"
-            BlueprintName = "OrganizerWidgetExtension"
-            ReferencedContainer = "container:Lippi.xcodeproj">
-         </BuildableReference>
-      </BuildableProductRunnable>
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
             BlueprintIdentifier = "188D1A552E6491BA00EA6B1D"
             BuildableName = "Lippi.app"
             BlueprintName = "Lippi"
             ReferencedContainer = "container:Lippi.xcodeproj">
          </BuildableReference>
-      </MacroExpansion>
+      </BuildableProductRunnable>
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "_XCWidgetKind"

@@ -31,14 +31,25 @@ struct GoalPlannerView: View {
     @State private var addedTasks = false
     @State private var generationIssue: String?
     @State private var chatDraftText = ""
+    @State private var plannerMode: GoalPlannerMode = .assistant
+    @State private var manualTitle: String = ""
+    @State private var manualSummary: String = ""
+    @State private var manualSuccessText: String = ""
+    @State private var manualFirstActionsText: String = ""
+    @State private var manualHabitText: String = ""
+    @State private var manualRiskText: String = ""
+    @State private var manualMilestones: [ManualRoadmapMilestone] = ManualRoadmapMilestone.starter
 
     private let engine = GoalRoadmapEngine()
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
+    private func manualText(_ ru: String, _ en: String) -> String { lang == .ru ? ru : en }
     private var trimmedGoalText: String { goalText.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var trimmedContextText: String { contextText.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var trimmedManualTitle: String { manualTitle.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var hasGoalInput: Bool { !trimmedGoalText.isEmpty }
     private var canGenerate: Bool { hasGoalInput && !isGenerating }
+    private var canCreateManualRoadmap: Bool { !trimmedManualTitle.isEmpty && !isGenerating }
     private var currentInput: GoalPlannerInput {
         GoalPlannerInput(
             goal: trimmedGoalText,
@@ -58,26 +69,34 @@ struct GoalPlannerView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        smartGoalChatCard
+                        plannerModeSwitcher
                             .lippiMotionScene(0)
+
+                        if plannerMode == .assistant {
+                            smartGoalChatCard
+                                .lippiMotionScene(1)
+                        } else {
+                            manualRoadmapCard
+                                .lippiMotionScene(1)
+                        }
 
                         if let roadmap {
                             if let audit = progressAudit(for: roadmap), audit.shouldSuggestAdjustment {
                                 adaptationCard(audit)
-                                    .lippiMotionScene(1)
+                                    .lippiMotionScene(2)
                             }
                             roadmapOverview(roadmap)
-                                .lippiMotionScene(2)
-                            clarityCard(roadmap)
                                 .lippiMotionScene(3)
+                            clarityCard(roadmap)
+                                .lippiMotionScene(4)
                             if !(roadmap.evidence ?? []).isEmpty {
                                 evidenceCard(roadmap)
-                                    .lippiMotionScene(4)
+                                    .lippiMotionScene(5)
                             }
                             milestonesCard(roadmap)
-                                .lippiMotionScene(5)
-                            habitsAndRisksCard(roadmap)
                                 .lippiMotionScene(6)
+                            habitsAndRisksCard(roadmap)
+                                .lippiMotionScene(7)
                         }
 
                         Color.clear.frame(height: 72)
@@ -102,6 +121,512 @@ struct GoalPlannerView: View {
             }
             .onAppear(perform: restoreRoadmap)
         }
+    }
+
+    private var plannerModeSwitcher: some View {
+        GlassCard(
+            padding: 8,
+            cornerRadius: 24,
+            style: .lightweight,
+            forceSystemGlass: !reduceTransparency
+        ) {
+            HStack(spacing: 8) {
+                ForEach(GoalPlannerMode.allCases) { mode in
+                    plannerModeButton(mode)
+                }
+            }
+        }
+    }
+
+    private func plannerModeButton(_ mode: GoalPlannerMode) -> some View {
+        let isSelected = plannerMode == mode
+        let tone = mode == .assistant ? DS.accent : Color(hex: 0x30D158)
+
+        return Button {
+            guard plannerMode != mode else { return }
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+                plannerMode = mode
+                generationIssue = nil
+            }
+
+            #if os(iOS)
+            UISelectionFeedbackGenerator().selectionChanged()
+            #endif
+        } label: {
+            HStack(spacing: 9) {
+                Image(safeSystemName: mode.icon, fallback: "sparkles")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(isSelected ? DS.textPrimary : tone)
+                    .frame(width: 28, height: 28)
+                    .background(tone.opacity(isSelected ? 0.22 : 0.10), in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(mode.title(lang: lang))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(DS.textPrimary)
+                        .singleLine()
+
+                    Text(mode.subtitle(lang: lang))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DS.text(0.62))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(DS.glassFill(isSelected ? 0.13 : 0.055))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(tone.opacity(isSelected ? 0.12 : 0.04)))
+            )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                tint: tone.opacity(isSelected ? 0.10 : 0.04),
+                interactive: true
+            )
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(isSelected ? tone.opacity(0.28) : DS.glassStroke(0.10), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var manualRoadmapCard: some View {
+        GlassCard(
+            padding: 0,
+            cornerRadius: 30,
+            style: .full,
+            forceSystemGlass: !reduceTransparency
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 14) {
+                    LippiSectionHeader(
+                        title: manualText("Ручная дорожная карта", "Manual roadmap"),
+                        subtitle: manualText("Собери маршрут сам: этапы, критерии и первые действия", "Build it yourself: stages, criteria, and first actions"),
+                        icon: "point.topleft.down.curvedto.point.bottomright.up",
+                        accent: Color(hex: 0x30D158)
+                    )
+
+                    manualRoadmapHint
+                    manualTextField(
+                        title: manualText("Цель", "Goal"),
+                        placeholder: manualText("Например: запустить MVP за 4 месяца", "Example: launch an MVP in 4 months"),
+                        icon: "flag.checkered",
+                        text: $manualTitle,
+                        tint: DS.accent
+                    )
+
+                    manualTextEditor(
+                        title: manualText("Контекст", "Context"),
+                        placeholder: manualText("Что уже есть, какие ограничения, сколько времени в неделю?", "What already exists, constraints, weekly capacity?"),
+                        icon: "text.alignleft",
+                        text: $manualSummary,
+                        minHeight: 82,
+                        tint: Color(hex: 0x64D2FF)
+                    )
+
+                    HStack(spacing: 10) {
+                        optionPicker(
+                            title: s("goals.input.horizon"),
+                            icon: "calendar.badge.clock",
+                            selection: $horizon,
+                            values: GoalPlanningHorizon.allCases
+                        )
+
+                        optionPicker(
+                            title: s("goals.input.intensity"),
+                            icon: "gauge.with.dots.needle.67percent",
+                            selection: $intensity,
+                            values: GoalPlanningIntensity.allCases
+                        )
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+
+                manualCriteriaSection
+                    .padding(.horizontal, 16)
+
+                manualMilestonesSection
+                    .padding(.horizontal, 16)
+
+                manualSupportSection
+                    .padding(.horizontal, 16)
+
+                manualPreviewFooter
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+            }
+        }
+    }
+
+    private var manualRoadmapHint: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(safeSystemName: "hand.draw.fill", fallback: "hand.point.up.left.fill")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(hex: 0x30D158))
+                .frame(width: 28, height: 28)
+                .background(Color(hex: 0x30D158).opacity(0.16), in: Circle())
+                .lippiSystemGlass(in: Circle(), tint: Color(hex: 0x30D158).opacity(0.08))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(manualText("Без ожидания модели", "No model required"))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+
+                Text(manualText("Заполни только цель, если нужен быстрый черновик. Этапы, действия и критерии можно уточнить вручную.", "Fill only the goal for a quick draft. You can refine stages, actions, and criteria manually."))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(DS.glassFill(0.075))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color(hex: 0x30D158).opacity(0.06)))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            tint: Color(hex: 0x30D158).opacity(0.06)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
+    private var manualCriteriaSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LippiSectionHeader(
+                title: manualText("Результат", "Outcome"),
+                subtitle: manualText("Что считать успехом и с чего начать", "Define success and the first moves"),
+                icon: "checkmark.seal.fill",
+                accent: DS.accent
+            )
+
+            manualTextEditor(
+                title: manualText("Критерии успеха", "Success criteria"),
+                placeholder: manualText("По одному критерию на строку", "One criterion per line"),
+                icon: "checklist.checked",
+                text: $manualSuccessText,
+                minHeight: 76,
+                tint: DS.accent
+            )
+
+            manualTextEditor(
+                title: manualText("Первые действия", "First actions"),
+                placeholder: manualText("Что сделать в ближайшие 24-48 часов?", "What should happen in the next 24-48 hours?"),
+                icon: "bolt.fill",
+                text: $manualFirstActionsText,
+                minHeight: 76,
+                tint: Color(hex: 0xFF9F0A)
+            )
+        }
+        .padding(13)
+        .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: DS.accent.opacity(0.055)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(DS.glassStroke(0.11), lineWidth: 1))
+    }
+
+    private var manualMilestonesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LippiSectionHeader(
+                title: manualText("Этапы", "Stages"),
+                subtitle: manualText("Каждый этап станет частью дорожной карты", "Each stage becomes part of the roadmap"),
+                icon: "map.fill",
+                accent: Color(hex: 0x64D2FF)
+            )
+
+            VStack(spacing: 12) {
+                ForEach($manualMilestones) { milestone in
+                    let index = manualMilestones.firstIndex { $0.id == milestone.wrappedValue.id } ?? 0
+                    manualMilestoneEditor(milestone: milestone, index: index)
+                }
+            }
+
+            Button {
+                addManualMilestone()
+            } label: {
+                Label(manualText("Добавить этап", "Add stage"), systemImage: "plus.circle.fill")
+                    .font(.subheadline.weight(.bold))
+                    .labelStyle(TightLabelStyle())
+                    .frame(maxWidth: .infinity)
+            }
+            .disabled(manualMilestones.count >= 6)
+            .buttonStyle(LippiButtonStyle(kind: .secondary))
+            .opacity(manualMilestones.count >= 6 ? 0.55 : 1)
+        }
+        .padding(13)
+        .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: Color(hex: 0x64D2FF).opacity(0.055)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(DS.glassStroke(0.11), lineWidth: 1))
+    }
+
+    private func manualMilestoneEditor(milestone: Binding<ManualRoadmapMilestone>, index: Int) -> some View {
+        let tone = manualMilestoneTone(index)
+        let canDelete = manualMilestones.count > 1
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Text("\(index + 1)")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(width: 30, height: 30)
+                    .background(tone.opacity(0.20), in: Circle())
+                    .lippiSystemGlass(in: Circle(), tint: tone.opacity(0.08))
+                    .overlay(Circle().stroke(tone.opacity(0.30), lineWidth: 1))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(manualText("Этап \(index + 1)", "Stage \(index + 1)"))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(DS.textPrimary)
+
+                    Text(manualText("Срок, цель этапа и конкретные шаги", "Timeframe, stage outcome, and concrete steps"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DS.textTertiary)
+                }
+
+                Spacer(minLength: 8)
+
+                if canDelete {
+                    Button {
+                        removeManualMilestone(id: milestone.wrappedValue.id)
+                    } label: {
+                        Image(safeSystemName: "trash.fill", fallback: "trash")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .ghost, compact: true))
+                    .accessibilityLabel(manualText("Удалить этап", "Delete stage"))
+                }
+            }
+
+            manualTextField(
+                title: manualText("Название", "Title"),
+                placeholder: manualText("Например: собрать первый прототип", "Example: assemble the first prototype"),
+                icon: "text.cursor",
+                text: milestone.title,
+                tint: tone
+            )
+
+            HStack(spacing: 10) {
+                manualTextField(
+                    title: manualText("Срок", "Timeframe"),
+                    placeholder: manualDefaultTimeframe(index: index),
+                    icon: "calendar",
+                    text: milestone.timeframe,
+                    tint: tone
+                )
+
+                manualCategoryPicker(selection: milestone.category, tone: tone)
+            }
+
+            manualTextEditor(
+                title: manualText("Результат этапа", "Stage result"),
+                placeholder: manualText("Как понять, что этап завершен?", "How will you know the stage is done?"),
+                icon: "target",
+                text: milestone.target,
+                minHeight: 66,
+                tint: tone
+            )
+
+            manualTextEditor(
+                title: manualText("Задачи этапа", "Stage tasks"),
+                placeholder: manualText("По одной задаче на строку", "One task per line"),
+                icon: "list.bullet.rectangle.fill",
+                text: milestone.tasksText,
+                minHeight: 88,
+                tint: tone
+            )
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(DS.glassFill(0.065))
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(tone.opacity(0.055)))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous),
+            tint: tone.opacity(0.055)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
+    private var manualSupportSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LippiSectionHeader(
+                title: manualText("Поддержка", "Support"),
+                subtitle: manualText("Ритм и защита от срывов", "Cadence and protection from drift"),
+                icon: "shield.lefthalf.filled",
+                accent: Color(hex: 0xBF5AF2)
+            )
+
+            manualTextEditor(
+                title: manualText("Привычки", "Habits"),
+                placeholder: manualText("Например: еженедельный обзор по воскресеньям", "Example: weekly review every Sunday"),
+                icon: "repeat.circle.fill",
+                text: $manualHabitText,
+                minHeight: 70,
+                tint: Color(hex: 0x30D158)
+            )
+
+            manualTextEditor(
+                title: manualText("Риски и корректировки", "Risks and adjustments"),
+                placeholder: manualText("Что может помешать и как план менять без паники?", "What can block progress, and how should the plan adapt?"),
+                icon: "exclamationmark.triangle.fill",
+                text: $manualRiskText,
+                minHeight: 76,
+                tint: Color(hex: 0xFF9F0A)
+            )
+        }
+        .padding(13)
+        .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: Color(hex: 0xBF5AF2).opacity(0.05)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(DS.glassStroke(0.11), lineWidth: 1))
+    }
+
+    private var manualPreviewFooter: some View {
+        let activeStages = manualMilestones.filter { $0.hasContent }.count
+        let taskCount = manualMilestones.reduce(0) { $0 + manualLines($1.tasksText, limit: 20).count }
+        let firstActionCount = manualLines(manualFirstActionsText, limit: 8).count
+
+        return HStack(spacing: 8) {
+            manualMetricPill(value: "\(max(activeStages, 1))", title: manualText("этапа", "stages"), icon: "map.fill", tone: Color(hex: 0x64D2FF))
+            manualMetricPill(value: "\(taskCount + firstActionCount)", title: manualText("шагов", "steps"), icon: "checklist.checked", tone: DS.accent)
+            manualMetricPill(value: horizon.title(lang: lang), title: manualText("горизонт", "horizon"), icon: "calendar", tone: Color(hex: 0x30D158))
+        }
+    }
+
+    private func manualMetricPill(value: String, title: String, icon: String, tone: Color) -> some View {
+        HStack(spacing: 7) {
+            Image(safeSystemName: icon, fallback: "circle.fill")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(tone)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+                    .singleLine()
+                    .minimumScaleFactor(0.72)
+
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .singleLine()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(DS.glassFill(0.075), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            tint: tone.opacity(0.06)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(DS.glassStroke(0.11), lineWidth: 1))
+    }
+
+    private func manualTextField(
+        title: String,
+        placeholder: String,
+        icon: String,
+        text: Binding<String>,
+        tint: Color
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(DS.text(0.70))
+                .labelStyle(TightLabelStyle())
+                .singleLine()
+
+            TextField(placeholder, text: text, axis: .vertical)
+                .lineLimit(1...2)
+                .textFieldStyle(.plain)
+                .font(.body.weight(.medium))
+                .foregroundStyle(DS.textPrimary)
+                .submitLabel(.done)
+                .goalGlassField(tint: tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func manualTextEditor(
+        title: String,
+        placeholder: String,
+        icon: String,
+        text: Binding<String>,
+        minHeight: CGFloat,
+        tint: Color
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(DS.text(0.70))
+                .labelStyle(TightLabelStyle())
+                .singleLine()
+
+            TextEditor(text: text)
+                .frame(minHeight: minHeight, maxHeight: max(minHeight + 74, 140))
+                .scrollContentBackground(.hidden)
+                .font(.body.weight(.medium))
+                .foregroundStyle(DS.textPrimary)
+                .overlay(alignment: .topLeading) {
+                    if text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(placeholder)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(DS.textTertiary)
+                            .padding(.top, 8)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .goalGlassField(tint: tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func manualCategoryPicker(selection: Binding<TaskCategory>, tone: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(manualText("Категория", "Category"), systemImage: "square.grid.2x2.fill")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(DS.text(0.70))
+                .labelStyle(TightLabelStyle())
+                .singleLine()
+
+            Picker(manualText("Категория", "Category"), selection: selection) {
+                ForEach(TaskCategory.allCases) { category in
+                    Label(category.title, systemImage: category.symbol).tag(category)
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(DS.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(DS.glassFill(0.10))
+                    .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).fill(DS.glassTint).opacity(0.28))
+                    .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).fill(tone.opacity(0.08)))
+            )
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 15, style: .continuous),
+                tint: tone.opacity(0.08),
+                interactive: true
+            )
+            .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var smartGoalChatCard: some View {
@@ -1611,6 +2136,38 @@ struct GoalPlannerView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .secondary))
+            } else if plannerMode == .manual {
+                Button {
+                    createManualRoadmap()
+                } label: {
+                    Label(manualText("Собрать дорожную карту", "Create roadmap"), systemImage: "checkmark.seal.fill")
+                        .labelStyle(TightLabelStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(!canCreateManualRoadmap)
+                .buttonStyle(LippiButtonStyle(kind: .primary))
+                .opacity(canCreateManualRoadmap ? 1 : 0.55)
+
+                HStack(spacing: 10) {
+                    Button {
+                        addManualMilestone()
+                    } label: {
+                        Label(manualText("Этап", "Stage"), systemImage: "plus.circle.fill")
+                            .labelStyle(TightLabelStyle())
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(manualMilestones.count >= 6)
+                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+
+                    Button {
+                        resetManualPlanner()
+                    } label: {
+                        Label(manualText("Очистить", "Clear"), systemImage: "eraser.fill")
+                            .labelStyle(TightLabelStyle())
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+                }
             } else {
                 chatComposerField
 
@@ -1722,6 +2279,244 @@ struct GoalPlannerView: View {
         #endif
     }
 
+    private func createManualRoadmap() {
+        guard canCreateManualRoadmap else { return }
+
+        let title = trimmedManualTitle
+        let summary = manualSummary.trimmed.nonEmpty(
+            or: manualText(
+                "План собран вручную: цель разбита на этапы, критерии и ближайшие действия.",
+                "Manually built plan: the goal is split into stages, criteria, and immediate actions."
+            )
+        )
+        let userMilestones = manualMilestones.enumerated().compactMap { index, milestone in
+            manualGoalMilestone(from: milestone, index: index, title: title)
+        }
+        let milestones = userMilestones.ifEmpty(manualFallbackMilestones(title: title))
+        let firstActions = manualLines(manualFirstActionsText, limit: 5)
+            .ifEmpty(milestones.flatMap(\.tasks).prefixArray(4))
+            .ifEmpty(manualDefaultTasks(for: 0, goal: title))
+        let criteria = manualLines(manualSuccessText, limit: 5)
+            .ifEmpty([
+                manualText("Понятно, какой результат должен быть достигнут.", "The desired result is clear."),
+                manualText("Дорожная карта разбита на конкретные этапы.", "The roadmap is split into concrete stages."),
+                manualText("Первые действия можно выполнить в ближайшие 24-48 часов.", "The first actions can be completed within 24-48 hours.")
+            ])
+        let habits = manualLines(manualHabitText, limit: 4).map { line in
+            GoalHabit(
+                title: line,
+                detail: manualText("Поддерживай этот ритм и проверяй прогресс на обзоре.", "Keep this cadence and review progress regularly.")
+            )
+        }.ifEmpty([
+            GoalHabit(
+                title: manualText("Еженедельный обзор", "Weekly review"),
+                detail: manualText("Раз в неделю отмечай выполненное, переносы и следующий самый важный шаг.", "Once a week, review completed work, postponed items, and the next most important step.")
+            )
+        ])
+        let risks = manualLines(manualRiskText, limit: 4).map { line in
+            GoalRisk(
+                title: line,
+                mitigation: manualText("Если риск проявился, уменьши объем ближайшего этапа и оставь только ключевой шаг.", "If this risk appears, reduce the next stage and keep only the key action.")
+            )
+        }.ifEmpty([
+            GoalRisk(
+                title: manualText("Слишком большой объем", "Scope too large"),
+                mitigation: manualText("Сократи этап до одного результата, который можно проверить за неделю.", "Reduce the stage to one result that can be checked within a week.")
+            )
+        ])
+
+        let result = GoalRoadmap(
+            title: title,
+            summary: summary,
+            source: .localPlanner,
+            confidence: 1.0,
+            successCriteria: criteria,
+            firstActions: firstActions,
+            assumptions: [
+                manualText("Дорожная карта составлена вручную пользователем.", "The roadmap was built manually by the user."),
+                manualText("Сроки можно корректировать по мере выполнения задач.", "Timeframes can be adjusted as tasks are completed.")
+            ],
+            clarifyingQuestions: nil,
+            evidence: nil,
+            milestones: milestones,
+            habits: habits,
+            risks: risks
+        )
+
+        goalText = title
+        contextText = manualSummary.trimmed
+        generationIssue = nil
+        addedTasks = false
+
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+            roadmap = result
+        }
+        saveRoadmap(result)
+
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        #endif
+    }
+
+    private func manualGoalMilestone(from milestone: ManualRoadmapMilestone, index: Int, title: String) -> GoalMilestone? {
+        guard milestone.hasContent else { return nil }
+        let tasks = manualLines(milestone.tasksText, limit: 8)
+            .ifEmpty(manualDefaultTasks(for: index, goal: title))
+
+        return GoalMilestone(
+            title: milestone.title.trimmed.nonEmpty(or: manualText("Этап \(index + 1)", "Stage \(index + 1)")),
+            timeframe: milestone.timeframe.trimmed.nonEmpty(or: manualDefaultTimeframe(index: index)),
+            target: milestone.target.trimmed.nonEmpty(
+                or: manualText(
+                    "Промежуточный результат для цели: \(title)",
+                    "Intermediate result for the goal: \(title)"
+                )
+            ),
+            tasks: tasks,
+            category: milestone.category
+        )
+    }
+
+    private func manualFallbackMilestones(title: String) -> [GoalMilestone] {
+        let categories: [TaskCategory] = [.other, .work, .health]
+        return (0..<3).map { index in
+            GoalMilestone(
+                title: manualFallbackMilestoneTitle(index: index),
+                timeframe: manualDefaultTimeframe(index: index),
+                target: manualFallbackMilestoneTarget(index: index, title: title),
+                tasks: manualDefaultTasks(for: index, goal: title),
+                category: categories[safe: index] ?? .other
+            )
+        }
+    }
+
+    private func manualFallbackMilestoneTitle(index: Int) -> String {
+        let ru = ["Уточнить маршрут", "Собрать рабочий прогресс", "Закрепить результат"]
+        let en = ["Clarify the route", "Build working progress", "Lock in the result"]
+        return (lang == .ru ? ru : en)[safe: index] ?? manualText("Этап \(index + 1)", "Stage \(index + 1)")
+    }
+
+    private func manualFallbackMilestoneTarget(index: Int, title: String) -> String {
+        let ru = [
+            "Понятна текущая точка, критерии успеха и ближайший шаг для цели: \(title).",
+            "Есть заметный практический прогресс, который можно проверить и улучшить.",
+            "Результат доведен до устойчивого ритма и понятного следующего уровня."
+        ]
+        let en = [
+            "Current state, success criteria, and the next action are clear for: \(title).",
+            "There is visible practical progress that can be tested and improved.",
+            "The result is stabilized into a sustainable rhythm and a clear next level."
+        ]
+        return (lang == .ru ? ru : en)[safe: index] ?? title
+    }
+
+    private func manualDefaultTasks(for index: Int, goal: String) -> [String] {
+        let ru = [
+            [
+                "Записать текущую точку по цели: \(goal)",
+                "Выбрать 1-2 измеримых критерия успеха",
+                "Назначить первый маленький шаг на ближайшие 24 часа"
+            ],
+            [
+                "Сделать первый рабочий результат",
+                "Проверить, что мешает двигаться быстрее",
+                "Обновить план с учетом фактов"
+            ],
+            [
+                "Закрыть ключевые незавершенные действия",
+                "Собрать короткий обзор прогресса",
+                "Назначить следующий уровень после завершения этапа"
+            ]
+        ]
+        let en = [
+            [
+                "Write down the current state for: \(goal)",
+                "Choose 1-2 measurable success criteria",
+                "Schedule one small action for the next 24 hours"
+            ],
+            [
+                "Create the first working result",
+                "Check what slows progress down",
+                "Update the plan using real feedback"
+            ],
+            [
+                "Close the key unfinished actions",
+                "Make a short progress review",
+                "Define the next level after this stage"
+            ]
+        ]
+        return (lang == .ru ? ru : en)[safe: min(index, 2)] ?? []
+    }
+
+    private func manualLines(_ text: String, limit: Int) -> [String] {
+        text
+            .replacingOccurrences(of: "•", with: "\n")
+            .replacingOccurrences(of: "·", with: "\n")
+            .components(separatedBy: CharacterSet(charactersIn: "\n;"))
+            .map { line in
+                line
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .trimmingCharacters(in: CharacterSet(charactersIn: "-–—"))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            .filter { !$0.isEmpty }
+            .prefixArray(limit)
+    }
+
+    private func manualDefaultTimeframe(index: Int) -> String {
+        let total = max(manualMilestones.count, 1)
+        let start = max(1, index * horizon.weeks / total + 1)
+        let end = max(start, (index + 1) * horizon.weeks / total)
+        return start == end
+            ? manualText("Неделя \(start)", "Week \(start)")
+            : manualText("Недели \(start)-\(end)", "Weeks \(start)-\(end)")
+    }
+
+    private func addManualMilestone() {
+        guard manualMilestones.count < 6 else { return }
+        let nextIndex = manualMilestones.count
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+            manualMilestones.append(
+                ManualRoadmapMilestone(
+                    category: TaskCategory.allCases[safe: nextIndex % TaskCategory.allCases.count] ?? .other
+                )
+            )
+        }
+
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+
+    private func removeManualMilestone(id: UUID) {
+        guard manualMilestones.count > 1 else { return }
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+            manualMilestones.removeAll { $0.id == id }
+        }
+
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+
+    private func resetManualPlanner() {
+        manualTitle = ""
+        manualSummary = ""
+        manualSuccessText = ""
+        manualFirstActionsText = ""
+        manualHabitText = ""
+        manualRiskText = ""
+        manualMilestones = ManualRoadmapMilestone.starter
+
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+
+    private func manualMilestoneTone(_ index: Int) -> Color {
+        [DS.accent, Color(hex: 0x64D2FF), Color(hex: 0x30D158), Color(hex: 0xBF5AF2), Color(hex: 0xFF9F0A), Color(hex: 0xFF375F)][safe: index] ?? DS.accent
+    }
+
     private func resetGoalChat() {
         goalText = ""
         contextText = ""
@@ -1730,6 +2525,7 @@ struct GoalPlannerView: View {
         generationIssue = nil
         addedTasks = false
         savedRoadmap = ""
+        resetManualPlanner()
     }
 
     @MainActor
@@ -1929,6 +2725,38 @@ enum GoalPlanningIntensity: String, GoalPlannerOption {
         case .light: return L10n.tr("goals.intensity.light", lang)
         case .balanced: return L10n.tr("goals.intensity.balanced", lang)
         case .focused: return L10n.tr("goals.intensity.focused", lang)
+        }
+    }
+}
+
+enum GoalPlannerMode: String, CaseIterable, Identifiable {
+    case assistant
+    case manual
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .assistant: return "sparkles"
+        case .manual: return "hand.draw.fill"
+        }
+    }
+
+    func title(lang: AppLang) -> String {
+        switch self {
+        case .assistant:
+            return lang == .ru ? "С ИИ" : "AI"
+        case .manual:
+            return lang == .ru ? "Вручную" : "Manual"
+        }
+    }
+
+    func subtitle(lang: AppLang) -> String {
+        switch self {
+        case .assistant:
+            return lang == .ru ? "чат и модель" : "chat and model"
+        case .manual:
+            return lang == .ru ? "свой маршрут" : "your own route"
         }
     }
 }
@@ -2182,6 +3010,30 @@ struct GoalRisk: Identifiable, Codable, Hashable {
     var id = UUID()
     var title: String
     var mitigation: String
+}
+
+struct ManualRoadmapMilestone: Identifiable, Hashable {
+    var id = UUID()
+    var title: String = ""
+    var timeframe: String = ""
+    var target: String = ""
+    var tasksText: String = ""
+    var category: TaskCategory = .other
+
+    var hasContent: Bool {
+        !title.trimmed.isEmpty
+            || !timeframe.trimmed.isEmpty
+            || !target.trimmed.isEmpty
+            || !tasksText.trimmed.isEmpty
+    }
+
+    static var starter: [ManualRoadmapMilestone] {
+        [
+            ManualRoadmapMilestone(category: .other),
+            ManualRoadmapMilestone(category: .work),
+            ManualRoadmapMilestone(category: .health)
+        ]
+    }
 }
 
 struct GoalMissedTask: Codable, Hashable {

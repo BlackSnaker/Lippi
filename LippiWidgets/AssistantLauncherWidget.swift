@@ -84,11 +84,13 @@ struct AssistantLauncherWidgetView: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(2)
+                        .minimumScaleFactor(0.72)
 
                     Text("Коснитесь, чтобы начать говорить")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.76))
                         .lineLimit(2)
+                        .minimumScaleFactor(0.76)
                 }
             }
 
@@ -110,11 +112,13 @@ struct AssistantLauncherWidgetView: View {
                             .font(.headline.weight(.semibold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.78)
 
                         Text("Быстрый запуск без лишних экранов")
                             .font(.footnote)
                             .foregroundStyle(.white.opacity(0.76))
                             .lineLimit(2)
+                            .minimumScaleFactor(0.78)
                     }
                 }
 
@@ -122,6 +126,7 @@ struct AssistantLauncherWidgetView: View {
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.74))
                     .lineLimit(2)
+                    .minimumScaleFactor(0.78)
             }
 
             Spacer(minLength: 0)
@@ -140,6 +145,7 @@ struct AssistantLauncherWidgetView: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.white.opacity(0.82))
                 .tracking(0.7)
+                .lineLimit(1)
 
             Spacer(minLength: 0)
 
@@ -170,14 +176,29 @@ struct AssistantLauncherWidgetView: View {
                 )
                 .overlay(
                     Circle()
-                        .stroke(.white.opacity(0.28), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.56), .white.opacity(0.18), accent.opacity(0.26)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
                 )
 
             Image(systemName: "mic.fill")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.white)
         }
-        .shadow(color: glow.opacity(0.35), radius: 12, x: 0, y: 6)
+        .overlay(alignment: .topLeading) {
+            Circle()
+                .fill(.white.opacity(0.34))
+                .frame(width: 16, height: 16)
+                .blur(radius: 1)
+                .offset(x: 8, y: 7)
+                .allowsHitTesting(false)
+        }
+        .shadow(color: glow.opacity(0.42), radius: 14, x: 0, y: 7)
     }
 
     private func actionLink(_ action: AssistantWidgetAction) -> some View {
@@ -190,6 +211,7 @@ struct AssistantLauncherWidgetView: View {
                     Text(action.title)
                         .font(.caption.weight(.semibold))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.74)
                     Spacer(minLength: 0)
                 }
 
@@ -197,18 +219,12 @@ struct AssistantLauncherWidgetView: View {
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.white.opacity(0.66))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.70)
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(.white.opacity(0.14))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(.white.opacity(0.22), lineWidth: 1)
-            )
+            .widgetGlassPanel(RoundedRectangle(cornerRadius: 12, style: .continuous), accent: accent, intensity: 0.15)
         }
         .buttonStyle(.plain)
     }
@@ -219,12 +235,13 @@ struct AssistantLauncherWidgetView: View {
                 .font(.caption2.weight(.bold))
             Text(title)
                 .font(.caption2.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.70)
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
-        .background(accent.opacity(0.42), in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
+        .widgetGlassPanel(Capsule(), accent: accent, intensity: 0.20)
     }
 }
 
@@ -237,6 +254,7 @@ struct AssistantLauncherWidget: Widget {
         .description("Быстрый запуск записи голоса и открытие полного меню помощника.")
         .supportedFamilies([.systemSmall, .systemMedium])
         .containerBackgroundRemovable(false)
+        .contentMarginsDisabled()
     }
 }
 

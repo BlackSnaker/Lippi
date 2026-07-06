@@ -53,13 +53,17 @@ struct LippiWidgetsLiveActivity: Widget {
             } compactLeading: {
                 PomodoroIslandCompactOrb(phase: context.state.phase)
             } compactTrailing: {
-                PomodoroIslandCountdown(state: context.state, compact: true)
+                Color.clear
+                    .frame(width: 1, height: 1)
             } minimal: {
                 PomodoroIslandCompactOrb(phase: context.state.phase, minimal: true)
             }
             .widgetURL(PomodoroIslandLink.open.url)
             .keylineTint(PomodoroIslandCopy.accent(for: context.state.phase))
             .contentMargins(.all, 0, for: .expanded)
+            .contentMargins(.all, 0, for: .compactLeading)
+            .contentMargins(.all, 0, for: .compactTrailing)
+            .contentMargins(.all, 0, for: .minimal)
         }
     }
 }
@@ -207,10 +211,10 @@ private struct PomodoroIslandCompactOrb: View {
                 )
                 .padding(minimal ? 3 : 2)
             Image(systemName: PomodoroIslandCopy.icon(for: phase))
-                .font(.system(size: minimal ? 9 : 10, weight: .bold))
+                .font(.system(size: minimal ? 8 : 9, weight: .bold))
                 .foregroundStyle(.white)
         }
-        .frame(width: minimal ? 18 : 22, height: minimal ? 18 : 22)
+        .frame(width: minimal ? 15 : 17, height: minimal ? 15 : 17)
     }
 }
 

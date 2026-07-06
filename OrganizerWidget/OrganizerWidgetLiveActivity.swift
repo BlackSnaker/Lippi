@@ -50,12 +50,16 @@ struct OrganizerWidgetLiveActivity: Widget {
             } compactLeading: {
                 OrganizerIslandCompactOrb(state: context.state)
             } compactTrailing: {
-                OrganizerIslandDueBadge(state: context.state, compact: true)
+                Color.clear
+                    .frame(width: 1, height: 1)
             } minimal: {
                 OrganizerIslandCompactOrb(state: context.state, minimal: true)
             }
             .widgetURL(OrganizerIslandLink.openTasks.url)
             .keylineTint(OrganizerIslandCopy.accent(for: context.state))
+            .contentMargins(.all, 0, for: .compactLeading)
+            .contentMargins(.all, 0, for: .compactTrailing)
+            .contentMargins(.all, 0, for: .minimal)
         }
     }
 }
@@ -197,10 +201,10 @@ private struct OrganizerIslandCompactOrb: View {
                 )
                 .padding(minimal ? 3 : 2)
             Image(systemName: state.isCompleted ? "checkmark.circle.fill" : state.categorySymbol)
-                .font(.system(size: minimal ? 9 : 10, weight: .bold))
+                .font(.system(size: minimal ? 8 : 9, weight: .bold))
                 .foregroundStyle(.white)
         }
-        .frame(width: minimal ? 18 : 22, height: minimal ? 18 : 22)
+        .frame(width: minimal ? 16 : 18, height: minimal ? 16 : 18)
     }
 }
 

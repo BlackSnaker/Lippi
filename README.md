@@ -81,10 +81,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%203%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%206%2C%202026-0A84FF?style=for-the-badge">
     <img alt="Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-Adaptive%20Coach-64D2FF?style=for-the-badge">
-    <img alt="Performance" src="https://img.shields.io/badge/Motion-ProMotion%20Ready-30D158?style=for-the-badge">
-    <img alt="AI" src="https://img.shields.io/badge/AI-Grounded%20Roadmaps-BF5AF2?style=for-the-badge">
+    <img alt="Widgets" src="https://img.shields.io/badge/Widgets-Glass%20Redesign-30D158?style=for-the-badge">
+    <img alt="Dynamic Island" src="https://img.shields.io/badge/Dynamic%20Island-Compact%20Live%20States-BF5AF2?style=for-the-badge">
   </p>
   <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
   <p><strong>Красивая и понятная история изменений для главной страницы репозитория.</strong></p>
@@ -119,6 +119,39 @@
       <br><br>
       <strong>Плавный скролл</strong><br>
       <sub>Во время жестов тяжёлые эффекты упрощаются и возвращаются после остановки.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 6, 2026 - Glass widgets, compact Dynamic Island, and stable widget installation
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>This update polishes how Lippi appears outside the app: on the Home Screen, in widgets, and inside Dynamic Island.</strong></p>
+      <ul>
+        <li><strong>Cleaner Home Screen widgets:</strong> widget layouts were rebuilt with brighter Liquid Glass surfaces, softer depth, and no heavy black frame around the content.</li>
+        <li><strong>Better text fitting:</strong> task names, timers, overdue labels, and compact status text now use tighter layout rules so important information stays readable in small widget sizes.</li>
+        <li><strong>More useful widget hierarchy:</strong> active tasks, focus states, Pomodoro, assistant entry points, and roadmap widgets now prioritize the most important detail first.</li>
+        <li><strong>Compact Dynamic Island states:</strong> Live Activities now keep the collapsed island small and quiet, so it no longer stretches across the status indicators before the user expands it.</li>
+        <li><strong>Refined Island visuals:</strong> Pomodoro, roadmap, and organizer activities received lighter compact icons, cleaner margins, and calmer glass styling for the expanded state.</li>
+        <li><strong>Fixed extension install conflict:</strong> the Organizer widget scheme now launches the containing <code>Lippi.app</code> instead of trying to install the <code>.appex</code> directly.</li>
+        <li><strong>Verification:</strong> <code>Lippi</code>, <code>LippiWidgetsExtension</code>, and <code>OrganizerWidgetExtension</code> all build successfully for iOS Simulator.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Это обновление доводит до блеска то, как Lippi выглядит вне приложения: на рабочем столе, в виджетах и Dynamic Island.</strong></p>
+      <ul>
+        <li><strong>Чище виджеты на рабочем столе:</strong> layout виджетов переработан под более светлые Liquid Glass-поверхности, мягкую глубину и без тяжелой черной рамки вокруг контента.</li>
+        <li><strong>Текст лучше помещается:</strong> названия задач, таймеры, просрочки и компактные статусы получили более строгие правила верстки, чтобы важная информация читалась даже в маленьких виджетах.</li>
+        <li><strong>Понятнее иерархия:</strong> активные задачи, фокус, Pomodoro, вход в ассистента и дорожные карты теперь сначала показывают самое важное, а второстепенное не перегружает поверхность.</li>
+        <li><strong>Компактный Dynamic Island:</strong> Live Activities в свернутом состоянии занимают минимум места и больше не растягивают остров до индикаторов сети и заряда.</li>
+        <li><strong>Аккуратнее визуал острова:</strong> Pomodoro, roadmap и organizer-активности получили более легкие компактные иконки, чистые отступы и спокойное стекло в раскрытом состоянии.</li>
+        <li><strong>Исправлен конфликт установки расширения:</strong> схема Organizer widget теперь запускает контейнер <code>Lippi.app</code>, а не пытается установить <code>.appex</code> напрямую.</li>
+        <li><strong>Проверка:</strong> <code>Lippi</code>, <code>LippiWidgetsExtension</code> и <code>OrganizerWidgetExtension</code> успешно собираются для iOS Simulator.</li>
+      </ul>
     </td>
   </tr>
 </table>

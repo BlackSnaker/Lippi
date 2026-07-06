@@ -24,7 +24,7 @@ extension EnvironmentValues {
 final class ScrollPerformanceCoordinator: ObservableObject {
     @Published private(set) var isScrolling = false
     private var settleTask: Task<Void, Never>?
-    private let settleDelay: UInt64 = 220_000_000
+    private let settleDelay: UInt64 = 360_000_000
 
     func setScrolling(_ value: Bool) {
         settleTask?.cancel()
@@ -34,9 +34,10 @@ final class ScrollPerformanceCoordinator: ObservableObject {
             return
         }
 
-        // Keep the lightweight render path through the final deceleration frames.
+        // Keep the lightweight render path through the final deceleration frames
+        // so glass, shadows, and implicit animations do not come back mid-scroll.
         settleTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: self?.settleDelay ?? 220_000_000)
+            try? await Task.sleep(nanoseconds: self?.settleDelay ?? 360_000_000)
             guard !Task.isCancelled else { return }
             self?.updateScrolling(false)
         }

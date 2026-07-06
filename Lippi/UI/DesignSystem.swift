@@ -192,6 +192,7 @@ struct DS {
     static let motionEnter = Animation.spring(response: 0.40, dampingFraction: 0.94, blendDuration: 0.12)
     static let motionMagic = Animation.spring(response: 0.56, dampingFraction: 0.88, blendDuration: 0.16)
     static let motionNavigate = Animation.spring(response: 0.48, dampingFraction: 0.90, blendDuration: 0.14)
+    static let motionTabSwitch = Animation.spring(response: 0.44, dampingFraction: 0.985, blendDuration: 0.16)
     static let motionReveal = Animation.spring(response: 0.52, dampingFraction: 0.92, blendDuration: 0.14)
     static let motionState = Animation.spring(response: 0.30, dampingFraction: 0.88, blendDuration: 0.08)
     static let motionSweep = Animation.easeInOut(duration: 5.8)
@@ -442,7 +443,7 @@ private struct LippiSystemGlassModifier<S: Shape>: ViewModifier {
     func body(content: Content) -> some View {
         let shouldRender = enabled
             && (forceSystemGlass || DS.systemGlassEffectsEnabled)
-            && (!isScrolling || forceSystemGlass)
+            && !isScrolling
         if shouldRender {
             if #available(iOS 26.0, *) {
                 content.glassEffect(
@@ -800,7 +801,7 @@ struct GlassCard<Content: View>: View {
     @State private var didAppear = false
 
     private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
-    private var scrollPerformanceMode: Bool { isScrolling && !forceSystemGlass }
+    private var scrollPerformanceMode: Bool { isScrolling }
     private var isFlatStyle: Bool { style == .flat }
     private var useFlatEffects: Bool { style == .flat || performanceMode || scrollPerformanceMode }
     private var useLightEffects: Bool { useFlatEffects || style == .lightweight || isScrolling }
@@ -1042,6 +1043,7 @@ struct LippiButtonStyle: ButtonStyle {
     @Environment(\.lippiIsScrolling) private var isScrolling
 
     private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
+    private var scrollingEffects: Bool { isScrolling }
     private var systemGlassEnabled: Bool { !simplifiedEffects }
     private var systemGlassTint: Color? {
         switch kind {
@@ -1083,11 +1085,11 @@ struct LippiButtonStyle: ButtonStyle {
             .scaleEffect(reduceMotion ? 1 : (pressed ? DS.pressScale : 1))
             .shadow(
                 color: shadowColor(pressed: pressed),
-                radius: pressed ? 3 : (kind == .primary ? (simplifiedEffects ? 3 : 8) : (simplifiedEffects ? 1.5 : 5)),
+                radius: shadowRadius(pressed: pressed),
                 x: 0,
-                y: pressed ? 1 : (kind == .primary ? (simplifiedEffects ? 2 : 4) : (simplifiedEffects ? 1 : 2))
+                y: shadowY(pressed: pressed)
             )
-            .animation(reduceMotion ? nil : DS.motionMagic, value: pressed)
+            .animation((reduceMotion || scrollingEffects) ? nil : DS.motionMagic, value: pressed)
             .onChange(of: configuration.isPressed) { _, newValue in
                 if newValue, isEnabled { DS.hapticSoft() }
             }
@@ -1206,6 +1208,7 @@ struct LippiButtonStyle: ButtonStyle {
 
     private func shadowColor(pressed: Bool) -> Color {
         guard isEnabled else { return .clear }
+        if scrollingEffects { return .clear }
         switch kind {
         case .primary:
             return DS.accent.opacity(pressed ? 0.20 : 0.34)
@@ -1215,6 +1218,32 @@ struct LippiButtonStyle: ButtonStyle {
             return Color.red.opacity(pressed ? 0.16 : 0.24)
         case .ghost:
             return .clear
+        }
+    }
+
+    private func shadowRadius(pressed: Bool) -> CGFloat {
+        if scrollingEffects { return 0 }
+        if pressed { return 3 }
+        switch kind {
+        case .primary:
+            return simplifiedEffects ? 3 : 8
+        case .secondary, .destructive:
+            return simplifiedEffects ? 1.5 : 5
+        case .ghost:
+            return 0
+        }
+    }
+
+    private func shadowY(pressed: Bool) -> CGFloat {
+        if scrollingEffects { return 0 }
+        if pressed { return 1 }
+        switch kind {
+        case .primary:
+            return simplifiedEffects ? 2 : 4
+        case .secondary, .destructive:
+            return simplifiedEffects ? 1 : 2
+        case .ghost:
+            return 0
         }
     }
 }
