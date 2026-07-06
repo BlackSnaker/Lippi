@@ -1,15 +1,10 @@
 import SwiftUI
-#if canImport(Charts)
-import Charts
-#endif
 
-// =======================================================
-// MARK: - STATS CARD (UI) — Premium + compiler-friendly
-// локальные текстовые токены
-// =======================================================
 private enum StatsMetric: String, CaseIterable, Identifiable {
     case focus, tasks, both
+
     var id: String { rawValue }
+
     var title: String {
         let lang = L10n.currentLang
         switch self {
@@ -25,23 +20,49 @@ struct StatsCardView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
+
     @State private var daysWindow: Int = 7
     @State private var metric: StatsMetric = .both
     @State private var selected: DayStats?
-    @State private var showHint = false
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
 
-    private let tPrimary = DS.text(0.94)
-    private let tSecondary = DS.text(0.72)
+    private var data: [DayStats] { stats.series(last: daysWindow) }
+    private var totals: (focus: Int, tasks: Int) { stats.totals(for: data) }
+    private var activeDays: Int { data.filter(\.hasActivity).count }
+    private var averageFocus: Int { totals.focus / max(daysWindow, 1) }
+    private var rhythmProgress: Double { Double(activeDays) / Double(max(daysWindow, 1)) }
+    private var rhythmPercent: Int { Int((rhythmProgress * 100).rounded()) }
+    private var bestDay: DayStats? {
+        data.max { lhs, rhs in
+            let left = lhs.focusMinutes + lhs.tasksDone * 20
+            let right = rhs.focusMinutes + rhs.tasksDone * 20
+            return left < right
+        }
+    }
+    private var selectedOrBestDay: DayStats? { selected ?? bestDay }
+
+    private var metricColumns: [GridItem] {
+        [
+            GridItem(.flexible(), spacing: 10, alignment: .top),
+            GridItem(.flexible(), spacing: 10, alignment: .top)
+        ]
+    }
 
     var body: some View {
-        GlassCard(padding: 18, cornerRadius: 24) {
-            VStack(alignment: .leading, spacing: 14) {
+        GlassCard(padding: 18, cornerRadius: 28, style: .full) {
+            VStack(alignment: .leading, spacing: 16) {
                 header
-                kpis
-                chart
+                insightPanel
+                metricGrid
+                timelineHeader
+                ReadableActivityTimeline(
+                    data: data,
+                    metric: metric,
+                    lang: lang,
+                    selected: $selected
+                )
                 footerHint
             }
         }
@@ -51,378 +72,512 @@ struct StatsCardView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            LippiSectionHeader(
-                title: s("stats.header.title"),
-                subtitle: s("stats.header.subtitle"),
-                icon: "chart.bar.xaxis",
-                accent: Color(hex: 0x64D2FF)
-            )
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                LippiSectionHeader(
+                    title: s("stats.header.title"),
+                    subtitle: s("stats.header.subtitle"),
+                    icon: "chart.line.uptrend.xyaxis",
+                    accent: Color(hex: 0x64D2FF)
+                )
 
-            Spacer(minLength: 8)
+                Spacer(minLength: 0)
+            }
 
-            // Premium “segmented capsule”
             HStack(spacing: 10) {
                 Picker("", selection: $daysWindow) {
                     Text(s("stats.window.7")).singleLine().tag(7)
                     Text(s("stats.window.30")).singleLine().tag(30)
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 150)
 
                 Picker("", selection: $metric) {
                     ForEach(StatsMetric.allCases) { Text($0.title).singleLine().tag($0) }
                 }
                 .pickerStyle(.segmented)
-                .frame(maxWidth: 240)
             }
+            .controlSize(.small)
             .padding(6)
             .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(DS.stroke, lineWidth: 1)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 15, style: .continuous)
-                            .stroke(DS.strokeInner, lineWidth: 1)
-                            .padding(1)
-                            .blendMode(.overlay)
-                    )
+                    .stroke(DS.glassStroke(0.14), lineWidth: 1)
             )
         }
     }
 
-    private var kpis: some View {
-        let data = stats.series(last: daysWindow)
-        let totals = stats.totals(for: data)
-        let avgFocus = totals.focus / max(daysWindow, 1)
+    private var insightPanel: some View {
+        HStack(alignment: .center, spacing: 14) {
+            ZStack {
+                Circle()
+                    .stroke(DS.glassStroke(0.16), lineWidth: 8)
 
-        return HStack(spacing: 10) {
-            kpi(icon: "bolt.fill",    tint: AnyShapeStyle(DS.brand),                 title: s("stats.kpi.focus_minutes"),  value: "\(totals.focus)")
-            kpi(icon: "checkmark",    tint: AnyShapeStyle(DS.text(0.9)),             title: s("stats.kpi.tasks"),          value: "\(totals.tasks)")
-            kpi(icon: "flame.fill",   tint: AnyShapeStyle(Color(hex: 0xFF6B6B)),     title: s("stats.kpi.streak_days"),    value: "\(stats.productiveStreak)")
-            kpi(icon: "gauge.medium", tint: AnyShapeStyle(Color(hex: 0x41D3BD)),     title: s("stats.kpi.avg_focus"),      value: "\(avgFocus)")
+                Circle()
+                    .trim(from: 0, to: max(0, min(1, rhythmProgress)))
+                    .stroke(
+                        AngularGradient(colors: [DS.brandA, DS.brandB, Color(hex: 0x30D158)], center: .center),
+                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+
+                VStack(spacing: 0) {
+                    Text("\(rhythmPercent)%")
+                        .font(.headline.weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+
+                    Text(s("stats.insight.rhythm"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+            .frame(width: 82, height: 82)
+            .padding(4)
+            .background(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(DS.glassFill(0.08))
+                    .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(DS.brandSoftGradient).opacity(0.62))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(DS.glassStroke(0.16), lineWidth: 1)
+            )
+
+            VStack(alignment: .leading, spacing: 7) {
+                Label(insightTitle, systemImage: insightSymbol)
+                    .font(.headline.weight(.bold))
+                    .labelStyle(TightLabelStyle())
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.88)
+
+                Text(insightBody)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.90)
+
+                FancyLinearProgressBar(progress: rhythmProgress, height: 8)
+                    .padding(.top, 2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(DS.glassFill(0.11))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(DS.glassTint).opacity(0.50))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: DS.accent.opacity(0.10),
+            enabled: !isScrolling
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(DS.glassStroke(0.15), lineWidth: 1)
+        )
+    }
+
+    private var insightTitle: String {
+        if totals.focus == 0 && totals.tasks == 0 { return s("stats.insight.empty_title") }
+        if activeDays == daysWindow { return s("stats.insight.stable_title") }
+        if data.last?.hasActivity == true { return s("stats.insight.today_active_title") }
+        return s("stats.insight.title")
+    }
+
+    private var insightSymbol: String {
+        if totals.focus == 0 && totals.tasks == 0 { return "sparkles" }
+        if activeDays == daysWindow { return "checkmark.seal.fill" }
+        if data.last?.hasActivity == true { return "bolt.heart.fill" }
+        return "waveform.path.ecg"
+    }
+
+    private var insightBody: String {
+        if totals.focus == 0 && totals.tasks == 0 {
+            return s("stats.insight.empty_body")
+        }
+
+        return L10n.fmt(
+            "stats.insight.body",
+            lang,
+            formattedMinutes(totals.focus),
+            totals.tasks,
+            activeDays,
+            daysWindow
+        )
+    }
+
+    private var metricGrid: some View {
+        LazyVGrid(columns: metricColumns, spacing: 10) {
+            metricTile(
+                title: s("stats.kpi.focus_minutes"),
+                value: formattedMinutes(totals.focus),
+                detail: s("stats.kpi.period_total"),
+                icon: "timer",
+                tone: Color(hex: 0x64D2FF),
+                progress: min(Double(totals.focus) / Double(daysWindow * 45), 1)
+            )
+
+            metricTile(
+                title: s("stats.kpi.tasks"),
+                value: "\(totals.tasks)",
+                detail: s("stats.kpi.tasks_done"),
+                icon: "checkmark.circle.fill",
+                tone: Color(hex: 0x30D158),
+                progress: min(Double(totals.tasks) / Double(max(daysWindow, 1)), 1)
+            )
+
+            metricTile(
+                title: s("stats.kpi.streak_days"),
+                value: "\(stats.productiveStreak)",
+                detail: s("stats.kpi.streak_hint"),
+                icon: "flame.fill",
+                tone: Color(hex: 0xFF9F0A),
+                progress: min(Double(stats.productiveStreak) / 7.0, 1)
+            )
+
+            metricTile(
+                title: s("stats.kpi.avg_focus"),
+                value: formattedMinutes(averageFocus),
+                detail: s("stats.kpi.daily_average"),
+                icon: "gauge.with.dots.needle.33percent",
+                tone: Color(hex: 0x41D3BD),
+                progress: min(Double(averageFocus) / 45.0, 1)
+            )
         }
     }
 
-    private func kpi(icon: String, tint: AnyShapeStyle, title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+    private func metricTile(title: String, value: String, detail: String, icon: String, tone: Color, progress: Double) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 9) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
                         .fill(DS.glassFill(0.12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(tone.opacity(0.22)))
+                        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(DS.glassStroke(0.16), lineWidth: 1))
 
-                    Image(systemName: icon)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(tint)
+                    Image(safeSystemName: icon, fallback: "circle.fill")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.text(0.94))
                 }
-                .frame(width: 30, height: 30)
+                .frame(width: 34, height: 34)
 
                 Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(tSecondary)
-                    .singleLine()
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
             }
 
             Text(value)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(tPrimary)
+                .font(.system(size: 23, weight: .bold, design: .rounded))
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.76)
                 .contentTransition(.numericText())
-                .singleLine()
+
+            Text(detail)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DS.textTertiary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.86)
+
+            FancyLinearProgressBar(progress: max(0, min(1, progress)), height: 6)
+                .tint(tone)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(kpiBackground)
-        .overlay(kpiOverlay)
-        .shadow(color: isScrolling ? .clear : DS.depthShadow(0.14), radius: isScrolling ? 0 : 6, x: 0, y: isScrolling ? 0 : 3)
+        .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+        .padding(13)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(DS.glassFill(0.10))
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(tone.opacity(0.07)))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(DS.glassStroke(0.13), lineWidth: 1)
+        )
+        .shadow(color: isScrolling ? .clear : DS.depthShadow(0.10), radius: isScrolling ? 0 : 7, x: 0, y: isScrolling ? 0 : 4)
     }
 
-    private var kpiBackground: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .fill(DS.glassFill(0.10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(DS.glassTint)
-                    .opacity(0.55)
-            )
-    }
+    private var timelineHeader: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(s("stats.timeline.title"))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
 
-    private var kpiOverlay: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .stroke(DS.stroke, lineWidth: 1)
-            .overlay(
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
-                    .stroke(DS.strokeInner, lineWidth: 1)
-                    .padding(1)
-                    .blendMode(.overlay)
-            )
-    }
+                Spacer(minLength: 8)
 
-    @ViewBuilder
-    private var chart: some View {
-        let data = stats.series(last: daysWindow)
-        #if canImport(Charts)
-        chartsView(data: data)
-        #else
-        SimpleBars(data: data, metric: metric, selected: $selected, showHint: $showHint)
-            .frame(height: 190)
-        #endif
-    }
-
-    #if canImport(Charts)
-    private func chartsView(data: [DayStats]) -> some View {
-        let panel = RoundedRectangle(cornerRadius: 18, style: .continuous)
-
-        return Chart {
-            ForEach(data, id: \.date) { day in
-                if metric == .focus || metric == .both {
-                    BarMark(
-                        x: .value(s("stats.axis.date"), day.date, unit: .day),
-                        y: .value(s("stats.axis.focus_minutes"), day.focusMinutes)
-                    )
-                    .cornerRadius(7)
-                    .foregroundStyle(DS.brand)
-                    .opacity(selected?.date == day.date ? 1 : 0.88)
-                }
-
-                if metric == .tasks || metric == .both {
-                    LineMark(
-                        x: .value(s("stats.axis.date"), day.date, unit: .day),
-                        y: .value(s("stats.axis.tasks"), day.tasksDone)
-                    )
-                    .interpolationMethod(.catmullRom)
-                    .lineStyle(StrokeStyle(lineWidth: 2.6, lineCap: .round))
-                    .foregroundStyle(DS.text(0.92))
-
-                    PointMark(
-                        x: .value(s("stats.axis.date"), day.date, unit: .day),
-                        y: .value(s("stats.axis.tasks"), day.tasksDone)
-                    )
-                    .symbolSize(selected?.date == day.date ? 70 : 32)
-                    .foregroundStyle(DS.text(selected?.date == day.date ? 0.95 : 0.55))
-                }
-
-                if let s = selected, s.date == day.date {
-                    RuleMark(x: .value(self.s("stats.axis.selected_date"), s.date, unit: .day))
-                        .foregroundStyle(DS.text(0.35))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                if let day = selectedOrBestDay {
+                    Text(day.date, format: .dateTime.day().month(.abbreviated))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(DS.textSecondary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(DS.glassFill(0.10), in: Capsule(style: .continuous))
+                        .overlay(Capsule(style: .continuous).stroke(DS.glassStroke(0.13), lineWidth: 1))
                 }
             }
-        }
-        .chartXAxis { axisX }
-        .chartYAxis { axisY }
-        .frame(height: 230)
-        .padding(10)
-        .background(panelBackground(panel))
-        .overlay(panelOverlay(panel))
-        .shadow(color: isScrolling ? .clear : DS.depthShadow(0.14), radius: isScrolling ? 0 : 8, x: 0, y: isScrolling ? 0 : 5)
-        .chartOverlay { proxy in
-            overlayGesture(proxy: proxy, data: data)
+
+            HStack(spacing: 8) {
+                legendChip(title: s("stats.legend.focus"), color: Color(hex: 0x64D2FF), symbol: "timer")
+                legendChip(title: s("stats.legend.tasks"), color: Color(hex: 0x30D158), symbol: "checkmark")
+                Spacer(minLength: 0)
+            }
         }
     }
 
-    private var axisX: some Charts.AxisContent {
-        Charts.AxisMarks(values: .stride(by: .day, count: daysWindow == 7 ? 1 : 5)) { _ in
-            Charts.AxisGridLine().foregroundStyle(DS.text(0.08))
-            Charts.AxisTick().foregroundStyle(DS.text(0.25))
-            Charts.AxisValueLabel(format: .dateTime.day().month(.abbreviated), centered: true)
-                .foregroundStyle(DS.text(0.78))
-                .font(.caption2)
-        }
+    private func legendChip(title: String, color: Color, symbol: String) -> some View {
+        Label(title, systemImage: symbol)
+            .font(.caption2.weight(.bold))
+            .labelStyle(TightLabelStyle())
+            .foregroundStyle(DS.textSecondary)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(DS.glassFill(0.08))
+                    .overlay(Capsule(style: .continuous).fill(color.opacity(0.15)))
+            )
+            .overlay(Capsule(style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+            .singleLine()
     }
-
-    private var axisY: some Charts.AxisContent {
-        Charts.AxisMarks(position: .leading) { _ in
-            Charts.AxisGridLine().foregroundStyle(DS.text(0.08))
-            Charts.AxisTick().foregroundStyle(DS.text(0.25))
-            Charts.AxisValueLabel()
-                .foregroundStyle(DS.text(0.55))
-                .font(.caption2)
-        }
-    }
-
-    private func panelBackground(_ panel: RoundedRectangle) -> some View {
-        panel
-            .fill(DS.glassFill(0.10))
-            .overlay(panel.fill(DS.glassTint).opacity(0.58))
-    }
-
-    private func panelOverlay(_ panel: RoundedRectangle) -> some View {
-        panel
-            .stroke(DS.stroke, lineWidth: 1)
-            .overlay(panel.stroke(DS.strokeInner, lineWidth: 1).padding(1).blendMode(.overlay))
-    }
-
-    private func overlayGesture(proxy: Charts.ChartProxy, data: [DayStats]) -> some View {
-        GeometryReader { _ in
-            Rectangle().fill(.clear).contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            guard let x: Date = proxy.value(atX: value.location.x) else { return }
-                            selectNearest(to: x, in: data)
-                        }
-                        .onEnded { _ in
-                            #if os(iOS)
-                            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                            #endif
-                            if reduceMotion {
-                                showHint = true
-                            } else {
-                                withAnimation(DS.motionFadeQuick) { showHint = true }
-                            }
-                        }
-                )
-        }
-    }
-
-    private func selectNearest(to date: Date, in data: [DayStats]) {
-        let nearest = data.min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) })
-        if nearest?.date != selected?.date {
-            selected = nearest
-        }
-    }
-    #endif
 
     private var footerHint: some View {
-        let selectedDay = selected
-        return HStack(spacing: 10) {
+        HStack(spacing: 10) {
             ZStack {
                 Circle()
                     .fill(DS.glassFill(0.12))
                     .frame(width: 28, height: 28)
                     .overlay(Circle().stroke(DS.glassStroke(0.14), lineWidth: 1))
-                Image(systemName: selectedDay == nil ? "hand.tap" : "sparkles")
+
+                Image(safeSystemName: selected == nil ? "hand.tap" : "sparkles", fallback: "sparkles")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(DS.text(0.9))
             }
 
-            if let selectedDay {
-                Text(selectedDay.date, format: .dateTime.day().month(.wide))
+            if let selected {
+                Text(selected.summaryText)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(tPrimary)
-                    .singleLine()
-
-                Spacer(minLength: 6)
-
-                Label("\(selectedDay.focusMinutes)", systemImage: "bolt.fill")
-                    .font(.footnote.weight(.semibold))
-                    .labelStyle(TightLabelStyle())
-                    .foregroundStyle(tSecondary)
-                    .singleLine()
-
-                Label("\(selectedDay.tasksDone)", systemImage: "checkmark")
-                    .font(.footnote.weight(.semibold))
-                    .labelStyle(TightLabelStyle())
-                    .foregroundStyle(tSecondary)
-                    .singleLine()
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else if let bestDay, bestDay.hasActivity {
+                Text(L10n.fmt("stats.footer.best_day", lang, formattedDay(bestDay.date), bestDay.summaryText))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 Text(s("stats.footer.hint"))
-                    .font(.subheadline)
-                    .foregroundStyle(tSecondary)
-                    .singleLine()
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            Spacer()
         }
         .padding(.top, 2)
         .padding(.horizontal, 2)
-        .transition(.opacity.combined(with: .move(edge: .bottom)))
+    }
+
+    private func formattedMinutes(_ minutes: Int) -> String {
+        let safeMinutes = max(0, minutes)
+        if safeMinutes < 60 {
+            return L10n.fmt("stats.minutes", lang, safeMinutes)
+        }
+
+        let hours = safeMinutes / 60
+        let rest = safeMinutes % 60
+        return rest == 0
+        ? L10n.fmt("stats.hours", lang, hours)
+        : L10n.fmt("stats.hours_minutes", lang, hours, rest)
+    }
+
+    private func formattedDay(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: lang.localeIdentifier)
+        formatter.setLocalizedDateFormatFromTemplate("d MMM")
+        return formatter.string(from: date)
     }
 }
 
-private struct SimpleBars: View {
+private struct ReadableActivityTimeline: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.lippiIsScrolling) private var isScrolling
+
     let data: [DayStats]
     let metric: StatsMetric
+    let lang: AppLang
     @Binding var selected: DayStats?
-    @Binding var showHint: Bool
 
-    var maxValue: Double {
-        switch metric {
-        case .focus: return max(60, Double(data.map{$0.focusMinutes}.max() ?? 0))
-        case .tasks: return max(5, Double(data.map{$0.tasksDone}.max() ?? 0))
-        case .both:  return max(60, Double(data.map{$0.focusMinutes}.max() ?? 0))
-        }
-    }
+    private var maxFocus: Double { max(1, Double(data.map(\.focusMinutes).max() ?? 0)) }
+    private var maxTasks: Double { max(1, Double(data.map(\.tasksDone).max() ?? 0)) }
+    private var isCompact: Bool { data.count > 12 }
 
     var body: some View {
         GeometryReader { geo in
-            let w = geo.size.width / CGFloat(max(data.count,1))
+            let spacing: CGFloat = isCompact ? 3 : 7
+            let available = geo.size.width - spacing * CGFloat(max(data.count - 1, 0))
+            let itemWidth = max(isCompact ? 7 : 18, available / CGFloat(max(data.count, 1)))
 
-            HStack(alignment: .bottom, spacing: 7) {
-                ForEach(data, id: \.date) { d in
-                    bar(d: d, w: w, totalH: geo.size.height)
+            HStack(alignment: .bottom, spacing: spacing) {
+                ForEach(data) { day in
+                    timelineDay(day, itemWidth: itemWidth)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .padding(.horizontal, 6)
-            .padding(.top, 8)
-            .background(backgroundPanel)
-            .overlay(overlayPanel)
-            .shadow(color: isScrolling ? .clear : DS.depthShadow(0.14), radius: isScrolling ? 0 : 8, x: 0, y: isScrolling ? 0 : 5)
+            .padding(.horizontal, 10)
+            .padding(.top, 12)
+            .padding(.bottom, 9)
+        }
+        .frame(height: isCompact ? 156 : 168)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(DS.glassFill(0.10))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(DS.glassTint).opacity(0.48))
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: DS.accent.opacity(0.08),
+            enabled: !isScrolling
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(DS.glassStroke(0.14), lineWidth: 1)
+        )
+        .shadow(color: isScrolling ? .clear : DS.depthShadow(0.10), radius: isScrolling ? 0 : 8, x: 0, y: isScrolling ? 0 : 5)
+    }
+
+    private func timelineDay(_ day: DayStats, itemWidth: CGFloat) -> some View {
+        let isSelected = selected?.id == day.id
+
+        return VStack(spacing: 7) {
+            ZStack(alignment: .bottom) {
+                Capsule(style: .continuous)
+                    .fill(DS.glassFill(0.08))
+                    .overlay(Capsule(style: .continuous).stroke(DS.glassStroke(0.10), lineWidth: 1))
+                    .frame(width: max(6, itemWidth * 0.62))
+
+                if metric != .tasks {
+                    focusBar(for: day, itemWidth: itemWidth)
+                }
+
+                if metric != .focus {
+                    taskMark(for: day, itemWidth: itemWidth)
+                }
+            }
+            .frame(width: itemWidth, height: isCompact ? 102 : 112, alignment: .bottom)
+            .padding(.top, isSelected ? 3 : 6)
+            .padding(.horizontal, isCompact ? 1 : 3)
+            .background(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(isSelected ? DS.glassFill(0.13) : .clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .stroke(isSelected ? DS.glassStroke(0.18) : .clear, lineWidth: 1)
+                    )
+            )
+
+            Text(dayLabel(for: day.date, selected: isSelected))
+                .font(.system(size: isCompact ? 8 : 10, weight: .bold, design: .rounded))
+                .foregroundStyle(isSelected ? DS.textPrimary : DS.textTertiary)
+                .frame(width: itemWidth, height: 13)
+                .minimumScaleFactor(0.65)
+                .lineLimit(1)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if reduceMotion {
+                selected = day
+            } else {
+                withAnimation(DS.motionQuick) { selected = day }
+            }
+
+            #if os(iOS)
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            #endif
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(accessibilityLabel(for: day)))
+    }
+
+    private func focusBar(for day: DayStats, itemWidth: CGFloat) -> some View {
+        let height = barHeight(value: Double(day.focusMinutes), maxValue: maxFocus, minimum: day.focusMinutes > 0 ? 9 : 3)
+
+        return Capsule(style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [Color(hex: 0x64D2FF), DS.brandA, DS.brandB.opacity(0.92)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .overlay(Capsule(style: .continuous).fill(DS.brandIridescent).opacity(0.35).blendMode(.screen))
+            .frame(width: max(5, itemWidth * (isCompact ? 0.52 : 0.58)), height: height)
+            .opacity(day.focusMinutes > 0 ? 1.0 : 0.20)
+    }
+
+    private func taskMark(for day: DayStats, itemWidth: CGFloat) -> some View {
+        let taskCount = day.tasksDone
+        let yOffset: CGFloat = metric == .tasks
+        ? -barHeight(value: Double(taskCount), maxValue: maxTasks, minimum: taskCount > 0 ? 10 : 3) + 8
+        : -barHeight(value: Double(day.focusMinutes), maxValue: maxFocus, minimum: day.focusMinutes > 0 ? 9 : 3) - 5
+
+        return Group {
+            if metric == .tasks {
+                Capsule(style: .continuous)
+                    .fill(Color(hex: 0x30D158).opacity(taskCount > 0 ? 0.95 : 0.18))
+                    .overlay(Capsule(style: .continuous).fill(Color.white.opacity(0.22)).blendMode(.overlay))
+                    .frame(
+                        width: max(5, itemWidth * (isCompact ? 0.50 : 0.56)),
+                        height: barHeight(value: Double(taskCount), maxValue: maxTasks, minimum: taskCount > 0 ? 10 : 3)
+                    )
+            } else if taskCount > 0 {
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: 0x30D158))
+                        .overlay(Circle().stroke(Color.white.opacity(0.34), lineWidth: 1))
+
+                    if !isCompact {
+                        Text("\(min(taskCount, 9))")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.white)
+                    }
+                }
+                .frame(width: isCompact ? 8 : 16, height: isCompact ? 8 : 16)
+                .shadow(color: Color(hex: 0x30D158).opacity(0.24), radius: 5, x: 0, y: 2)
+                .offset(y: yOffset)
+            }
         }
     }
 
-    private func bar(d: DayStats, w: CGFloat, totalH: CGFloat) -> some View {
-        let value: Double = {
-            switch metric {
-            case .focus, .both: return Double(d.focusMinutes)
-            case .tasks:        return Double(d.tasksDone)
-            }
-        }()
-        let h = max(2, CGFloat(value / maxValue) * (totalH - 24))
-        let isSel = (selected?.date == d.date)
-
-        return RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(DS.brand)
-            .opacity(isSel ? 1.0 : 0.65)
-            .frame(width: max(10, w - 8), height: h)
-            .overlay {
-                if isSel {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(DS.glassStroke(0.20), lineWidth: 1)
-                        .shadow(color: DS.glassFill(0.08), radius: 4)
-                }
-            }
-            .onTapGesture {
-                if reduceMotion {
-                    selected = d
-                    showHint = true
-                } else {
-                    withAnimation(DS.motionQuick) {
-                        selected = d
-                        showHint = true
-                    }
-                }
-                #if os(iOS)
-                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                #endif
-            }
+    private func barHeight(value: Double, maxValue: Double, minimum: CGFloat) -> CGFloat {
+        let available: CGFloat = isCompact ? 96 : 106
+        guard value > 0 else { return minimum }
+        return max(minimum, CGFloat(value / max(maxValue, 1)) * available)
     }
 
-    private var backgroundPanel: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(DS.glassFill(0.10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(DS.glassTint)
-                    .opacity(0.58)
-            )
+    private func dayLabel(for date: Date, selected: Bool) -> String {
+        if isCompact {
+            let day = Calendar.current.component(.day, from: date)
+            return selected || day % 5 == 0 ? "\(day)" : ""
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: lang.localeIdentifier)
+        formatter.setLocalizedDateFormatFromTemplate("EEEEE")
+        return formatter.string(from: date).uppercased()
     }
 
-    private var overlayPanel: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .stroke(DS.stroke, lineWidth: 1)
-            .overlay(
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .stroke(DS.strokeInner, lineWidth: 1)
-                    .padding(1)
-                    .blendMode(.overlay)
-            )
+    private func accessibilityLabel(for day: DayStats) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: lang.localeIdentifier)
+        formatter.setLocalizedDateFormatFromTemplate("d MMMM")
+        return "\(formatter.string(from: day.date)): \(day.summaryText)"
     }
 }

@@ -81,10 +81,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%206%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-Adaptive%20Coach-64D2FF?style=for-the-badge">
-    <img alt="Widgets" src="https://img.shields.io/badge/Widgets-Glass%20Redesign-30D158?style=for-the-badge">
-    <img alt="Dynamic Island" src="https://img.shields.io/badge/Dynamic%20Island-Compact%20Live%20States-BF5AF2?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%207%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Today" src="https://img.shields.io/badge/Today-Productivity%20Pulse-64D2FF?style=for-the-badge">
+    <img alt="Widgets" src="https://img.shields.io/badge/Widgets-Stable%20Schemes-30D158?style=for-the-badge">
+    <img alt="Readability" src="https://img.shields.io/badge/UI-Readable%20Metrics-BF5AF2?style=for-the-badge">
   </p>
   <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
   <p><strong>Красивая и понятная история изменений для главной страницы репозитория.</strong></p>
@@ -119,6 +119,39 @@
       <br><br>
       <strong>Плавный скролл</strong><br>
       <sub>Во время жестов тяжёлые эффекты упрощаются и возвращаются после остановки.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 7, 2026 - Readable productivity pulse and stable widget launches
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>This update makes the Today screen easier to understand at a glance and removes a noisy Xcode widget-host launch failure.</strong></p>
+      <ul>
+        <li><strong>Productivity Pulse:</strong> the old abstract statistics chart was rebuilt into a clear dashboard for focus, completed tasks, streak, and average daily focus.</li>
+        <li><strong>Human-readable insight:</strong> Lippi now summarizes the period with a rhythm score, active-day count, total focus time, and completed task count.</li>
+        <li><strong>Clear visual language:</strong> blue bars now mean focus time, green marks mean completed tasks, and the legend explains the chart directly inside the card.</li>
+        <li><strong>Better interaction:</strong> tapping a day reveals that day's summary instead of leaving the user to decode the graph alone.</li>
+        <li><strong>More beautiful Liquid Glass:</strong> the metric tiles, rhythm ring, and timeline now use softer glass, clearer hierarchy, and calmer depth.</li>
+        <li><strong>Widget launch fix:</strong> shared widget schemes no longer ask Xcode to show a Notification Center widget host after build, preventing the <code>Show Notification Center Widget timed out</code> error.</li>
+        <li><strong>Verification:</strong> <code>Lippi</code>, <code>LippiWidgetsExtension</code>, and <code>OrganizerWidgetExtension</code> all build successfully for iOS Simulator.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Это обновление делает главный экран понятнее с первого взгляда и убирает шумную ошибку запуска widget-host в Xcode.</strong></p>
+      <ul>
+        <li><strong>Пульс продуктивности:</strong> старый абстрактный график статистики заменён на понятную панель фокуса, закрытых задач, серии и среднего фокуса за день.</li>
+        <li><strong>Человеческий вывод:</strong> Lippi теперь кратко объясняет период через ритм, активные дни, общее время фокуса и количество выполненных задач.</li>
+        <li><strong>Понятный визуальный язык:</strong> синие столбики означают фокус, зелёные метки — выполненные задачи, а легенда объясняет это прямо внутри карточки.</li>
+        <li><strong>Лучшее взаимодействие:</strong> по нажатию на день пользователь видит сводку этого дня, а не пытается самостоятельно расшифровать график.</li>
+        <li><strong>Красивее Liquid Glass:</strong> плитки метрик, кольцо ритма и шкала дней получили мягкое стекло, понятную иерархию и спокойную глубину.</li>
+        <li><strong>Исправлен запуск виджетов:</strong> shared-схемы виджетов больше не заставляют Xcode открывать Notification Center widget host после сборки, что устраняет ошибку <code>Show Notification Center Widget timed out</code>.</li>
+        <li><strong>Проверка:</strong> <code>Lippi</code>, <code>LippiWidgetsExtension</code> и <code>OrganizerWidgetExtension</code> успешно собираются для iOS Simulator.</li>
+      </ul>
     </td>
   </tr>
 </table>
