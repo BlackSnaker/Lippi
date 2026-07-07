@@ -4,10 +4,11 @@ enum GoalRoadmapQualityGate {
     static func validated(
         _ roadmap: GoalRoadmap,
         input: GoalPlannerInput,
-        lang: AppLang
+        lang: AppLang,
+        evidence: [GoalEvidenceSource] = []
     ) -> GoalRoadmap? {
         let sanitized = sanitizingUnsupportedClaims(in: roadmap, input: input, lang: lang)
-        guard issues(for: sanitized, input: input).isEmpty else { return nil }
+        guard issues(for: sanitized, input: input, evidence: evidence).isEmpty else { return nil }
 
         var normalized = sanitized
         normalized.milestones = sanitized.milestones.enumerated().map { index, milestone in
@@ -19,24 +20,32 @@ enum GoalRoadmapQualityGate {
         return normalized
     }
 
-    static func feedback(for roadmap: GoalRoadmap?, input: GoalPlannerInput) -> String {
+    static func feedback(for roadmap: GoalRoadmap?, input: GoalPlannerInput, evidence: [GoalEvidenceSource] = []) -> String {
         guard let roadmap else {
             return "The previous answer did not match the required JSON schema. Return every required field with grounded, non-empty values."
         }
 
-        let findings = issues(for: roadmap, input: input)
+        let findings = issues(for: roadmap, input: input, evidence: evidence)
         guard !findings.isEmpty else {
             return "Keep the plan grounded, specific, and within the selected horizon."
         }
         return findings.joined(separator: " ")
     }
 
-    private static func issues(for roadmap: GoalRoadmap, input: GoalPlannerInput) -> [String] {
+    private static func issues(for roadmap: GoalRoadmap, input: GoalPlannerInput, evidence: [GoalEvidenceSource]) -> [String] {
         var findings: [String] = []
         let expectedMilestones = input.horizon.weeks == 12 ? 4 : 3
 
         if roadmap.milestones.count != expectedMilestones {
             findings.append("Use exactly \(expectedMilestones) milestones for this horizon.")
+        }
+
+        if roadmap.successCriteria.count != 2 {
+            findings.append("Return exactly two success criteria.")
+        }
+
+        if roadmap.firstActions.count != 2 {
+            findings.append("Return exactly two first actions that can start within 24-48 hours.")
         }
 
         let normalizedTitles = roadmap.milestones.map { normalized($0.title) }
@@ -53,8 +62,16 @@ enum GoalRoadmapQualityGate {
             findings.append("Replace vague tasks such as generic research or working on the project with an action and a concrete artifact or decision.")
         }
 
+        if (allTasks + roadmap.firstActions).contains(where: lacksConcreteOutput) {
+            findings.append("Every task and first action must name a concrete output, check, artifact, decision, or deliverable.")
+        }
+
         if roadmap.milestones.contains(where: { normalized($0.target).count < 12 }) {
             findings.append("Give every milestone a clear, reviewable outcome instead of a short generic target.")
+        }
+
+        if roadmap.successCriteria.contains(where: lacksConcreteOutput) {
+            findings.append("Success criteria must be observable: name a deliverable, metric supplied by the user, checklist, review, or test.")
         }
 
         let questions = roadmap.clarifyingQuestions ?? []
@@ -81,6 +98,15 @@ enum GoalRoadmapQualityGate {
         ]
         if plannedFields.contains(where: { hasUnsupportedOutcomeClaim(in: $0, input: input) }) {
             findings.append("Remove invented performance numbers, downloads, users, revenue, demand, conversion, or health outcomes unless the user explicitly supplied them.")
+        }
+
+        let anchorTerms = meaningfulTerms(in: "\(input.goal) \(input.context)")
+        let plannedText = normalized(plannedFields.joined(separator: " "))
+        if anchorTerms.count >= 2 {
+            let hits = anchorTerms.filter { plannedText.contains($0) }.count
+            if hits < min(2, anchorTerms.count) {
+                findings.append("Tie the roadmap back to the user's actual goal words, domain, and context instead of giving a generic plan.")
+            }
         }
 
         return findings
@@ -184,13 +210,40 @@ enum GoalRoadmapQualityGate {
             "learn more",
             "prepare everything",
             "continue learning",
+            "study the topic",
+            "practice more",
+            "improve skills",
             "работать над проектом",
             "изучить материалы",
             "сделать исследование",
             "продвигаться к цели",
-            "подготовить все"
+            "подготовить все",
+            "заниматься больше",
+            "улучшить навыки",
+            "изучить тему"
         ]
         return vagueTasks.contains(value)
+    }
+
+    private static func lacksConcreteOutput(_ text: String) -> Bool {
+        let value = normalized(text)
+        if value.count < 14 { return true }
+
+        let concreteSignals = [
+            "checklist", "artifact", "draft", "prototype", "test", "decision", "metric", "review", "report",
+            "summary", "plan", "schedule", "experiment", "interview", "feedback", "lesson", "practice",
+            "release", "implementation", "document", "note", "map", "brief", "baseline",
+            "чек лист", "артефакт", "черновик", "прототип", "тест", "провер", "решение", "метрик",
+            "обзор", "отчет", "сводк", "план", "распис", "эксперимент", "интервью", "обратн",
+            "урок", "практик", "релиз", "документ", "заметк", "карта", "бриф", "база"
+        ]
+        if concreteSignals.contains(where: { value.contains($0) }) { return false }
+
+        let weakOpeners = [
+            "learn", "study", "explore", "understand", "work", "continue",
+            "изуч", "разобрат", "понять", "работ", "продолж"
+        ]
+        return weakOpeners.contains { value.hasPrefix($0) }
     }
 
     private static func isVagueQuestion(_ question: String) -> Bool {
@@ -224,5 +277,20 @@ enum GoalRoadmapQualityGate {
 
     private static func numbers(in text: String) -> [String] {
         text.split(whereSeparator: { !$0.isNumber }).map(String.init)
+    }
+
+    private static func meaningfulTerms(in text: String) -> [String] {
+        let stopwords: Set<String> = [
+            "goal", "plan", "week", "weeks", "month", "months", "task", "tasks", "want", "need",
+            "цель", "план", "недел", "месяц", "задач", "хочу", "нужно", "надо", "сделать", "достичь",
+            "для", "with", "from", "that", "this", "будет", "есть", "как"
+        ]
+        var seen = Set<String>()
+        let terms = normalized(text)
+            .split(separator: " ")
+            .map(String.init)
+            .filter { $0.count >= 4 && !stopwords.contains($0) }
+            .filter { seen.insert($0).inserted }
+        return Array(terms.prefix(8))
     }
 }

@@ -176,6 +176,33 @@ struct OllamaGoalProvider {
         return content
     }
 
+    func generateProgressSummary(prompt: String, configuration: OllamaConfiguration) async throws -> String {
+        guard configuration.isConfigured else { throw OllamaProviderError.notConfigured }
+        let url = try configuration.endpointURL(path: "api/generate")
+        let body = GenerateProgressSummaryRequest(
+            model: configuration.model.trimmingCharacters(in: .whitespacesAndNewlines),
+            prompt: prompt
+        )
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 120
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let data = try await perform(request)
+        let response: GenerateResponse
+        do {
+            response = try JSONDecoder().decode(GenerateResponse.self, from: data)
+        } catch {
+            throw OllamaProviderError.malformedResponse
+        }
+        let content = response.response.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !content.isEmpty else { throw OllamaProviderError.malformedResponse }
+        return content
+    }
+
     private func perform(_ request: URLRequest) async throws -> Data {
         do {
             let (data, response) = try await session.data(for: request)
@@ -215,8 +242,44 @@ private struct GenerateRequest: Encodable {
     }
 
     private struct GenerateOptions: Encodable {
-        let temperature = 0.05
-        let numPredict = 1_200
+        let temperature = 0.07
+        let numPredict = 1_700
+        let repeatPenalty = 1.08
+        let repeatLastN = 96
+
+        enum CodingKeys: String, CodingKey {
+            case temperature
+            case numPredict = "num_predict"
+            case repeatPenalty = "repeat_penalty"
+            case repeatLastN = "repeat_last_n"
+        }
+    }
+}
+
+private struct GenerateProgressSummaryRequest: Encodable {
+    let model: String
+    let prompt: String
+    let system = OllamaProgressSummarySystemPrompt.value
+    let stream = false
+    let think = false
+    let keepAlive = "15m"
+    let format = OllamaProgressSummarySchema.response
+    private let options = GenerateOptions()
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case prompt
+        case system
+        case stream
+        case think
+        case keepAlive = "keep_alive"
+        case format
+        case options
+    }
+
+    private struct GenerateOptions: Encodable {
+        let temperature = 0.08
+        let numPredict = 1_000
         let repeatPenalty = 1.08
         let repeatLastN = 96
 
@@ -231,14 +294,27 @@ private struct GenerateRequest: Encodable {
 
 private enum OllamaPlannerSystemPrompt {
     static let value = """
-    You are Lippi's grounded goal-roadmap planner. Your job is to turn a user's stated goal and constraints into a practical route, not to predict success.
+    You are Lippi's grounded goal-roadmap planner and source-aware planning analyst. Your job is to turn a user's stated goal and constraints into a practical route, not to predict success.
     Treat only the user brief and supplied excerpts as facts. Unknown details must be assumptions or clarifying questions.
-    Before planning, structure the request into objective, known context, constraints, numbers, dates, missing details, and the user's request language.
+    Before planning, structure the request into objective, domain, intent, known context, constraints, numbers, dates, missing details, and the user's request language.
+    Use the domain profile to choose the right type of work: discovery, learning, building, validation, recovery, review, or habit formation.
+    Use source excerpts only within their evidence boundary. Source retrieval notes explain why a source was selected, but the excerpt is the actual source text.
+    Prefer official or specialist sources over broad roadmaps when they conflict. If sources are weak for the user's domain, say so in assumptions or clarifying questions.
     Write every human-readable JSON string in the user's request language, not necessarily the app UI language. Preserve product names, acronyms, and technical terms as written.
     Always ask two or three concrete clarifying questions that would help refine the roadmap and support the user later. Do not use generic placeholder questions.
     If Lippi supplies task-progress facts showing that the previous plan has missed, overdue, or stalled tasks, act as a supportive plan adjuster: preserve the goal, reduce the nearest workload, split skipped tasks, reschedule the next checkpoint, and avoid blame, psychological claims, or invented reasons for the delay.
     Never invent users, demand, feedback, downloads, revenue, conversion, prices, health outcomes, legal outcomes, deadlines, resources, or personal circumstances.
     Return only valid JSON that matches the supplied schema. Do not add Markdown or explanations.
+    """
+}
+
+private enum OllamaProgressSummarySystemPrompt {
+    static let value = """
+    You are Lippi's supportive goal-progress analyst. You summarize the user's visible progress and create a gentle, conditional forecast.
+    Treat only the supplied app facts, roadmap, task audit, and user self-report as facts. Unknown causes must remain unknown.
+    Your forecast is not a guarantee. It must be soft, kind, and grounded in completion facts, focus rhythm, overdue tasks, upcoming tasks, roadmap age, and the user's stated state.
+    If the user is tired or overloaded, recommend reducing pressure and making the next step smaller. Do not blame the user or infer motivation, discipline, health, sleep, income, demand, or hidden circumstances.
+    Write every human-readable JSON string in the requested language. Return only valid JSON that matches the schema.
     """
 }
 
@@ -281,6 +357,30 @@ private enum OllamaRoadmapSchema {
     private static let risk: OllamaJSONSchema = .object(
         properties: ["title": .string, "mitigation": .string],
         required: ["title", "mitigation"]
+    )
+}
+
+private enum OllamaProgressSummarySchema {
+    static let response: OllamaJSONSchema = .object(
+        properties: [
+            "title": .string,
+            "summary": .string,
+            "progressScore": .number,
+            "forecastLabel": .string,
+            "forecast": .string,
+            "wins": .array(items: .string, minItems: 2, maxItems: 4),
+            "supportiveSignals": .array(items: .string, minItems: 2, maxItems: 4),
+            "risks": .array(items: .string, minItems: 1, maxItems: 3),
+            "nextSteps": .array(items: .string, minItems: 2, maxItems: 3),
+            "stateCare": .array(items: .string, minItems: 1, maxItems: 3),
+            "checkInQuestion": .string,
+            "confidence": .number
+        ],
+        required: [
+            "title", "summary", "progressScore", "forecastLabel", "forecast",
+            "wins", "supportiveSignals", "risks", "nextSteps", "stateCare",
+            "checkInQuestion", "confidence"
+        ]
     )
 }
 

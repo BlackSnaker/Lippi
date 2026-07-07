@@ -82,9 +82,9 @@
 <div align="center">
   <p>
     <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%207%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Today" src="https://img.shields.io/badge/Today-Productivity%20Pulse-64D2FF?style=for-the-badge">
-    <img alt="Widgets" src="https://img.shields.io/badge/Widgets-Stable%20Schemes-30D158?style=for-the-badge">
-    <img alt="Readability" src="https://img.shields.io/badge/UI-Readable%20Metrics-BF5AF2?style=for-the-badge">
+    <img alt="AI" src="https://img.shields.io/badge/AI-Source%20Aware%20Roadmaps-64D2FF?style=for-the-badge">
+    <img alt="Progress" src="https://img.shields.io/badge/Progress-Friendly%20Summaries-30D158?style=for-the-badge">
+    <img alt="Quality" src="https://img.shields.io/badge/Quality-Grounded%20Plans-BF5AF2?style=for-the-badge">
   </p>
   <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
   <p><strong>Красивая и понятная история изменений для главной страницы репозитория.</strong></p>
@@ -119,6 +119,43 @@
       <br><br>
       <strong>Плавный скролл</strong><br>
       <sub>Во время жестов тяжёлые эффекты упрощаются и возвращаются после остановки.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 7, 2026 - Source-aware AI roadmaps and friendly progress summaries
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>This update makes Lippi's Smart Goals feel more like a thoughtful planning partner: it understands the goal domain, uses sources more carefully, and explains progress in a softer, more useful way.</strong></p>
+      <ul>
+        <li><strong>Source-aware roadmap model:</strong> the planner now classifies the user's goal as product, business, software, design, language, health, or general planning before building a route.</li>
+        <li><strong>Better evidence handling:</strong> open references now include source type, planning purpose, match reason, and richer excerpts so the model can use sources as guidance without overstating them.</li>
+        <li><strong>More grounded prompts:</strong> Ollama and Apple Foundation Models prompts now ask the model to separate facts, assumptions, missing details, constraints, and source boundaries before writing the roadmap.</li>
+        <li><strong>Stronger roadmap quality gate:</strong> vague tasks, unsupported numbers, invented outcomes, duplicate work, and unclear success criteria are rejected before they reach the user.</li>
+        <li><strong>Useful progress summaries:</strong> users can request a friendly AI summary of roadmap progress, visible task completion, focus rhythm, overdue items, and a gentle forecast based on their current state.</li>
+        <li><strong>Weekly support loop:</strong> Lippi can schedule weekly progress-summary notifications and open Smart Goals directly into the summary flow.</li>
+        <li><strong>Roadmap ready notification:</strong> after an AI roadmap is created, iPhone now receives a local notification so the user knows the plan is ready.</li>
+        <li><strong>Russian and English polish:</strong> all new AI, progress, forecast, warning, and notification copy is localized for both languages.</li>
+        <li><strong>Verification:</strong> the main <code>Lippi</code> app builds successfully for iOS Simulator.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Это обновление делает «Умные цели» похожими на вдумчивого партнёра по планированию: Lippi лучше понимает тип цели, аккуратнее работает с источниками и мягче объясняет прогресс.</strong></p>
+      <ul>
+        <li><strong>ИИ с пониманием домена:</strong> планировщик сначала определяет тип цели: продукт, бизнес, разработка, дизайн, язык, здоровье или общий маршрут.</li>
+        <li><strong>Умнее работа с источниками:</strong> открытые источники теперь передают тип, практическую роль, причину выбора и более насыщенные выдержки, чтобы модель использовала их как ориентир, а не как повод фантазировать.</li>
+        <li><strong>Более заземлённые промпты:</strong> Ollama и Apple Foundation Models теперь сначала разделяют факты, допущения, недостающий контекст, ограничения и границы источников.</li>
+        <li><strong>Строже проверка дорожных карт:</strong> расплывчатые задачи, неподтверждённые числа, выдуманные результаты, повторы и неясные критерии успеха отсекаются до показа пользователю.</li>
+        <li><strong>Полезная сводка прогресса:</strong> пользователь может запросить дружелюбный AI-анализ прогресса по карте, задачам, фокусу, просрочкам и мягкому прогнозу с учётом текущего состояния.</li>
+        <li><strong>Еженедельное сопровождение:</strong> Lippi умеет планировать еженедельные уведомления со сводкой и открывать «Умные цели» сразу в сценарий анализа прогресса.</li>
+        <li><strong>Уведомление о готовой карте:</strong> после построения дорожной карты через ИИ iPhone получает локальное уведомление, что план готов.</li>
+        <li><strong>Полировка RU/EN:</strong> все новые тексты про ИИ, прогресс, прогноз, предупреждения и уведомления добавлены на русском и английском.</li>
+        <li><strong>Проверка:</strong> основное приложение <code>Lippi</code> успешно собирается для iOS Simulator.</li>
+      </ul>
     </td>
   </tr>
 </table>

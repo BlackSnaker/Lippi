@@ -14,12 +14,18 @@ import UIKit
 // MARK: - Goal Planner
 // =======================================================
 struct GoalPlannerView: View {
+    var openProgressSummaryOnAppear: Bool = false
+
     @EnvironmentObject private var store: TaskStore
+    @EnvironmentObject private var stats: StatsStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage("goal.planner.lastRoadmap") private var savedRoadmap: String = ""
+    @AppStorage("goal.progress.lastSummary") private var savedProgressSummary: String = ""
+    @AppStorage(GoalProgressNotificationScheduler.enabledKey) private var weeklyProgressSummaryEnabled: Bool = true
+    @AppStorage("goal.progress.userState") private var userStateRaw: String = GoalUserState.calm.rawValue
 
     @State private var goalText: String = ""
     @State private var contextText: String = ""
@@ -39,8 +45,14 @@ struct GoalPlannerView: View {
     @State private var manualHabitText: String = ""
     @State private var manualRiskText: String = ""
     @State private var manualMilestones: [ManualRoadmapMilestone] = ManualRoadmapMilestone.starter
+    @State private var progressSummary: GoalProgressSummary?
+    @State private var isSummarizingProgress = false
+    @State private var progressSummaryIssue: String?
+    @State private var userStateNote: String = ""
+    @State private var didHandleProgressDeepLink = false
 
     private let engine = GoalRoadmapEngine()
+    private let progressEngine = GoalProgressSummaryEngine()
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
     private func manualText(_ ru: String, _ en: String) -> String { lang == .ru ? ru : en }
@@ -60,6 +72,10 @@ struct GoalPlannerView: View {
     }
     private var currentBrief: GoalRequestBrief {
         GoalRequestBrief.make(input: currentInput, fallbackLang: lang)
+    }
+    private var selectedUserState: GoalUserState {
+        get { GoalUserState(rawValue: userStateRaw) ?? .calm }
+        nonmutating set { userStateRaw = newValue.rawValue }
     }
 
     var body: some View {
@@ -85,18 +101,42 @@ struct GoalPlannerView: View {
                                 adaptationCard(audit)
                                     .lippiMotionScene(2)
                             }
+                            GoalProgressSummaryCard(
+                                roadmap: roadmap,
+                                summary: progressSummary,
+                                isSummarizing: isSummarizingProgress,
+                                issue: progressSummaryIssue,
+                                lang: lang,
+                                userState: Binding(
+                                    get: { selectedUserState },
+                                    set: { selectedUserState = $0 }
+                                ),
+                                stateNote: $userStateNote,
+                                weeklyEnabled: $weeklyProgressSummaryEnabled,
+                                onGenerate: {
+                                    Task { await generateProgressSummary() }
+                                },
+                                onWeeklyChanged: {
+                                    refreshProgressNotifications()
+                                }
+                            )
+                            .lippiMotionScene(3)
+                            if let progressSummary {
+                                GoalProgressSummaryPage(summary: progressSummary, lang: lang)
+                                    .lippiMotionScene(4)
+                            }
                             roadmapOverview(roadmap)
-                                .lippiMotionScene(3)
+                                .lippiMotionScene(5)
                             clarityCard(roadmap)
-                                .lippiMotionScene(4)
+                                .lippiMotionScene(6)
                             if !(roadmap.evidence ?? []).isEmpty {
                                 evidenceCard(roadmap)
-                                    .lippiMotionScene(5)
+                                    .lippiMotionScene(7)
                             }
                             milestonesCard(roadmap)
-                                .lippiMotionScene(6)
+                                .lippiMotionScene(8)
                             habitsAndRisksCard(roadmap)
-                                .lippiMotionScene(7)
+                                .lippiMotionScene(9)
                         }
 
                         Color.clear.frame(height: 72)
@@ -119,7 +159,12 @@ struct GoalPlannerView: View {
             .safeAreaInset(edge: .bottom) {
                 bottomActionBar
             }
-            .onAppear(perform: restoreRoadmap)
+            .onAppear {
+                restoreRoadmap()
+                restoreProgressSummary()
+                refreshProgressNotifications()
+                handleProgressDeepLinkIfNeeded()
+            }
         }
     }
 
@@ -2346,7 +2391,10 @@ struct GoalPlannerView: View {
         goalText = title
         contextText = manualSummary.trimmed
         generationIssue = nil
+        progressSummary = nil
+        progressSummaryIssue = nil
         addedTasks = false
+        savedProgressSummary = ""
 
         withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
             roadmap = result
@@ -2522,10 +2570,39 @@ struct GoalPlannerView: View {
         contextText = ""
         chatDraftText = ""
         roadmap = nil
+        progressSummary = nil
         generationIssue = nil
+        progressSummaryIssue = nil
         addedTasks = false
         savedRoadmap = ""
+        savedProgressSummary = ""
+        refreshProgressNotifications()
         resetManualPlanner()
+    }
+
+    @MainActor
+    private func generateProgressSummary() async {
+        guard let roadmap, !isSummarizingProgress else { return }
+        isSummarizingProgress = true
+        progressSummaryIssue = nil
+        defer { isSummarizingProgress = false }
+
+        let result = await progressEngine.buildSummary(
+            roadmap: roadmap,
+            tasks: store.tasks,
+            stats: stats,
+            userState: selectedUserState,
+            stateNote: userStateNote,
+            lang: lang
+        )
+
+        progressSummary = result.summary
+        progressSummaryIssue = result.issue
+        saveProgressSummary(result.summary)
+
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(result.issue == nil ? .success : .warning)
+        #endif
     }
 
     @MainActor
@@ -2547,8 +2624,12 @@ struct GoalPlannerView: View {
                 await updateRoadmapLiveActivity(stage)
             }
             roadmap = result
+            progressSummary = nil
             generationIssue = nil
+            progressSummaryIssue = nil
             saveRoadmap(result)
+            savedProgressSummary = ""
+            scheduleRoadmapReadyNotification(result)
             await finishRoadmapLiveActivity(.ready)
 
             #if os(iOS)
@@ -2594,9 +2675,13 @@ struct GoalPlannerView: View {
         if error.shouldBuildDraftFallback {
             let draft = engine.buildDraftRoadmap(input: input, lang: lang, progressAudit: progressAudit)
             roadmap = draft
+            progressSummary = nil
+            progressSummaryIssue = nil
             saveRoadmap(draft)
+            savedProgressSummary = ""
         } else {
             roadmap = nil
+            progressSummary = nil
         }
 
         #if os(iOS)
@@ -2621,8 +2706,11 @@ struct GoalPlannerView: View {
 
         let result = engine.buildDraftRoadmap(input: input, lang: lang, progressAudit: roadmap.flatMap { progressAudit(for: $0) })
         roadmap = result
+        progressSummary = nil
         generationIssue = nil
+        progressSummaryIssue = nil
         saveRoadmap(result)
+        savedProgressSummary = ""
 
         #if os(iOS)
         UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -2673,13 +2761,45 @@ struct GoalPlannerView: View {
         if goalText.isEmpty { goalText = roadmap?.title ?? "" }
     }
 
+    private func restoreProgressSummary() {
+        guard progressSummary == nil, !savedProgressSummary.isEmpty else { return }
+        guard let data = savedProgressSummary.data(using: .utf8) else { return }
+        progressSummary = try? JSONDecoder().decode(GoalProgressSummary.self, from: data)
+    }
+
     private func saveRoadmap(_ roadmap: GoalRoadmap) {
         guard let data = try? JSONEncoder().encode(roadmap) else { return }
         savedRoadmap = String(decoding: data, as: UTF8.self)
+        refreshProgressNotifications()
+    }
+
+    private func saveProgressSummary(_ summary: GoalProgressSummary) {
+        guard let data = try? JSONEncoder().encode(summary) else { return }
+        savedProgressSummary = String(decoding: data, as: UTF8.self)
+    }
+
+    private func scheduleRoadmapReadyNotification(_ roadmap: GoalRoadmap) {
+        NotificationManager.shared.scheduleAfterSeconds(
+            id: "goal-roadmap-ready-\(roadmap.id.uuidString)",
+            title: L10n.tr("goals.notification.ready.title", lang),
+            body: L10n.fmt("goals.notification.ready.body", lang, roadmap.title),
+            seconds: 1.2
+        )
     }
 
     private func progressAudit(for roadmap: GoalRoadmap) -> GoalPlanProgressAudit? {
         GoalPlanProgressAudit.make(roadmap: roadmap, tasks: store.tasks)
+    }
+
+    private func refreshProgressNotifications() {
+        GoalProgressNotificationScheduler.refresh(lang: lang)
+    }
+
+    private func handleProgressDeepLinkIfNeeded() {
+        guard openProgressSummaryOnAppear, !didHandleProgressDeepLink else { return }
+        didHandleProgressDeepLink = true
+        guard roadmap != nil, progressSummary == nil else { return }
+        Task { await generateProgressSummary() }
     }
 }
 
@@ -3503,6 +3623,7 @@ struct GoalRoadmapEngine {
         Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
 
         \(brief.promptSection())
+        \(OpenRoadmapCatalog.profile(for: input).promptSection())
 
         Progress audit from the previous Lippi plan:
         \(progressAuditPromptSection(progressAudit))
@@ -3512,10 +3633,13 @@ struct GoalRoadmapEngine {
 
         Planning contract:
         - Build the smallest realistic route from the known facts. Preserve stated time, money, dates, constraints, and domain.
+        - First decide what must be learned, built, measured, or reviewed in this domain. Do not skip discovery when context is thin.
         - Use the structured request as the canonical interpretation. If the raw text and structured request conflict, ask a clarifying question instead of inventing.
         - All human-readable JSON string values must be in \(brief.outputLanguageName), matching the user's request language. Keep product names and technical acronyms as written.
         - Make each milestone a different reviewable outcome in its fixed slot. Give every milestone two or three distinct tasks.
         - Each task must start with a clear action and name an artifact, decision, test, or deliverable. Never write vague tasks such as "make progress", "work on the project", or "do research" without a focus.
+        - Use reference excerpts as orientation, not as a license to add unsupported facts. When a source is relevant, translate its concept into a concrete user-facing step.
+        - Prefer official/specialist sources over broad roadmaps when they conflict. If the sources do not cover the user's domain, say so through assumptions/questions.
         - Return exactly two success criteria and two first actions. A success criterion is either a user-supplied metric or an observable deliverable.
         - Return two or three clarifyingQuestions. They must be guiding questions that help refine the roadmap and future Lippi support, not generic placeholders.
         - Unknown information belongs in assumptions or clarifying questions. Do not turn unknown facts into claims.
@@ -3542,12 +3666,14 @@ struct GoalRoadmapEngine {
         Horizon: \(input.horizon.weeks) weeks. Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
         Output language: \(brief.outputLanguageName).
         \(brief.promptSection())
+        \(OpenRoadmapCatalog.profile(for: input).promptSection())
         Progress audit:
         \(progressAuditPromptSection(progressAudit))
         Quality audit to fix: \(qualityFeedback)
         Reference excerpts:
         \(evidencePromptSection(evidence))
         The earlier answer was rejected. Replan from the user brief, the fixed slots, the progress audit, and the quality audit above.
+        Use source excerpts only as grounded orientation. Convert source concepts into concrete actions; never invent facts that are not in the user brief or excerpts.
         Return two or three useful clarifyingQuestions in \(brief.outputLanguageName) so the user can refine the roadmap and Lippi can adjust support later.
         """
     }
@@ -3573,7 +3699,7 @@ struct GoalRoadmapEngine {
         guard let roadmap = decodedRoadmap(from: text, source: source, input: input, lang: lang, evidence: evidence) else {
             return nil
         }
-        return GoalRoadmapQualityGate.validated(roadmap, input: input, lang: lang)
+        return GoalRoadmapQualityGate.validated(roadmap, input: input, lang: lang, evidence: evidence)
     }
 
     private func roadmapQualityFeedback(
@@ -3585,7 +3711,8 @@ struct GoalRoadmapEngine {
     ) -> String {
         GoalRoadmapQualityGate.feedback(
             for: decodedRoadmap(from: text, source: source, input: input, lang: lang, evidence: evidence),
-            input: input
+            input: input,
+            evidence: evidence
         )
     }
 
@@ -3769,6 +3896,8 @@ struct GoalRoadmapEngine {
         You are Lippi's grounded goal-roadmap planner inside an iPhone app.
         Work only from stated user facts and supplied reference excerpts. Return strict JSON only.
         First structure the user's request into objective, context facts, constraints, numbers, dates, missing details, and response language. Use that structure as the planning contract.
+        Classify the goal domain before planning. The roadmap must reflect the domain's real work: discovery, skill practice, artifact creation, validation, review, or recovery, depending on the goal.
+        Treat source excerpts as orientation and evidence boundaries. Prefer official or specialist references over broad roadmaps; never claim that a source proves facts outside its excerpt.
         Build a small route with distinct, reviewable milestones and concrete tasks. Unknown facts belong in assumptions or clarifying questions.
         Always include two or three helpful clarifying questions for refining the roadmap and future support.
         Write every human-readable JSON value in the detected user request language. Keep names, brands, product terms, and acronyms as written.
@@ -3803,6 +3932,7 @@ struct GoalRoadmapEngine {
         Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: original.horizon.weeks)).
         Source-language handling: \(sourceNote)
         \(brief.promptSection())
+        \(OpenRoadmapCatalog.profile(for: original).promptSection())
         Progress audit from previous Lippi tasks:
         \(progressAuditPromptSection(progressAudit))
         Reference excerpts:
@@ -3810,7 +3940,7 @@ struct GoalRoadmapEngine {
 
         JSON shape: {"title":"string","summary":"string","confidence":0.7,"successCriteria":["string","string"],"firstActions":["string","string"],"assumptions":["string"],"clarifyingQuestions":["guiding question","guiding question"],"milestones":[{"title":"string","timeframe":"string","target":"reviewable output","tasks":["action plus artifact","action plus decision"],"category":"work"}],"habits":[{"title":"string","detail":"cadence"}],"risks":[{"title":"string","mitigation":"specific response"}]}
 
-        Rules: use 3 milestones for 4 or 8 weeks and 4 for 12 weeks; every milestone has two or three different action-plus-artifact tasks; return exactly two success criteria and first actions; return two or three guiding clarifying questions; use assumptions instead of invented facts; if the progress audit lists missed tasks, make the nearest milestone smaller, reschedule the skipped items, and ask what blocked them without inventing a reason; all human-readable JSON strings must be in \(brief.outputLanguageName); no vague tasks, performance predictions, medical/legal/financial instructions, or guarantees. Categories: work, study, health, rest, home, other.
+        Rules: use 3 milestones for 4 or 8 weeks and 4 for 12 weeks; every milestone has two or three different action-plus-artifact tasks; return exactly two success criteria and first actions; return two or three guiding clarifying questions; use assumptions instead of invented facts; translate relevant source concepts into concrete steps without adding unsupported claims; if the progress audit lists missed tasks, make the nearest milestone smaller, reschedule the skipped items, and ask what blocked them without inventing a reason; all human-readable JSON strings must be in \(brief.outputLanguageName); no vague tasks, performance predictions, medical/legal/financial instructions, or guarantees. Categories: work, study, health, rest, home, other.
         """
     }
 
@@ -3845,6 +3975,7 @@ struct GoalRoadmapEngine {
         Source-language handling: \(sourceNote)
         Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: originalInput.horizon.weeks)).
         \(brief.promptSection())
+        \(OpenRoadmapCatalog.profile(for: originalInput).promptSection())
         Progress audit:
         \(progressAuditPromptSection(progressAudit))
         Quality audit to fix: \(qualityFeedback)
@@ -3869,7 +4000,7 @@ struct GoalRoadmapEngine {
 
         Previous answer:
         \(String(original.prefix(5_000)))
-        The repaired answer must include two or three useful clarifyingQuestions in \(brief.outputLanguageName).
+        The repaired answer must include two or three useful clarifyingQuestions in \(brief.outputLanguageName). Use references only for concepts they actually support and keep unknowns as assumptions or questions.
         """
     }
 
@@ -3879,7 +4010,11 @@ struct GoalRoadmapEngine {
         }
 
         return evidence.map { source in
-            "- \(source.title): \(source.excerpt)"
+            """
+            - \(source.title) [\(source.sourceType ?? "reference"), \(source.host)]
+              retrieval note: \(source.planningUse ?? "use only if relevant to the user's goal")
+              source excerpt: \(source.excerpt)
+            """
         }.joined(separator: "\n")
     }
 

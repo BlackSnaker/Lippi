@@ -269,6 +269,39 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    /// Повторяющееся еженедельно по дню недели Calendar: 1 = Sunday, 2 = Monday...
+    func scheduleWeekly(
+        id: String,
+        title: String,
+        body: String,
+        weekday: Int,
+        hour: Int,
+        minute: Int,
+        replaceExisting: Bool = true,
+        userInfo: [AnyHashable: Any] = [:]
+    ) {
+        ensureAuthorized { [weak self] ok in
+            guard let self, ok else { return }
+            if replaceExisting { self.cancel(ids: [id]) }
+
+            var comps = DateComponents()
+            comps.weekday = min(max(weekday, 1), 7)
+            comps.hour = min(max(hour, 0), 23)
+            comps.minute = min(max(minute, 0), 59)
+            comps.second = 0
+            comps.timeZone = nil
+
+            let content = self.makeContent(title: title, body: body)
+            content.userInfo = userInfo
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
+            let req = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
+
+            self.center.add(req) { error in
+                if let error { print("🔔 add weekly request error:", error, "id:", id) }
+            }
+        }
+    }
+
     // MARK: - Cancel
 
     func cancel(ids: [String]) {
@@ -1988,6 +2021,7 @@ struct ContentView: View {
     @State private var tab: AppTab = .today
     @State private var previousTab: AppTab?
     @State private var showGoalPlanner = false
+    @State private var openGoalProgressSummary = false
     @State private var showVoiceAssistant = false
     @State private var isSwitchingTabs = false
     @State private var tabTransitionDirection: CGFloat = 1
@@ -2209,6 +2243,7 @@ struct ContentView: View {
 
         case "goals":
             switchTab(to: .today)
+            openGoalProgressSummary = deepLinkQueryValue("mode", from: url)?.lowercased() == "progress"
             showGoalPlanner = true
 
         case "task":
@@ -2217,6 +2252,12 @@ struct ContentView: View {
         default:
             break
         }
+    }
+
+    private func handleNotificationResponse(_ response: UNNotificationResponse) {
+        guard let rawURL = response.notification.request.content.userInfo["url"] as? String,
+              let url = URL(string: rawURL) else { return }
+        handleIncomingURL(url)
     }
 
     private func normalizeAssistantText(_ value: String) -> String {
@@ -2510,6 +2551,12 @@ struct ContentView: View {
         .environmentObject(scrollPerformance)
         .onAppear {
             NotificationManager.shared.requestAuthorization()
+            NotificationManager.shared.onResponse = { response in
+                DispatchQueue.main.async {
+                    handleNotificationResponse(response)
+                }
+            }
+            GoalProgressNotificationScheduler.refresh(lang: lang)
             pomo.stats = stats
             if taskCompletionObserver == nil {
                 taskCompletionObserver = NotificationCenter.default.addObserver(forName: .taskCompletionChanged, object: nil, queue: .main) { note in
@@ -2539,9 +2586,12 @@ struct ContentView: View {
                 .presentationDetents([.fraction(0.72), .large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showGoalPlanner) {
-            GoalPlannerView()
+        .sheet(isPresented: $showGoalPlanner, onDismiss: {
+            openGoalProgressSummary = false
+        }) {
+            GoalPlannerView(openProgressSummaryOnAppear: openGoalProgressSummary)
                 .environmentObject(store)
+                .environmentObject(stats)
                 .environment(\.lippiIsScrolling, scrollPerformance.isScrolling)
                 .environment(\.lippiScrollPerformanceCoordinator, scrollPerformance)
                 .presentationDetents([.large])
