@@ -81,10 +81,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%207%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="AI" src="https://img.shields.io/badge/AI-Source%20Aware%20Roadmaps-64D2FF?style=for-the-badge">
-    <img alt="Progress" src="https://img.shields.io/badge/Progress-Friendly%20Summaries-30D158?style=for-the-badge">
-    <img alt="Quality" src="https://img.shields.io/badge/Quality-Grounded%20Plans-BF5AF2?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%209%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Smoothness" src="https://img.shields.io/badge/UI-Apple%20Smoothness-64D2FF?style=for-the-badge">
+    <img alt="Ollama" src="https://img.shields.io/badge/Ollama-Reliable%20AI-30D158?style=for-the-badge">
+    <img alt="Chat" src="https://img.shields.io/badge/Goals-Chat%20First-BF5AF2?style=for-the-badge">
   </p>
   <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
   <p><strong>Красивая и понятная история изменений для главной страницы репозитория.</strong></p>
@@ -119,6 +119,43 @@
       <br><br>
       <strong>Плавный скролл</strong><br>
       <sub>Во время жестов тяжёлые эффекты упрощаются и возвращаются после остановки.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 9, 2026 - Apple-level smoothness, reliable Ollama, and a simpler Lippi chat
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>This update focuses on the feeling of the app: calmer motion, fewer wasted AI runs, and a Smart Goals chat that behaves like a real conversation.</strong></p>
+      <ul>
+        <li><strong>Apple-like interface smoothness:</strong> shared motion tokens were retuned with calmer springs, shorter stagger delays, and less bounce so transitions feel more native and controlled.</li>
+        <li><strong>Scroll-first performance mode:</strong> Lippi now detects scroll and drag movement more reliably, then temporarily simplifies heavy glass, refraction, shadows, and decorative redraws while the gesture is active.</li>
+        <li><strong>Smoother tab switching:</strong> expensive screen compositing is now used only during the actual tab transition, reducing unnecessary offscreen rendering during normal use.</li>
+        <li><strong>Adaptive animated indicators:</strong> Countdown, Eye Exercises, and Smart Goals processing animations lower their update rate while scrolling, keeping the user's gesture as the priority.</li>
+        <li><strong>More reliable Ollama path:</strong> when Ollama is enabled, Lippi checks the Mac connection and selected model before generation, retries temporary failures, keeps the model warm longer, and no longer silently falls back to another AI provider.</li>
+        <li><strong>No more fake AI result:</strong> if Ollama fails, Lippi shows a clear error instead of presenting a local draft as if the AI had completed the work. The user can still create a manual non-AI draft explicitly.</li>
+        <li><strong>True chat flow for Smart Goals:</strong> Lippi now asks one guiding question at a time like a chatbot. The user answers in the bottom composer, and the answer is saved as structured context for the roadmap model.</li>
+        <li><strong>Cleaner guidance UX:</strong> users can skip a question, continue adding context, or build the roadmap once Lippi has enough information without scrolling through a long form.</li>
+        <li><strong>Verification:</strong> the main <code>Lippi</code> app builds successfully for iOS Simulator.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Это обновление про ощущение приложения: спокойнее анимации, меньше холостой работы ИИ и «Умные цели» в формате настоящего диалога.</strong></p>
+      <ul>
+        <li><strong>Плавность в стиле Apple:</strong> общие motion-токены перенастроены на более спокойные spring-анимации, короткие задержки появления и меньше лишнего bounce.</li>
+        <li><strong>Performance-mode во время скролла:</strong> Lippi надёжнее распознаёт прокрутку и drag-жесты, а затем временно упрощает тяжёлое стекло, refraction, тени и декоративные перерисовки.</li>
+        <li><strong>Плавнее переключение вкладок:</strong> дорогая screen-compositing группировка используется только во время реального перехода между вкладками, а не постоянно.</li>
+        <li><strong>Адаптивные анимированные индикаторы:</strong> Countdown, упражнения для глаз и обработка Smart Goals снижают частоту обновления во время скролла, чтобы главный приоритет оставался у жеста пользователя.</li>
+        <li><strong>Надёжнее Ollama:</strong> если Ollama включена, Lippi сначала проверяет соединение с Mac и наличие выбранной модели, повторяет временно неудачные запросы, дольше держит модель тёплой и больше не переключается молча на другой ИИ.</li>
+        <li><strong>Без фальшивого AI-результата:</strong> если Ollama не сработала, Lippi показывает честную ошибку, а не выдаёт локальный черновик как готовую работу ИИ. Черновик без ИИ остаётся доступен вручную.</li>
+        <li><strong>Настоящий чат для «Умных целей»:</strong> Lippi задаёт по одному уточняющему вопросу как чат-бот. Пользователь отвечает в нижнем поле, а ответ сохраняется как структурированный контекст для модели.</li>
+        <li><strong>Удобнее уточнения:</strong> вопрос можно пропустить, можно дописать контекст или сразу строить дорожную карту, когда информации достаточно — без прокрутки длинной формы.</li>
+        <li><strong>Проверка:</strong> основное приложение <code>Lippi</code> успешно собирается для iOS Simulator.</li>
+      </ul>
     </td>
   </tr>
 </table>

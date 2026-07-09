@@ -2096,10 +2096,15 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
     private func tabScreenLayer(_ tab: AppTab) -> some View {
-        screenView(tab)
+        let screen = screenView(tab)
             .padding(.top, 6)
-            .compositingGroup()
+        if previousTab != nil {
+            screen.compositingGroup()
+        } else {
+            screen
+        }
     }
 
     private var incomingScreenOpacity: Double {
@@ -2832,13 +2837,14 @@ private struct PomodoroAlarmBanner: View {
 struct GlassTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
 
     @Binding var selection: AppTab
     var isInteractionEnabled: Bool = true
     let lang: AppLang
     @Namespace private var tabSelectionNamespace
 
-    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency }
+    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
 
     var body: some View {
         HStack(spacing: 5) {

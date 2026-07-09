@@ -186,15 +186,15 @@ struct DS {
     static let pad: CGFloat = 20
 
     // Motion tokens: one source of truth for smooth, consistent animations.
-    static let motionQuick = Animation.spring(response: 0.22, dampingFraction: 0.96, blendDuration: 0.06)
-    static let motionSmooth = Animation.spring(response: 0.34, dampingFraction: 0.95, blendDuration: 0.10)
-    static let motionGentle = Animation.spring(response: 0.46, dampingFraction: 0.95, blendDuration: 0.12)
-    static let motionEnter = Animation.spring(response: 0.40, dampingFraction: 0.94, blendDuration: 0.12)
-    static let motionMagic = Animation.spring(response: 0.56, dampingFraction: 0.88, blendDuration: 0.16)
-    static let motionNavigate = Animation.spring(response: 0.48, dampingFraction: 0.90, blendDuration: 0.14)
-    static let motionTabSwitch = Animation.spring(response: 0.44, dampingFraction: 0.985, blendDuration: 0.16)
-    static let motionReveal = Animation.spring(response: 0.52, dampingFraction: 0.92, blendDuration: 0.14)
-    static let motionState = Animation.spring(response: 0.30, dampingFraction: 0.88, blendDuration: 0.08)
+    static let motionQuick = Animation.spring(response: 0.20, dampingFraction: 0.98, blendDuration: 0.05)
+    static let motionSmooth = Animation.spring(response: 0.32, dampingFraction: 0.98, blendDuration: 0.08)
+    static let motionGentle = Animation.spring(response: 0.44, dampingFraction: 0.97, blendDuration: 0.10)
+    static let motionEnter = Animation.spring(response: 0.36, dampingFraction: 0.97, blendDuration: 0.10)
+    static let motionMagic = Animation.spring(response: 0.48, dampingFraction: 0.96, blendDuration: 0.12)
+    static let motionNavigate = Animation.spring(response: 0.40, dampingFraction: 0.96, blendDuration: 0.12)
+    static let motionTabSwitch = Animation.spring(response: 0.36, dampingFraction: 0.99, blendDuration: 0.12)
+    static let motionReveal = Animation.spring(response: 0.44, dampingFraction: 0.96, blendDuration: 0.10)
+    static let motionState = Animation.spring(response: 0.26, dampingFraction: 0.96, blendDuration: 0.06)
     static let motionSweep = Animation.easeInOut(duration: 5.8)
     static let motionFadeQuick = Animation.easeOut(duration: 0.16)
 
@@ -277,7 +277,13 @@ struct DS {
         return animationFrameInterval
     }
 
-    static func motionStaggerDelay(_ index: Int, step: Double = 0.045, cap: Double = 0.22) -> Double {
+    static func animationFrameInterval(active: Bool, reduceMotion: Bool, isScrolling: Bool) -> TimeInterval {
+        if !active { return 1.0 }
+        if reduceMotion || isScrolling || runtimeConstrained { return 1.0 / 30.0 }
+        return animationFrameInterval
+    }
+
+    static func motionStaggerDelay(_ index: Int, step: Double = 0.028, cap: Double = 0.14) -> Double {
         min(cap, max(0, Double(index)) * step)
     }
 
@@ -1388,13 +1394,14 @@ struct AnimatedBackground: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.displayScale) private var displayScale
+    @Environment(\.lippiIsScrolling) private var isScrolling
 
     // Тюнинг производительности
     private let globalBlurCap: CGFloat = 28
     private let blobEdgeSoftness: CGFloat = 0.72
 
     // In Simulator/Low Power/thermal pressure we keep the look, but stop live redraws.
-    private var reducedEffects: Bool { DS.performanceEffectsReduced }
+    private var reducedEffects: Bool { DS.performanceEffectsReduced || isScrolling }
     private var targetFPS: Double { DS.preferredFramesPerSecond >= 120 ? 24 : 18 }
     private var effectiveFPS: Double { reducedEffects ? 8 : targetFPS }
     private var enableGlowBlend: Bool { !reducedEffects && !reduceMotion } // plusLighter дорогой при скролле

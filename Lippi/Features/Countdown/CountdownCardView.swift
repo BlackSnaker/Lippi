@@ -273,12 +273,14 @@ struct CountdownCardView: View {
 // MARK: - Animated Ring (isolated display-sync)
 // =======================================================
 private struct CountdownRingAnimated: View {
+    @Environment(\.lippiIsScrolling) private var isScrolling
+
     let reduceMotion: Bool
     let sceneActive: Bool
     let compute: (Date) -> Double
 
     private var frameInterval: TimeInterval {
-        DS.animationFrameInterval(active: sceneActive, reduceMotion: reduceMotion)
+        DS.animationFrameInterval(active: sceneActive, reduceMotion: reduceMotion, isScrolling: isScrolling)
     }
 
     var body: some View {
@@ -294,12 +296,14 @@ private struct CountdownRingAnimated: View {
 // MARK: - Animated Bar (isolated display-sync)
 // =======================================================
 private struct CountdownBarAnimated: View {
+    @Environment(\.lippiIsScrolling) private var isScrolling
+
     let reduceMotion: Bool
     let sceneActive: Bool
     let compute: (Date) -> Double
 
     private var frameInterval: TimeInterval {
-        DS.animationFrameInterval(active: sceneActive, reduceMotion: reduceMotion)
+        DS.animationFrameInterval(active: sceneActive, reduceMotion: reduceMotion, isScrolling: isScrolling)
     }
 
     var body: some View {

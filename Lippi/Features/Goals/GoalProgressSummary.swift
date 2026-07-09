@@ -146,7 +146,9 @@ struct GoalProgressSummaryEngine {
 
         if configuration.isEnabled {
             do {
-                let text = try await OllamaGoalProvider().generateProgressSummary(
+                let provider = OllamaGoalProvider()
+                try await provider.ensureReady(configuration: configuration)
+                let text = try await provider.generateProgressSummary(
                     prompt: prompt(for: roadmap, facts: facts, lang: lang),
                     configuration: configuration
                 )

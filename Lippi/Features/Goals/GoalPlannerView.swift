@@ -21,6 +21,7 @@ struct GoalPlannerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage("goal.planner.lastRoadmap") private var savedRoadmap: String = ""
     @AppStorage("goal.progress.lastSummary") private var savedProgressSummary: String = ""
@@ -37,6 +38,7 @@ struct GoalPlannerView: View {
     @State private var addedTasks = false
     @State private var generationIssue: String?
     @State private var chatDraftText = ""
+    @State private var skippedGuidanceQuestions: Set<String> = []
     @State private var plannerMode: GoalPlannerMode = .assistant
     @State private var manualTitle: String = ""
     @State private var manualSummary: String = ""
@@ -72,6 +74,33 @@ struct GoalPlannerView: View {
     }
     private var currentBrief: GoalRequestBrief {
         GoalRequestBrief.make(input: currentInput, fallbackLang: lang)
+    }
+    private var currentGuidanceQuestions: [String] {
+        guard hasGoalInput else { return [] }
+        return GoalGuidanceQuestionBuilder.questions(for: currentInput, brief: currentBrief, lang: currentBrief.responseLanguage)
+    }
+    private var activeGuidanceQuestion: String? {
+        currentGuidanceQuestions.first { question in
+            !contextText.localizedCaseInsensitiveContains(question)
+                && !skippedGuidanceQuestions.contains(question)
+        }
+    }
+    private var activeGuidanceQuestionIndex: Int {
+        guard let activeGuidanceQuestion,
+              let index = currentGuidanceQuestions.firstIndex(of: activeGuidanceQuestion) else {
+            return min(currentGuidanceQuestions.count, answeredGuidanceQuestionCount + skippedGuidanceQuestions.count + 1)
+        }
+        return index + 1
+    }
+    private var answeredGuidanceQuestionCount: Int {
+        currentGuidanceQuestions.filter { contextText.localizedCaseInsensitiveContains($0) }.count
+    }
+    private var visibleContextBlocks: [String] {
+        let blocks = trimmedContextText
+            .components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return Array(blocks.suffix(3))
     }
     private var selectedUserState: GoalUserState {
         get { GoalUserState(rawValue: userStateRaw) ?? .calm }
@@ -676,11 +705,9 @@ struct GoalPlannerView: View {
 
     private var smartGoalChatCard: some View {
         let brief = currentBrief
-        let questions = hasGoalInput
-            ? GoalGuidanceQuestionBuilder.questions(for: currentInput, brief: brief, lang: brief.responseLanguage)
-            : []
         let displayedGoal = hasGoalInput ? trimmedGoalText : (roadmap?.title ?? "")
         let hasDisplayedGoal = !displayedGoal.trimmed.isEmpty
+        let activeQuestion = activeGuidanceQuestion
 
         return GlassCard(
             padding: 0,
@@ -709,10 +736,10 @@ struct GoalPlannerView: View {
                     }
 
                     if hasGoalInput {
-                        if !trimmedContextText.isEmpty {
+                        ForEach(visibleContextBlocks, id: \.self) { block in
                             chatMessageBubble(
                                 title: s("goals.chat.user_context"),
-                                text: trimmedContextText,
+                                text: block,
                                 icon: "text.alignleft",
                                 tone: Color(hex: 0x64D2FF),
                                 isUser: true
@@ -722,16 +749,18 @@ struct GoalPlannerView: View {
                         chatPlanningControls(brief)
 
                         if roadmap == nil && !isGenerating {
-                            chatMessageBubble(
-                                text: trimmedContextText.isEmpty ? s("goals.chat.context_needed") : s("goals.chat.context_ready"),
-                                icon: trimmedContextText.isEmpty ? "questionmark.bubble.fill" : "checkmark.seal.fill",
-                                tone: trimmedContextText.isEmpty ? Color(hex: 0x64D2FF) : Color(hex: 0x30D158)
-                            )
-
-                            VStack(spacing: 9) {
-                                ForEach(questions, id: \.self) { question in
-                                    chatQuestionBubble(question)
-                                }
+                            if let activeQuestion {
+                                chatQuestionBubble(
+                                    activeQuestion,
+                                    index: activeGuidanceQuestionIndex,
+                                    total: max(currentGuidanceQuestions.count, 1)
+                                )
+                            } else {
+                                chatMessageBubble(
+                                    text: s("goals.chat.enough_context"),
+                                    icon: "checkmark.seal.fill",
+                                    tone: Color(hex: 0x30D158)
+                                )
                             }
                         }
                     }
@@ -1031,38 +1060,41 @@ struct GoalPlannerView: View {
         .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
     }
 
-    private func chatQuestionBubble(_ question: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(safeSystemName: "questionmark.circle.fill", fallback: "questionmark.circle.fill")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(Color(hex: 0x64D2FF))
-                .frame(width: 22)
-                .padding(.top, 3)
+    private func chatQuestionBubble(_ question: String, index: Int? = nil, total: Int? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            chatMessageBubble(
+                title: questionProgressTitle(index: index, total: total),
+                text: question,
+                icon: "questionmark.bubble.fill",
+                tone: Color(hex: 0x64D2FF)
+            )
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text(question)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(DS.text(0.86))
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Text(s("goals.chat.answer_prompt"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.86)
+
+                Spacer(minLength: 0)
 
                 Button {
-                    appendGuidanceQuestion(question)
+                    skipGuidanceQuestion(question)
                 } label: {
-                    Label(s("goals.guidance.add"), systemImage: "plus.circle.fill")
+                    Label(s("goals.chat.skip_question"), systemImage: "forward.fill")
                         .font(.caption.weight(.bold))
                         .labelStyle(TightLabelStyle())
                 }
                 .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
             }
+            .padding(.leading, 2)
+            .padding(.trailing, 36)
         }
-        .padding(12)
-        .background(DS.glassFill(0.07), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
-            tint: Color(hex: 0x64D2FF).opacity(0.07)
-        )
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+    }
+
+    private func questionProgressTitle(index: Int?, total: Int?) -> String {
+        guard let index, let total, total > 0 else { return "Lippi" }
+        return L10n.fmt("goals.chat.question_progress", currentBrief.responseLanguage, index, total)
     }
 
     private var chatContextComposer: some View {
@@ -1230,7 +1262,7 @@ struct GoalPlannerView: View {
     }
 
     private var processingEmblem: some View {
-        TimelineView(.animation(minimumInterval: DS.animationFrameInterval(active: isGenerating, reduceMotion: reduceMotion))) { timeline in
+        TimelineView(.animation(minimumInterval: DS.animationFrameInterval(active: isGenerating, reduceMotion: reduceMotion, isScrolling: isScrolling))) { timeline in
             let fraction = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.45) / 1.45
 
             ZStack {
@@ -2300,6 +2332,9 @@ struct GoalPlannerView: View {
 
     private var chatComposerPlaceholder: String {
         let textLang = hasGoalInput ? currentBrief.responseLanguage : lang
+        if hasGoalInput, activeGuidanceQuestion != nil {
+            return L10n.tr("goals.chat.reply_question_placeholder", textLang)
+        }
         return L10n.tr(hasGoalInput ? "goals.chat.reply_placeholder" : "goals.chat.goal_placeholder", textLang)
     }
 
@@ -2312,16 +2347,27 @@ struct GoalPlannerView: View {
         guard !value.isEmpty, !isGenerating, roadmap == nil else { return }
 
         if hasGoalInput {
-            contextText = trimmedContextText.isEmpty ? value : "\(trimmedContextText)\n\(value)"
+            if let question = activeGuidanceQuestion {
+                appendContextBlock(L10n.fmt("goals.chat.answer_context_line", currentBrief.responseLanguage, question, value))
+            } else {
+                appendContextBlock(L10n.fmt("goals.chat.context_free_line", currentBrief.responseLanguage, value))
+            }
         } else {
             goalText = value
             generationIssue = nil
+            skippedGuidanceQuestions = []
         }
         chatDraftText = ""
 
         #if os(iOS)
         UISelectionFeedbackGenerator().selectionChanged()
         #endif
+    }
+
+    private func appendContextBlock(_ block: String) {
+        let value = block.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        contextText = trimmedContextText.isEmpty ? value : "\(trimmedContextText)\n\n\(value)"
     }
 
     private func createManualRoadmap() {
@@ -2569,6 +2615,7 @@ struct GoalPlannerView: View {
         goalText = ""
         contextText = ""
         chatDraftText = ""
+        skippedGuidanceQuestions = []
         roadmap = nil
         progressSummary = nil
         generationIssue = nil
@@ -2721,6 +2768,14 @@ struct GoalPlannerView: View {
         guard !contextText.localizedCaseInsensitiveContains(question) else { return }
         let prefix = contextText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : "\n\n"
         contextText += prefix + L10n.fmt("goals.guidance.context_line", currentBrief.responseLanguage, question)
+
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+
+    private func skipGuidanceQuestion(_ question: String) {
+        skippedGuidanceQuestions.insert(question)
 
         #if os(iOS)
         UISelectionFeedbackGenerator().selectionChanged()
@@ -3441,6 +3496,7 @@ enum GoalPlannerEngineError: Error {
     case systemLocaleUnsupported
     case unsupportedLocale
     case translationUnavailable(String)
+    case ollamaUnavailable(String)
     case providersUnavailable(String)
     case invalidResponse
     case generationInterrupted
@@ -3450,6 +3506,8 @@ enum GoalPlannerEngineError: Error {
         switch self {
         case .modelUnavailable, .systemLocaleUnsupported, .unsupportedLocale, .translationUnavailable, .providersUnavailable, .invalidResponse, .generationInterrupted, .generationFailed:
             return true
+        case .ollamaUnavailable:
+            return false
         }
     }
 
@@ -3463,6 +3521,8 @@ enum GoalPlannerEngineError: Error {
             return L10n.tr("goals.error.unsupported_locale", lang)
         case .translationUnavailable(let details):
             return L10n.fmt("goals.error.translation_unavailable", lang, details)
+        case .ollamaUnavailable(let details):
+            return L10n.fmt("goals.error.ollama_required", lang, details)
         case .providersUnavailable(let details):
             return L10n.fmt("goals.error.providers", lang, details)
         case .invalidResponse:
@@ -3492,7 +3552,6 @@ struct GoalRoadmapEngine {
         await onStage(.research)
         let evidence = await OpenRoadmapRetriever().research(for: input)
         let configuration = OllamaConfiguration.stored
-        var macProviderIssue: OllamaProviderError?
 
         if configuration.isEnabled {
             do {
@@ -3507,9 +3566,9 @@ struct GoalRoadmapEngine {
                 await onStage(.checking)
                 return roadmap
             } catch let error as OllamaProviderError {
-                macProviderIssue = error
+                throw GoalPlannerEngineError.ollamaUnavailable(error.message(lang: lang))
             } catch {
-                macProviderIssue = .transport
+                throw GoalPlannerEngineError.ollamaUnavailable(OllamaProviderError.transport.message(lang: lang))
             }
         }
 
@@ -3519,9 +3578,6 @@ struct GoalRoadmapEngine {
             await onStage(.checking)
             return roadmap
         } catch let error as GoalPlannerEngineError {
-            if let macProviderIssue {
-                throw GoalPlannerEngineError.providersUnavailable(macProviderIssue.message(lang: lang))
-            }
             throw error
         }
     }
@@ -3581,6 +3637,7 @@ struct GoalRoadmapEngine {
     ) async throws -> GoalRoadmap {
         let provider = OllamaGoalProvider()
         let brief = GoalRequestBrief.make(input: input, fallbackLang: lang)
+        try await provider.ensureReady(configuration: configuration)
         let response = try await provider.generate(
             prompt: ollamaPrompt(for: input, lang: lang, brief: brief, evidence: evidence, progressAudit: progressAudit),
             configuration: configuration

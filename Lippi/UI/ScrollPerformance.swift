@@ -24,7 +24,8 @@ extension EnvironmentValues {
 final class ScrollPerformanceCoordinator: ObservableObject {
     @Published private(set) var isScrolling = false
     private var settleTask: Task<Void, Never>?
-    private let settleDelay: UInt64 = 360_000_000
+    private let settleDelay: UInt64 = 420_000_000
+    private var activeGestures = 0
 
     func setScrolling(_ value: Bool) {
         settleTask?.cancel()
@@ -43,9 +44,21 @@ final class ScrollPerformanceCoordinator: ObservableObject {
         }
     }
 
+    func beginGesture() {
+        activeGestures = 1
+        setScrolling(true)
+    }
+
+    func endGesture() {
+        activeGestures = max(0, activeGestures - 1)
+        guard activeGestures == 0 else { return }
+        setScrolling(false)
+    }
+
     func stop() {
         settleTask?.cancel()
         settleTask = nil
+        activeGestures = 0
         updateScrolling(false)
     }
 
@@ -72,11 +85,24 @@ private struct LippiScrollPerformanceModifier: ViewModifier {
                     transaction.disablesAnimations = true
                 }
             }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { _ in
+                        coordinator?.beginGesture()
+                    }
+                    .onEnded { _ in
+                        coordinator?.endGesture()
+                    }
+            )
 
         if #available(iOS 18.0, *), let coordinator {
             tunedContent
                 .onScrollPhaseChange { _, phase in
-                    coordinator.setScrolling(phase.isScrolling)
+                    if phase.isScrolling {
+                        coordinator.setScrolling(true)
+                    } else {
+                        coordinator.endGesture()
+                    }
                 }
                 .scrollBounceBehavior(.basedOnSize)
         } else {

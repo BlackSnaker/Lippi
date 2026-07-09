@@ -211,6 +211,7 @@ struct EyeFeedback {
 struct EyeExerciseGameView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.lippiIsScrolling) private var isScrolling
     @EnvironmentObject private var store: EyeExerciseStore
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
 
@@ -265,7 +266,9 @@ struct EyeExerciseGameView: View {
 
     private var cfg: EyeExerciseSettings { store.settings }
     private var progress: Double { Double(hits + misses) / Double(max(1, cfg.targetsPerSession)) }
-    private var frameInterval: TimeInterval { DS.animationFrameInterval(active: true, reduceMotion: reduceMotion) }
+    private var frameInterval: TimeInterval {
+        DS.animationFrameInterval(active: true, reduceMotion: reduceMotion, isScrolling: isScrolling)
+    }
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
 

@@ -143,23 +143,54 @@ struct OllamaGoalProvider {
 
         let models = response.models.map(\.name)
         let selected = configuration.model.trimmingCharacters(in: .whitespacesAndNewlines)
-        let isAvailable = models.contains { name in
-            name == selected || name == "\(selected):latest" || selected == "\(name):latest"
-        }
+        let isAvailable = models.contains { Self.modelName($0, matches: selected) }
         return OllamaConnectionReport(availableModels: models, configuredModelIsAvailable: isAvailable)
+    }
+
+    func ensureReady(configuration: OllamaConfiguration) async throws {
+        let report = try await check(configuration: configuration)
+        guard report.configuredModelIsAvailable else { throw OllamaProviderError.modelMissing }
     }
 
     func generate(prompt: String, configuration: OllamaConfiguration) async throws -> String {
         guard configuration.isConfigured else { throw OllamaProviderError.notConfigured }
-        let url = try configuration.endpointURL(path: "api/generate")
         let body = GenerateRequest(
             model: configuration.model.trimmingCharacters(in: .whitespacesAndNewlines),
             prompt: prompt
         )
+        return try await generatedContent(body: body, configuration: configuration)
+    }
 
+    func generateProgressSummary(prompt: String, configuration: OllamaConfiguration) async throws -> String {
+        guard configuration.isConfigured else { throw OllamaProviderError.notConfigured }
+        let body = GenerateProgressSummaryRequest(
+            model: configuration.model.trimmingCharacters(in: .whitespacesAndNewlines),
+            prompt: prompt
+        )
+        return try await generatedContent(body: body, configuration: configuration)
+    }
+
+    private func generatedContent<Body: Encodable>(body: Body, configuration: OllamaConfiguration) async throws -> String {
+        let url = try configuration.endpointURL(path: "api/generate")
+        var lastError: OllamaProviderError?
+
+        for attempt in 0..<3 {
+            do {
+                return try await generatedContentOnce(body: body, url: url)
+            } catch let error as OllamaProviderError {
+                lastError = error
+                guard error.isRetriable, attempt < 2 else { throw error }
+                try? await Task.sleep(nanoseconds: UInt64(350 + attempt * 450) * 1_000_000)
+            }
+        }
+
+        throw lastError ?? OllamaProviderError.transport
+    }
+
+    private func generatedContentOnce<Body: Encodable>(body: Body, url: URL) async throws -> String {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 120
+        request.timeoutInterval = 180
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = try JSONEncoder().encode(body)
@@ -176,31 +207,14 @@ struct OllamaGoalProvider {
         return content
     }
 
-    func generateProgressSummary(prompt: String, configuration: OllamaConfiguration) async throws -> String {
-        guard configuration.isConfigured else { throw OllamaProviderError.notConfigured }
-        let url = try configuration.endpointURL(path: "api/generate")
-        let body = GenerateProgressSummaryRequest(
-            model: configuration.model.trimmingCharacters(in: .whitespacesAndNewlines),
-            prompt: prompt
-        )
+    private static func modelName(_ candidate: String, matches selected: String) -> Bool {
+        let cleanCandidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanSelected = selected.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanCandidate.isEmpty, !cleanSelected.isEmpty else { return false }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 120
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let data = try await perform(request)
-        let response: GenerateResponse
-        do {
-            response = try JSONDecoder().decode(GenerateResponse.self, from: data)
-        } catch {
-            throw OllamaProviderError.malformedResponse
-        }
-        let content = response.response.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !content.isEmpty else { throw OllamaProviderError.malformedResponse }
-        return content
+        let candidateVariants = Set([cleanCandidate, cleanCandidate.replacingOccurrences(of: ":latest", with: "")])
+        let selectedVariants = Set([cleanSelected, cleanSelected.replacingOccurrences(of: ":latest", with: "")])
+        return !candidateVariants.isDisjoint(with: selectedVariants)
     }
 
     private func perform(_ request: URLRequest) async throws -> Data {
@@ -220,13 +234,26 @@ struct OllamaGoalProvider {
     }
 }
 
+private extension OllamaProviderError {
+    var isRetriable: Bool {
+        switch self {
+        case .transport, .malformedResponse:
+            return true
+        case .server(let status):
+            return status == 408 || status == 429 || (500..<600).contains(status)
+        case .notConfigured, .invalidEndpoint, .loopbackEndpoint, .insecureRemoteEndpoint, .incompleteRoadmap, .modelMissing:
+            return false
+        }
+    }
+}
+
 private struct GenerateRequest: Encodable {
     let model: String
     let prompt: String
     let system = OllamaPlannerSystemPrompt.value
     let stream = false
     let think = false
-    let keepAlive = "15m"
+    let keepAlive = "30m"
     let format = OllamaRoadmapSchema.response
     private let options = GenerateOptions()
 
@@ -262,7 +289,7 @@ private struct GenerateProgressSummaryRequest: Encodable {
     let system = OllamaProgressSummarySystemPrompt.value
     let stream = false
     let think = false
-    let keepAlive = "15m"
+    let keepAlive = "30m"
     let format = OllamaProgressSummarySchema.response
     private let options = GenerateOptions()
 
