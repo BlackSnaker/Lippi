@@ -81,10 +81,11 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%209%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Smoothness" src="https://img.shields.io/badge/UI-Apple%20Smoothness-64D2FF?style=for-the-badge">
-    <img alt="Ollama" src="https://img.shields.io/badge/Ollama-Reliable%20AI-30D158?style=for-the-badge">
-    <img alt="Chat" src="https://img.shields.io/badge/Goals-Chat%20First-BF5AF2?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2012%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Liquid Glass" src="https://img.shields.io/badge/UI-Liquid%20Glass-64D2FF?style=for-the-badge">
+    <img alt="Performance" src="https://img.shields.io/badge/Performance-Smooth%20UI-30D158?style=for-the-badge">
+    <img alt="Navigation" src="https://img.shields.io/badge/Navigation-3%20%2B%20More-BF5AF2?style=for-the-badge">
+    <img alt="Accessibility" src="https://img.shields.io/badge/Accessibility-Adaptive-FF9F0A?style=for-the-badge">
   </p>
   <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
   <p><strong>Красивая и понятная история изменений для главной страницы репозитория.</strong></p>
@@ -93,32 +94,71 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Chat-first goals</strong><br>
-      <sub>Goal setup, context, questions, and roadmap generation now happen in one Liquid Glass chat.</sub>
+      <strong>Compact navigation</strong><br>
+      <sub>Today, Tasks, and Pomodoro stay one tap away; secondary areas live in a polished More menu.</sub>
       <br><br>
-      <strong>Цели через чат</strong><br>
-      <sub>Постановка цели, контекст, вопросы и генерация карты идут в одном Liquid Glass-диалоге.</sub>
+      <strong>Компактная навигация</strong><br>
+      <sub>Сегодня, Задачи и Pomodoro всегда под рукой, а второстепенные разделы собраны в красивом меню «Ещё».</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Grounded AI</strong><br>
-      <sub>The planner asks guiding questions, respects context, and rejects vague or invented roadmaps.</sub>
+      <strong>True full screen</strong><br>
+      <sub>The themed backdrop reaches every physical edge without top or bottom bands.</sub>
       <br><br>
-      <strong>Достоверный ИИ</strong><br>
-      <sub>Планировщик задаёт вопросы, учитывает контекст и отсекает общие или выдуманные планы.</sub>
+      <strong>Настоящий full screen</strong><br>
+      <sub>Тематический фон доходит до физических краёв дисплея без полос сверху и снизу.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Liquid Glass polish</strong><br>
-      <sub>Cards, controls, Dynamic Island states, and roadmap surfaces use cleaner system-glass styling.</sub>
+      <strong>Calmer Liquid Glass</strong><br>
+      <sub>System glass highlights navigation and controls while content surfaces stay clear and lightweight.</sub>
       <br><br>
-      <strong>Больше Liquid Glass</strong><br>
-      <sub>Карточки, controls, Dynamic Island и дорожные карты получили более чистое системное стекло.</sub>
+      <strong>Спокойный Liquid Glass</strong><br>
+      <sub>Системное стекло подчёркивает навигацию и элементы управления, а контент остаётся чистым и лёгким.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Smoother scrolling</strong><br>
-      <sub>Scroll-aware rendering reduces heavy effects during gestures and returns polish after settling.</sub>
+      <strong>Responsive by design</strong><br>
+      <sub>Scrolling, timers, persistence, Dynamic Type, VoiceOver, and reduced-effects modes now work together.</sub>
       <br><br>
-      <strong>Плавный скролл</strong><br>
-      <sub>Во время жестов тяжёлые эффекты упрощаются и возвращаются после остановки.</sub>
+      <strong>Адаптивность во всём</strong><br>
+      <sub>Скролл, таймеры, сохранение, Dynamic Type, VoiceOver и облегчённые режимы работают согласованно.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 12, 2026 - Full-screen Liquid Glass, compact navigation, and smoother everyday flow
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>This release brings the entire Lippi interface closer to the clarity, restraint, accessibility, and responsiveness people expect from Apple apps.</strong></p>
+      <ul>
+        <li><strong>Refined Liquid Glass system:</strong> native glass is now reserved for navigation, prominent surfaces, and interactive controls instead of being stacked across every content card.</li>
+        <li><strong>Compact three-tab navigation:</strong> Today, Tasks, and Pomodoro remain visible, the active destination expands with its label, and Break, Health, Eyes, and Settings move into a polished overflow menu.</li>
+        <li><strong>True edge-to-edge backdrop:</strong> the themed background fills the complete display behind Dynamic Island and the Home Indicator without detached top or bottom bands.</li>
+        <li><strong>Calmer visual hierarchy:</strong> cards, buttons, toolbars, forms, shadows, borders, and gradients were simplified for a cleaner Apple-like rhythm and less compositing work.</li>
+        <li><strong>Faster tab switching:</strong> Lippi no longer keeps two complete heavyweight screen trees rendered during a tab transition.</li>
+        <li><strong>Smoother active experiences:</strong> Countdown, Pomodoro, breathing guidance, eye exercises, and break gameplay use cancellable tasks and bounded update rates instead of unnecessary continuous UI work.</li>
+        <li><strong>Background persistence:</strong> task, statistics, breathing, eye-history, and widget updates move expensive encoding and file operations away from the main interaction path.</li>
+        <li><strong>Adaptive performance:</strong> scrolling, Low Power Mode, thermal pressure, Reduce Motion, and Reduce Transparency automatically switch the interface to lighter rendering paths.</li>
+        <li><strong>Accessibility and layout polish:</strong> controls keep comfortable touch targets, charts avoid tiny labels, VoiceOver gains meaningful actions, settings adapt to accessibility text sizes, and content stays readable on iPhone and iPad.</li>
+        <li><strong>Verification:</strong> Swift syntax and patch integrity checks pass; final layout iterations were reviewed through current iPhone Simulator screenshots.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Этот релиз приближает весь интерфейс Lippi к ясности, сдержанности, доступности и отзывчивости, которых пользователи ждут от приложений Apple.</strong></p>
+      <ul>
+        <li><strong>Обновлённая система Liquid Glass:</strong> нативное стекло осталось в навигации, важных поверхностях и интерактивных элементах вместо наложения эффекта на каждую контентную карточку.</li>
+        <li><strong>Компактная навигация из трёх вкладок:</strong> «Сегодня», «Задачи» и Pomodoro всегда видны, активный раздел раскрывается с подписью, а «Перерыв», «Здоровье», «Глаза» и «Настройки» собраны в аккуратном меню «Ещё».</li>
+        <li><strong>Настоящий edge-to-edge фон:</strong> тематическая сцена заполняет весь дисплей за Dynamic Island и Home Indicator без отдельных полос сверху и снизу.</li>
+        <li><strong>Спокойнее визуальная иерархия:</strong> карточки, кнопки, панели, формы, тени, рамки и градиенты упрощены ради более чистого ритма в стиле Apple и меньшей нагрузки на композицию.</li>
+        <li><strong>Быстрее переключение вкладок:</strong> Lippi больше не держит одновременно два тяжёлых дерева экранов во время перехода.</li>
+        <li><strong>Плавнее активные сценарии:</strong> Countdown, Pomodoro, дыхательная практика, упражнения для глаз и мини-игра используют отменяемые задачи и ограниченную частоту обновления вместо лишней постоянной работы UI.</li>
+        <li><strong>Сохранение в фоне:</strong> задачи, статистика, история дыхания и глаз, а также обновление виджетов переносят тяжёлое кодирование и файловые операции за пределы главного пути взаимодействия.</li>
+        <li><strong>Адаптивная производительность:</strong> скролл, энергосбережение, нагрев, Reduce Motion и Reduce Transparency автоматически включают облегчённые пути рендера.</li>
+        <li><strong>Accessibility и адаптивная вёрстка:</strong> элементы управления сохраняют удобные зоны касания, в графиках нет микроскопических подписей, VoiceOver получил осмысленные действия, настройки адаптируются к крупному тексту, а контент удобно читается на iPhone и iPad.</li>
+        <li><strong>Проверка:</strong> Swift-синтаксис и целостность патча проверены; финальные итерации layout сверены по актуальным скриншотам iPhone Simulator.</li>
+      </ul>
     </td>
   </tr>
 </table>
