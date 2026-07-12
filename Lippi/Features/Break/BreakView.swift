@@ -29,15 +29,15 @@ struct BreakView: View {
                             .lippiMotionScene(2)
                         Color.clear.frame(height: 84)
                     }
-                    .padding(20)
+                    .lippiContentColumn()
                 }
                 .scrollIndicators(.hidden)
                 .lippiScrollPerformance()
             }
             .navigationTitle(s("break.nav_title"))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 92) }
+            .clearNavBarBackgroundIfAvailable()
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 88) }
         }
         .fullScreenCover(isPresented: $showGame) {
             BreakGameFullscreenView()
@@ -119,7 +119,6 @@ struct BreakView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .primary))
-                .buttonStyle(PressScaleStyle(scale: 0.985, opacity: 0.95))
             }
         }
     }
@@ -237,7 +236,10 @@ private struct BreakGameFullscreenView: View {
             lastTick = now
             game.tick(dt: CGFloat(dt), viewportWidth: viewportWidth)
         }
-        displayLink.start(preferredFramesPerSecond: reduceMotion ? 60 : DS.preferredFramesPerSecond)
+        // SwiftUI publishes the complete scene after every physics step. Capping
+        // this path at 60 Hz prevents 120 Hz devices from doubling main-thread
+        // diffing work without changing the game's perceived responsiveness.
+        displayLink.start(preferredFramesPerSecond: reduceMotion || DS.runtimeConstrained ? 30 : 60)
         #endif
     }
 
@@ -498,12 +500,12 @@ private final class BreakDisplayLinkDriver: NSObject, ObservableObject {
     var onFrame: ((TimeInterval) -> Void)?
     private var displayLink: CADisplayLink?
 
-    func start(preferredFramesPerSecond: Int = DS.preferredFramesPerSecond) {
+    func start(preferredFramesPerSecond: Int = 60) {
         guard displayLink == nil else { return }
         let link = CADisplayLink(target: self, selector: #selector(step(_:)))
         let preferredFPS = min(preferredFramesPerSecond, DS.preferredFramesPerSecond)
         if #available(iOS 15.0, *) {
-            let minimumFPS = preferredFPS >= 120 ? 80 : 45
+            let minimumFPS = preferredFPS >= 60 ? 30 : 20
             link.preferredFrameRateRange = CAFrameRateRange(
                 minimum: Float(minimumFPS),
                 maximum: Float(preferredFPS),

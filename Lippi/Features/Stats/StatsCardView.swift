@@ -399,10 +399,12 @@ struct StatsCardView: View {
     }
 
     private func formattedDay(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: lang.localeIdentifier)
-        formatter.setLocalizedDateFormatFromTemplate("d MMM")
-        return formatter.string(from: date)
+        date.formatted(
+            .dateTime
+                .day()
+                .month(.abbreviated)
+                .locale(Locale(identifier: lang.localeIdentifier))
+        )
     }
 }
 
@@ -484,10 +486,11 @@ private struct ReadableActivityTimeline: View {
             )
 
             Text(dayLabel(for: day.date, selected: isSelected))
-                .font(.system(size: isCompact ? 8 : 10, weight: .bold, design: .rounded))
+                .font(.caption2.weight(.bold))
                 .foregroundStyle(isSelected ? DS.textPrimary : DS.textTertiary)
-                .frame(width: itemWidth, height: 13)
-                .minimumScaleFactor(0.65)
+                .frame(width: itemWidth)
+                .frame(minHeight: 14)
+                .minimumScaleFactor(0.85)
                 .lineLimit(1)
         }
         .contentShape(Rectangle())
@@ -504,6 +507,10 @@ private struct ReadableActivityTimeline: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibilityLabel(for: day)))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction {
+            selected = day
+        }
     }
 
     private func focusBar(for day: DayStats, itemWidth: CGFloat) -> some View {
@@ -545,11 +552,11 @@ private struct ReadableActivityTimeline: View {
 
                     if !isCompact {
                         Text("\(min(taskCount, 9))")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.white)
                     }
                 }
-                .frame(width: isCompact ? 8 : 16, height: isCompact ? 8 : 16)
+                .frame(width: isCompact ? 8 : 18, height: isCompact ? 8 : 18)
                 .shadow(color: Color(hex: 0x30D158).opacity(0.24), radius: 5, x: 0, y: 2)
                 .offset(y: yOffset)
             }
@@ -568,16 +575,20 @@ private struct ReadableActivityTimeline: View {
             return selected || day % 5 == 0 ? "\(day)" : ""
         }
 
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: lang.localeIdentifier)
-        formatter.setLocalizedDateFormatFromTemplate("EEEEE")
-        return formatter.string(from: date).uppercased()
+        return date.formatted(
+            .dateTime
+                .weekday(.narrow)
+                .locale(Locale(identifier: lang.localeIdentifier))
+        ).uppercased()
     }
 
     private func accessibilityLabel(for day: DayStats) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: lang.localeIdentifier)
-        formatter.setLocalizedDateFormatFromTemplate("d MMMM")
-        return "\(formatter.string(from: day.date)): \(day.summaryText)"
+        let date = day.date.formatted(
+            .dateTime
+                .day()
+                .month(.wide)
+                .locale(Locale(identifier: lang.localeIdentifier))
+        )
+        return "\(date): \(day.summaryText)"
     }
 }

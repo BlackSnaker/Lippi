@@ -6,6 +6,7 @@ import UIKit
 // MARK: - TASKS (dark Apple-style backdrop, fixed)
 // =======================================================
 struct TasksView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var store: TaskStore
     @EnvironmentObject private var stats: StatsStore
     @Environment(\.lippiIsScrolling) private var isScrolling
@@ -109,7 +110,7 @@ struct TasksView: View {
                     }
 
                     Color.clear
-                        .frame(height: 84)
+                        .frame(height: 88)
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                 }
@@ -120,13 +121,13 @@ struct TasksView: View {
             }
             .navigationTitle(s("tasks.nav_title"))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearNavBarBackgroundIfAvailable()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAdd = true } label: {
                         Image(safeSystemName: "plus.circle.fill", fallback: "plus")
                     }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+                    .accessibilityLabel(s("today.toolbar.new_task"))
                 }
             }
             .searchable(
@@ -182,7 +183,7 @@ struct TasksView: View {
                         Image(safeSystemName: "arrow.up.arrow.down.circle.fill", fallback: "arrow.up.arrow.down")
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(DS.textPrimary)
-                            .frame(width: 38, height: 38)
+                            .frame(width: 44, height: 44)
                             .background(DS.glassFill(0.10), in: Circle())
                             .lippiSystemGlass(in: Circle(), tint: DS.accent.opacity(0.10), interactive: true)
                             .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
@@ -302,7 +303,7 @@ struct TasksView: View {
         TaskRow(
             item: item,
             onToggle: {
-                withAnimation(DS.motionState) {
+                withAnimation(reduceMotion ? nil : DS.motionState) {
                     store.toggle(item.id)
                 }
             },
@@ -312,7 +313,7 @@ struct TasksView: View {
         .listRowBackground(Color.clear)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
-                withAnimation(DS.motionState) {
+                withAnimation(reduceMotion ? nil : DS.motionState) {
                     store.remove(item.id)
                 }
             } label: {
@@ -321,7 +322,7 @@ struct TasksView: View {
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
             Button {
-                withAnimation(DS.motionState) {
+                withAnimation(reduceMotion ? nil : DS.motionState) {
                     store.toggle(item.id)
                 }
             } label: {
@@ -332,7 +333,7 @@ struct TasksView: View {
         }
         .contextMenu {
             Button {
-                withAnimation(DS.motionState) {
+                withAnimation(reduceMotion ? nil : DS.motionState) {
                     store.toggle(item.id)
                 }
             } label: {
@@ -345,7 +346,7 @@ struct TasksView: View {
                 Label(s("tasks.menu.edit"), systemImage: "square.and.pencil")
             }
             Button(role: .destructive) {
-                withAnimation(DS.motionState) {
+                withAnimation(reduceMotion ? nil : DS.motionState) {
                     store.remove(item.id)
                 }
             } label: {
@@ -414,7 +415,7 @@ struct TaskRow: View, Equatable {
                     )
                     .font(.system(size: 19, weight: .semibold))
                     .foregroundStyle(item.isCompleted ? Color(hex: 0x30D158) : DS.textSecondary)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .scaleEffect(reduceMotion ? 1 : (item.isCompleted ? 1.08 : 1.0))
                     .rotationEffect(.degrees(reduceMotion ? 0 : (item.isCompleted ? -4 : 0)))
                     .animation(reduceMotion ? nil : DS.motionState, value: item.isCompleted)
@@ -428,6 +429,9 @@ struct TaskRow: View, Equatable {
                 }
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
+                .accessibilityLabel(
+                    item.isCompleted ? s("tasks.menu.make_active") : s("tasks.menu.mark_done")
+                )
 
                 Button(action: onEdit) {
                     VStack(alignment: .leading, spacing: 8) {

@@ -65,14 +65,14 @@ public struct EyeHealthHomeView: View {
 
                         Color.clear.frame(height: 84)
                     }
-                    .padding(20)
+                    .lippiContentColumn()
                 }
                 .lippiScrollPerformance()
             }
             .navigationTitle(s("eye.home.nav_title"))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 92) }
+            .clearNavBarBackgroundIfAvailable()
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 88) }
         }
         .sheet(isPresented: $showGame) {
             NavigationStack {
@@ -584,11 +584,10 @@ struct EyeStatsView: View {
             }
             .navigationTitle(s("eye.stats.nav_title"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearNavBarBackgroundIfAvailable()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(s("eye.common.done")) { dismiss() }
-                        .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -607,7 +606,7 @@ struct EyeStatsView: View {
                 GlassCard(style: .lightweight) { sessionsList }
                     .lippiMotionScene(2)
             }
-            .padding(20)
+            .lippiContentColumn()
         }
         .scrollIndicators(.hidden)
         .lippiScrollPerformance()
@@ -930,19 +929,18 @@ struct EyeSettingsView: View {
                 }
                 .scrollIndicators(.hidden)
                 .lippiScrollPerformance()
-                .padding(20)
+                .lippiContentColumn()
             }
             .navigationTitle(t("eye.settings.nav_title"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearNavBarBackgroundIfAvailable()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(t("eye.common.cancel")) { dismiss() }
-                        .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(t("eye.common.save")) { save() }
-                        .buttonStyle(LippiButtonStyle(kind: .primary, compact: true))
+                        .fontWeight(.semibold)
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -965,6 +963,11 @@ struct EyeSettingsView: View {
                         .fill(DS.glassFill(0.12))
                         .opacity(0.16)
                         .ignoresSafeArea()
+                )
+                .lippiSystemGlass(
+                    in: Rectangle(),
+                    tint: DS.accent.opacity(0.05),
+                    prominent: true
                 )
             }
             .onAppear { s = eye.settings }

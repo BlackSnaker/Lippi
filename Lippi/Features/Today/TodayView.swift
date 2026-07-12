@@ -10,8 +10,6 @@ struct TodayView: View {
     @EnvironmentObject private var store: TaskStore
     @EnvironmentObject private var stats: StatsStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var showAdd = false
     @State private var showImportantNow = false
@@ -20,32 +18,15 @@ struct TodayView: View {
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
 
-    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
-    private var activeTasksCount: Int { store.tasks.filter { !$0.isCompleted }.count }
+    private var taskOverview: TodayTaskOverview { store.todayOverview() }
+    private var activeTasksCount: Int { taskOverview.active.count }
     private var completedTodayCount: Int { stats.today.tasksDone }
     private var focusedMinutesToday: Int { stats.today.focusMinutes }
     private var productiveStreak: Int { stats.productiveStreak }
-    private var activeTasks: [TaskItem] { store.tasks.filter { !$0.isCompleted } }
-    private var overdueTasks: [TaskItem] {
-        activeTasks.filter { task in
-            guard let due = task.dueDate else { return false }
-            return due < .now
-        }
-    }
-    private var dueTodayTasks: [TaskItem] {
-        activeTasks.filter { task in
-            guard let due = task.dueDate else { return false }
-            return Calendar.current.isDateInToday(due) && due >= .now
-        }
-    }
-    private var upcomingTasks: [TaskItem] {
-        activeTasks.sorted { lhs, rhs in
-            let left = lhs.dueDate ?? .distantFuture
-            let right = rhs.dueDate ?? .distantFuture
-            if left != right { return left < right }
-            return lhs.createdAt < rhs.createdAt
-        }
-    }
+    private var activeTasks: [TaskItem] { taskOverview.active }
+    private var overdueTasks: [TaskItem] { taskOverview.overdue }
+    private var dueTodayTasks: [TaskItem] { taskOverview.dueToday }
+    private var upcomingTasks: [TaskItem] { taskOverview.upcoming }
     private var overdueTasksCount: Int { overdueTasks.count }
     private var dueTodayCount: Int { dueTodayTasks.count }
     private var completionProgress: Double {
@@ -93,40 +74,7 @@ struct TodayView: View {
     }
 
     private var todayBackdrop: some View {
-        ZStack {
-            AppBackdrop()
-
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(performanceMode ? 0.02 : 0.05),
-                    Color.clear,
-                    Color.black.opacity(performanceMode ? 0.08 : 0.14)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .blendMode(.overlay)
-
-            if !performanceMode {
-                RadialGradient(
-                    colors: [DS.brandA.opacity(0.18), .clear],
-                    center: .topLeading,
-                    startRadius: 0,
-                    endRadius: 260
-                )
-                .offset(x: -26, y: -48)
-
-                RadialGradient(
-                    colors: [DS.brandB.opacity(0.14), .clear],
-                    center: .bottomTrailing,
-                    startRadius: 0,
-                    endRadius: 280
-                )
-                .offset(x: 24, y: 40)
-                .opacity(reduceMotion ? 0.85 : 1.0)
-            }
-        }
-        .ignoresSafeArea()
+        AppBackdrop()
     }
 
     var body: some View {
@@ -145,7 +93,7 @@ struct TodayView: View {
                         StatsCardView()
                             .lippiMotionScene(4)
                     }
-                    .padding(20)
+                    .lippiContentColumn()
                 }
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
@@ -155,7 +103,7 @@ struct TodayView: View {
             }
             .navigationTitle(s("today.nav_title"))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearNavBarBackgroundIfAvailable()
             .toolbarBackgroundVisibility(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -164,21 +112,19 @@ struct TodayView: View {
                     } label: {
                         Image(safeSystemName: "sparkles.rectangle.stack.fill", fallback: "sparkles")
                     }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                     .accessibilityLabel(s("today.summary.title"))
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAdd = true } label: {
-                        Label(s("today.toolbar.new_task"), systemImage: "plus.circle.fill")
-                            .labelStyle(TightLabelStyle())
+                        Image(safeSystemName: "plus", fallback: "plus.circle.fill")
                     }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+                    .accessibilityLabel(s("today.toolbar.new_task"))
                 }
             }
             // ✅ Нижний отступ под TabBar (чтобы контент не уходил под него)
             .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 92)
+                Color.clear.frame(height: 88)
             }
             .sheet(isPresented: $showAdd) {
                 AddEditTaskView { store.add($0) }
@@ -206,9 +152,9 @@ struct TodayView: View {
                             .singleLine()
 
                         Text(greetingTitle)
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .font(.largeTitle.weight(.bold))
                             .foregroundStyle(DS.textPrimary)
-                            .singleLine()
+                            .lineLimit(2)
 
                         Text(s("today.header.subtitle"))
                             .font(.footnote.weight(.medium))
@@ -582,7 +528,7 @@ struct TodayView: View {
 
                         Color.clear.frame(height: 18)
                     }
-                    .padding(20)
+                    .lippiContentColumn()
                 }
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
@@ -590,13 +536,12 @@ struct TodayView: View {
             }
             .navigationTitle(s("today.summary.title"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearNavBarBackgroundIfAvailable()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(s("common.close")) {
                         showImportantNow = false
                     }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                 }
             }
         }
@@ -1025,7 +970,7 @@ struct TodayView: View {
                 Image(safeSystemName: "checkmark", fallback: "checkmark")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(DS.text(0.90))
-                    .frame(width: 30, height: 30)
+                    .frame(width: 44, height: 44)
                     .background(DS.glassFill(0.10), in: Circle())
                     .lippiSystemGlass(
                         in: Circle(),
@@ -1035,6 +980,7 @@ struct TodayView: View {
                     .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
             }
             .buttonStyle(PressScaleStyle(scale: 0.94, opacity: 0.88))
+            .accessibilityLabel(s("tasks.menu.mark_done"))
         }
         .padding(.vertical, 10)
     }

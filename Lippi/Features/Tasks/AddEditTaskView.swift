@@ -54,9 +54,6 @@ struct AddEditTaskView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        heroHeader
-                            .lippiMotionScene(0)
-
                         // ---------- Основное ----------
                         GlassCard {
                             VStack(alignment: .leading, spacing: 12) {
@@ -81,7 +78,7 @@ struct AddEditTaskView: View {
                                 notesEditor
                             }
                         }
-                        .lippiMotionScene(1)
+                        .lippiMotionScene(0)
 
                         // ---------- Срок ----------
                         GlassCard {
@@ -127,7 +124,7 @@ struct AddEditTaskView: View {
                             }
                         }
                         .animation(reduceMotion ? nil : DS.motionSmooth, value: hasDueDate)
-                        .lippiMotionScene(2)
+                        .lippiMotionScene(1)
 
                         // ---------- Категория ----------
                         GlassCard {
@@ -179,22 +176,21 @@ struct AddEditTaskView: View {
                             }
                         }
                         .animation(reduceMotion ? nil : DS.motionState, value: category)
-                        .lippiMotionScene(3)
+                        .lippiMotionScene(2)
 
                         // воздух перед липкой кнопкой
                         Color.clear.frame(height: 96)
                     }
-                    .padding(20)
+                    .lippiContentColumn()
                 }
                 .lippiScrollPerformance()
             }
             .navigationTitle(isEditing ? s("task_editor.nav.edit") : s("task_editor.nav.new"))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearNavBarBackgroundIfAvailable()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(s("task_editor.cancel")) { dismiss() }
-                        .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                 }
             }
 
@@ -224,7 +220,8 @@ struct AddEditTaskView: View {
                 )
                 .lippiSystemGlass(
                     in: Rectangle(),
-                    tint: DS.accent.opacity(0.06)
+                    tint: DS.accent.opacity(0.06),
+                    prominent: true
                 )
                 .lippiMagicAppear(delay: 0.10, y: 16, scale: 0.97)
             }
@@ -232,40 +229,6 @@ struct AddEditTaskView: View {
     }
 
     // MARK: - Subviews
-
-    private var heroHeader: some View {
-        GlassCard {
-            HStack(spacing: 12) {
-                Image(safeSystemName: isEditing ? "square.and.pencil" : "plus.circle.fill",
-                      fallback: isEditing ? "square.and.pencil" : "plus")
-                    .foregroundStyle(DS.text(0.92))
-                    .frame(width: 44, height: 44)
-                    .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .lippiSystemGlass(
-                        in: RoundedRectangle(cornerRadius: 16, style: .continuous),
-                        tint: DS.accent.opacity(0.10)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                    )
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(isEditing ? s("task_editor.hero.edit") : s("task_editor.hero.new"))
-                        .font(.headline)
-                        .foregroundStyle(DS.text(0.95))
-                        .singleLine()
-
-                    Text(isEditing ? s("task_editor.hero.edit_subtitle") : s("task_editor.hero.new_subtitle"))
-                        .font(.footnote)
-                        .foregroundStyle(DS.text(0.65))
-                        .lineLimit(2)
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
-    }
 
     private func fieldRow<Content: View>(icon: String, title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {

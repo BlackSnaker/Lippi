@@ -1146,6 +1146,7 @@ final class StatsStore: ObservableObject {
     // MARK: - Debounced save (background)
     // -------------------------------------------------------
     private let saveQueue = DispatchQueue(label: "StatsStore.save", qos: .utility)
+    private let loadQueue = DispatchQueue(label: "StatsStore.load", qos: .userInitiated)
     private var pendingSave: DispatchWorkItem?
     private let saveDebounce: TimeInterval = 0.4
 
@@ -1162,7 +1163,15 @@ final class StatsStore: ObservableObject {
         var focusMinutes: Int = 0
         var tasksDone: Int = 0
     }
+    private struct SeriesCache {
+        let referenceDay: Date
+        let values: [DayStats]
+    }
     private var cachedAggByDay: [Date: DayAgg]? = nil
+    private var cachedSeries: [Int: SeriesCache] = [:]
+    private var purgeCutoff: Date?
+    private var hasFinishedInitialLoad = false
+    private var needsSaveAfterLoad = false
 
     init() { loadOrMigrate() }
 
@@ -1206,6 +1215,9 @@ final class StatsStore: ObservableObject {
 
         let cal = Calendar.current
         let today = startOfDay(.now)
+        if let cached = cachedSeries[daysCount], cached.referenceDay == today {
+            return cached.values
+        }
 
         // окно дат (как было), но без force unwrap в map
         var window: [Date] = []
@@ -1218,10 +1230,12 @@ final class StatsStore: ObservableObject {
 
         let agg = aggregatedByDay()
 
-        return window.map { day in
+        let values = window.map { day in
             let a = agg[day] ?? DayAgg()
             return DayStats(date: day, focusMinutes: a.focusMinutes, tasksDone: a.tasksDone)
         }
+        cachedSeries[daysCount] = SeriesCache(referenceDay: today, values: values)
+        return values
     }
 
     func totals(for series: [DayStats]) -> (focus: Int, tasks: Int) {
@@ -1255,6 +1269,7 @@ final class StatsStore: ObservableObject {
 
     func purge(olderThan days: Int = 365) {
         let limit = Calendar.current.date(byAdding: .day, value: -days, to: startOfDay(.now))!
+        purgeCutoff = limit
         events.removeAll { startOfDay($0.date) < limit }
 
         rebuildIndexes()
@@ -1263,44 +1278,80 @@ final class StatsStore: ObservableObject {
     }
 
     private func loadOrMigrate() {
-        if let data = try? Data(contentsOf: urlEvents),
-           let evs = try? JSONDecoder().decode([StatsEvent].self, from: data) {
-            events = evs
-            rebuildIndexes()
-            invalidateCaches()
-            return
-        }
+        let eventsURL = urlEvents
+        let legacyURL = urlLegacy
+        loadQueue.async { [weak self] in
+            var loaded: [StatsEvent] = []
+            var migratedLegacy = false
 
-        if let data = try? Data(contentsOf: urlLegacy),
-           let legacy = try? JSONDecoder().decode([DayStats].self, from: data) {
-            var migrated: [StatsEvent] = []
-            migrated.reserveCapacity(legacy.count * 2)
-
-            for d in legacy {
-                let midday = Calendar.current.date(bySettingHour: 12, minute: 0, second: 0, of: startOfDay(d.date)) ?? d.date
-                if d.focusMinutes > 0 {
-                    migrated.append(StatsEvent(date: midday, type: .focus, seconds: d.focusMinutes * 60, taskId: nil))
-                }
-                if d.tasksDone > 0 {
-                    for _ in 0..<d.tasksDone {
-                        migrated.append(StatsEvent(date: midday, type: .taskDone, seconds: nil, taskId: nil))
+            if let data = try? Data(contentsOf: eventsURL),
+               let decoded = try? JSONDecoder().decode([StatsEvent].self, from: data) {
+                loaded = decoded
+            } else if let data = try? Data(contentsOf: legacyURL),
+                      let legacy = try? JSONDecoder().decode([DayStats].self, from: data) {
+                loaded.reserveCapacity(legacy.count * 2)
+                for day in legacy {
+                    let midday = Calendar.current.date(
+                        bySettingHour: 12,
+                        minute: 0,
+                        second: 0,
+                        of: startOfDay(day.date)
+                    ) ?? day.date
+                    if day.focusMinutes > 0 {
+                        loaded.append(
+                            StatsEvent(
+                                date: midday,
+                                type: .focus,
+                                seconds: day.focusMinutes * 60,
+                                taskId: nil
+                            )
+                        )
+                    }
+                    if day.tasksDone > 0 {
+                        for _ in 0..<day.tasksDone {
+                            loaded.append(
+                                StatsEvent(date: midday, type: .taskDone, seconds: nil, taskId: nil)
+                            )
+                        }
                     }
                 }
+                migratedLegacy = true
             }
 
-            events = migrated
-            rebuildIndexes()
-            invalidateCaches()
+            let result = loaded
+            let didMigrate = migratedLegacy
+            DispatchQueue.main.async { [weak self] in
+                self?.installLoadedEvents(result, migratedLegacy: didMigrate)
+            }
+        }
+    }
 
-            // сохраняем уже в новом формате, но НЕ блокируем UI
-            scheduleSave()
-            try? FileManager.default.removeItem(at: urlLegacy)
-            return
+    private func installLoadedEvents(_ loaded: [StatsEvent], migratedLegacy: Bool) {
+        var prepared = loaded
+        if let purgeCutoff {
+            prepared.removeAll { startOfDay($0.date) < purgeCutoff }
         }
 
-        events = []
+        if events.isEmpty {
+            events = prepared
+        } else {
+            let currentIDs = Set(events.map(\.id))
+            events = prepared.filter { !currentIDs.contains($0.id) } + events
+        }
         rebuildIndexes()
         invalidateCaches()
+        hasFinishedInitialLoad = true
+
+        if migratedLegacy || needsSaveAfterLoad {
+            needsSaveAfterLoad = false
+            scheduleSave()
+        }
+        if migratedLegacy {
+            let legacyURL = urlLegacy
+            loadQueue.async {
+                try? FileManager.default.removeItem(at: legacyURL)
+            }
+        }
     }
 
     // -------------------------------------------------------
@@ -1341,6 +1392,7 @@ final class StatsStore: ObservableObject {
 
     private func invalidateCaches() {
         cachedAggByDay = nil
+        cachedSeries.removeAll(keepingCapacity: true)
     }
 
     private func rebuildIndexes() {
@@ -1357,6 +1409,10 @@ final class StatsStore: ObservableObject {
     // MARK: - Debounced Save (background)
     // -------------------------------------------------------
     private func scheduleSave() {
+        guard hasFinishedInitialLoad else {
+            needsSaveAfterLoad = true
+            return
+        }
         pendingSave?.cancel()
 
         let snapshot = events
@@ -1428,9 +1484,18 @@ struct TaskItem: Identifiable, Codable, Hashable {
     }
 }
 
+struct TodayTaskOverview {
+    let active: [TaskItem]
+    let overdue: [TaskItem]
+    let dueToday: [TaskItem]
+    let upcoming: [TaskItem]
+}
+
 final class TaskStore: ObservableObject {
     // УБРАЛИ didSet { save() } — это писало на диск при каждом изменении и лагало UI
-    @Published private(set) var tasks: [TaskItem] = []
+    @Published private(set) var tasks: [TaskItem] = [] {
+        didSet { cachedTodayOverview = nil }
+    }
 
     private let fileURL: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
         .first!.appendingPathComponent("tasks.json")
@@ -1439,12 +1504,15 @@ final class TaskStore: ObservableObject {
     // MARK: - Debounced background save (главное ускорение)
     // -------------------------------------------------------
     private let saveQueue = DispatchQueue(label: "TaskStore.save", qos: .utility)
+    private let loadQueue = DispatchQueue(label: "TaskStore.load", qos: .userInitiated)
     private var pendingSave: DispatchWorkItem?
     private let saveDebounce: TimeInterval = 0.35
+    private var hasFinishedInitialLoad = false
+    private var needsSaveAfterLoad = false
+    private var cachedTodayOverview: (createdAt: Date, value: TodayTaskOverview)?
 
     init() {
         load()
-        refreshNextTaskWidget()
     }
 
     // MARK: - CRUD
@@ -1550,19 +1618,76 @@ final class TaskStore: ObservableObject {
         return best
     }
 
+    func todayOverview(now: Date = .now) -> TodayTaskOverview {
+        if let cachedTodayOverview,
+           now.timeIntervalSince(cachedTodayOverview.createdAt) < 1 {
+            return cachedTodayOverview.value
+        }
+
+        let active = tasks.filter { !$0.isCompleted }
+        let overdue = active.filter { item in
+            guard let due = item.dueDate else { return false }
+            return due < now
+        }
+        let dueToday = active.filter { item in
+            guard let due = item.dueDate else { return false }
+            return Calendar.current.isDateInToday(due) && due >= now
+        }
+        let upcoming = active.sorted { lhs, rhs in
+            let left = lhs.dueDate ?? .distantFuture
+            let right = rhs.dueDate ?? .distantFuture
+            if left != right { return left < right }
+            return lhs.createdAt < rhs.createdAt
+        }
+        let value = TodayTaskOverview(
+            active: active,
+            overdue: overdue,
+            dueToday: dueToday,
+            upcoming: upcoming
+        )
+        cachedTodayOverview = (now, value)
+        return value
+    }
+
     // MARK: - Persistence
 
     private func load() {
-        do {
-            let data = try Data(contentsOf: fileURL)
-            tasks = try JSONDecoder().decode([TaskItem].self, from: data)
-        } catch {
-            tasks = []
+        let url = fileURL
+        loadQueue.async { [weak self] in
+            let loaded: [TaskItem]
+            if let data = try? Data(contentsOf: url),
+               let decoded = try? JSONDecoder().decode([TaskItem].self, from: data) {
+                loaded = decoded
+            } else {
+                loaded = []
+            }
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if self.tasks.isEmpty {
+                    if !self.needsSaveAfterLoad {
+                        self.tasks = loaded
+                    }
+                } else {
+                    let currentIDs = Set(self.tasks.map(\.id))
+                    self.tasks = loaded.filter { !currentIDs.contains($0.id) } + self.tasks
+                }
+                self.hasFinishedInitialLoad = true
+                self.refreshNextTaskWidget()
+                if self.needsSaveAfterLoad {
+                    self.needsSaveAfterLoad = false
+                    self.scheduleSave()
+                }
+            }
         }
     }
 
     /// Debounced save — чтобы не тормозить скролл/анимации.
     private func scheduleSave() {
+        guard hasFinishedInitialLoad else {
+            needsSaveAfterLoad = true
+            return
+        }
         pendingSave?.cancel()
 
         let snapshot = tasks
@@ -2019,13 +2144,9 @@ struct ContentView: View {
     @StateObject private var dailyReminder = DailyReminderStore()
     @StateObject private var scrollPerformance = ScrollPerformanceCoordinator()
     @State private var tab: AppTab = .today
-    @State private var previousTab: AppTab?
     @State private var showGoalPlanner = false
     @State private var openGoalProgressSummary = false
     @State private var showVoiceAssistant = false
-    @State private var isSwitchingTabs = false
-    @State private var tabTransitionDirection: CGFloat = 1
-    @State private var tabTransitionTask: Task<Void, Never>?
     @State private var taskCompletionObserver: NSObjectProtocol?
 
     @ViewBuilder
@@ -2050,89 +2171,19 @@ struct ContentView: View {
         )
     }
 
-    private var tabSwitchAnimation: Animation {
-        reduceMotion
-        ? .easeOut(duration: 0.14)
-        : DS.motionTabSwitch
-    }
-
     private func switchTab(to newTab: AppTab) {
         guard newTab != tab else { return }
-
-        let outgoingTab = tab
-        let animation = tabSwitchAnimation
-        let cleanupDelay: UInt64 = reduceMotion ? 180_000_000 : 470_000_000
-
         scrollPerformance.stop()
-        tabTransitionDirection = newTab.navigationIndex >= tab.navigationIndex ? 1 : -1
 
-        tabTransitionTask?.cancel()
-
+        // A tab switch replaces one complete NavigationStack with another. Keeping
+        // both trees alive for a cross-fade forces large offscreen render passes,
+        // especially when the screens contain glass and charts. Native tab
+        // navigation is immediate; the compact tab indicator still animates.
         var instant = Transaction(animation: nil)
         instant.disablesAnimations = true
         withTransaction(instant) {
-            previousTab = outgoingTab
-            isSwitchingTabs = false
             tab = newTab
         }
-
-        tabTransitionTask = Task { @MainActor in
-            await Task.yield()
-            guard !Task.isCancelled else { return }
-
-            withAnimation(animation) {
-                isSwitchingTabs = true
-            }
-
-            try? await Task.sleep(nanoseconds: cleanupDelay)
-            guard !Task.isCancelled else { return }
-
-            var cleanup = Transaction(animation: nil)
-            cleanup.disablesAnimations = true
-            withTransaction(cleanup) {
-                previousTab = nil
-                isSwitchingTabs = false
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func tabScreenLayer(_ tab: AppTab) -> some View {
-        let screen = screenView(tab)
-            .padding(.top, 6)
-        if previousTab != nil {
-            screen.compositingGroup()
-        } else {
-            screen
-        }
-    }
-
-    private var incomingScreenOpacity: Double {
-        previousTab == nil || isSwitchingTabs ? 1.0 : 0.001
-    }
-
-    private var incomingScreenOffset: CGSize {
-        guard previousTab != nil, !reduceMotion else { return .zero }
-        return isSwitchingTabs ? .zero : CGSize(width: 24 * tabTransitionDirection, height: 3)
-    }
-
-    private var incomingScreenScale: CGFloat {
-        guard previousTab != nil, !reduceMotion else { return 1.0 }
-        return isSwitchingTabs ? 1.0 : 0.992
-    }
-
-    private var outgoingScreenOpacity: Double {
-        isSwitchingTabs ? 0.001 : 1.0
-    }
-
-    private var outgoingScreenOffset: CGSize {
-        guard !reduceMotion else { return .zero }
-        return isSwitchingTabs ? CGSize(width: -10 * tabTransitionDirection, height: -1) : .zero
-    }
-
-    private var outgoingScreenScale: CGFloat {
-        guard !reduceMotion else { return 1.0 }
-        return isSwitchingTabs ? 0.998 : 1.0
     }
 
     private func localizedTabTitle(_ tab: AppTab) -> String {
@@ -2452,8 +2503,8 @@ struct ContentView: View {
                 Spacer(minLength: 0)
 
                 GlassTabBar(selection: tabSelectionBinding, isInteractionEnabled: true, lang: lang)
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, max(10, proxy.safeAreaInsets.bottom + 8))
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, max(6, proxy.safeAreaInsets.bottom + 4))
                     .lippiMagicAppear(delay: 0.08, y: 18, scale: 0.97)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -2465,25 +2516,9 @@ struct ContentView: View {
         ZStack {
             AppBackdrop(renderMode: .force)
 
-            ZStack {
-                if let previousTab {
-                    tabScreenLayer(previousTab)
-                        .id("previous-\(previousTab.navigationIndex)")
-                        .opacity(outgoingScreenOpacity)
-                        .offset(outgoingScreenOffset)
-                        .scaleEffect(outgoingScreenScale)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                        .zIndex(0)
-                }
-
-                tabScreenLayer(tab)
-                    .id("current-\(tab.navigationIndex)")
-                    .opacity(incomingScreenOpacity)
-                    .offset(incomingScreenOffset)
-                    .scaleEffect(incomingScreenScale)
-                    .zIndex(1)
-            }
+            screenView(tab)
+                .padding(.top, 6)
+                .id(tab.navigationIndex)
             .transaction { tx in
                 if scrollPerformance.isScrolling { tx.animation = nil }
             }
@@ -2516,6 +2551,11 @@ struct ContentView: View {
         .overlay(alignment: .bottomTrailing) {
             VoiceAssistantLauncherButton(
                 title: L10n.tr("assistant.title", lang),
+                actionTitle: L10n.tr(
+                    voiceAssistant.isListening ? "assistant.button.stop" : "assistant.button.start",
+                    lang
+                ),
+                openTitle: L10n.tr("assistant.action.open", lang),
                 state: voiceAssistant.state,
                 onTap: {
                     if voiceAssistant.isListening {
@@ -2529,7 +2569,7 @@ struct ContentView: View {
                 }
             )
             .padding(.trailing, 18)
-            .padding(.bottom, 94)
+            .padding(.bottom, 98)
             .lippiMagicAppear(delay: 0.16, y: 12, scale: 0.92)
             .zIndex(8)
         }
@@ -2544,9 +2584,6 @@ struct ContentView: View {
         .lippiPerformanceResponsive()
 
         .environment(\.locale, Locale(identifier: lang.localeIdentifier))
-
-        // (опционально) направление текста — на будущее (если добавишь арабский/иврит и т.п.)
-        .environment(\.layoutDirection, .leftToRight)
 
         .environmentObject(store)
         .environmentObject(stats)
@@ -2610,7 +2647,6 @@ struct ContentView: View {
             handleAssistantCommand(command)
         }
         .onDisappear {
-            tabTransitionTask?.cancel()
             scrollPerformance.stop()
             if let taskCompletionObserver {
                 NotificationCenter.default.removeObserver(taskCompletionObserver)
@@ -2628,7 +2664,6 @@ struct AppBackdrop: View {
         case force
     }
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.lippiHasGlobalBackdrop) private var hasGlobalBackdrop
     @Environment(\.lippiIsScrolling) private var isScrolling
@@ -2680,16 +2715,6 @@ struct AppBackdrop: View {
         )
     }
 
-    private var themedGlowC: Color {
-        let glow = palette.glowC
-        return Color(
-            dynamicDark: glow.darkHex,
-            light: glow.lightHex,
-            darkAlpha: glow.darkAlpha,
-            lightAlpha: glow.lightAlpha
-        )
-    }
-
     var body: some View {
         Group {
             if shouldRender {
@@ -2698,52 +2723,31 @@ struct AppBackdrop: View {
 
                     themedBgBase
 
-                    if performanceMode {
-                        RadialGradient(
-                            colors: [themedGlowA.opacity(0.62), .clear],
-                            center: .topLeading,
-                            startRadius: 0,
-                            endRadius: 250
-                        )
+                    RadialGradient(
+                        colors: [themedGlowA.opacity(performanceMode ? 0.42 : 0.68), .clear],
+                        center: .topLeading,
+                        startRadius: 0,
+                        endRadius: performanceMode ? 250 : 320
+                    )
 
-                        RadialGradient(
-                            colors: [themedGlowB.opacity(0.52), .clear],
-                            center: .bottomTrailing,
-                            startRadius: 0,
-                            endRadius: 280
-                        )
-                    } else {
-                        RadialGradient(
-                            colors: [themedGlowA, .clear],
-                            center: .topLeading,
-                            startRadius: 0,
-                            endRadius: 320
-                        )
+                    RadialGradient(
+                        colors: [themedGlowB.opacity(performanceMode ? 0.34 : 0.56), .clear],
+                        center: .bottomTrailing,
+                        startRadius: 0,
+                        endRadius: performanceMode ? 280 : 350
+                    )
 
-                        RadialGradient(
-                            colors: [themedGlowB, .clear],
-                            center: .bottomTrailing,
-                            startRadius: 0,
-                            endRadius: 350
-                        )
-
-                        RadialGradient(
-                            colors: [themedGlowC.opacity(0.74), .clear],
-                            center: .bottomLeading,
-                            startRadius: 0,
-                            endRadius: 280
-                        )
-
+                    if !performanceMode {
                         LinearGradient(
                             colors: [
-                                Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.020, lightAlpha: 0.052),
-                                Color.clear,
-                                Color(dynamicDark: 0x000000, light: 0x0F172A, darkAlpha: 0.10, lightAlpha: 0.08)
+                                Color.white.opacity(0.018),
+                                .clear,
+                                DS.depthShadow(0.06)
                             ],
                             startPoint: .top,
                             endPoint: .bottom
                         )
-                        .opacity(0.90)
+                        .opacity(0.64)
                     }
                 }
                 .lippiWindowChrome()
@@ -2802,6 +2806,7 @@ private struct PomodoroAlarmBanner: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
+                    .frame(minHeight: 44)
                     .background(
                         Capsule(style: .continuous)
                             .fill(DS.brand)
@@ -2822,6 +2827,7 @@ private struct PomodoroAlarmBanner: View {
         .lippiSystemGlass(
             in: RoundedRectangle(cornerRadius: 16, style: .continuous),
             tint: DS.accent.opacity(0.10),
+            prominent: true,
             enabled: true
         )
         .shadow(color: DS.shadow.opacity(0.24), radius: 8, x: 0, y: 4)
@@ -2831,8 +2837,7 @@ private struct PomodoroAlarmBanner: View {
 
 // =======================================================
 // MARK: - GlassTabBar (quiet Liquid Glass navigation)
-// Compact icon-first navigation. The active tab gets the only label, so the
-// menu stays readable without turning the bottom edge into a control panel.
+// Compact navigation: three primary destinations and a system overflow menu.
 // =======================================================
 struct GlassTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -2845,60 +2850,62 @@ struct GlassTabBar: View {
     @Namespace private var tabSelectionNamespace
 
     private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
+    private var usesSystemGlass: Bool {
+        if #available(iOS 26.0, *) {
+            return !simplifiedEffects && DS.systemGlassEffectsEnabled
+        }
+        return false
+    }
 
     var body: some View {
-        HStack(spacing: 5) {
-            ForEach(AppTab.primaryTabs, id: \.self) { tab in
-                TabButton(
-                    icon: tab.icon,
-                    fallback: tab.fallbackIcon,
-                    title: tab.title(lang: lang),
-                    tab: tab,
+        LippiGlassEffectGroup(spacing: 2) {
+            HStack(spacing: 2) {
+                ForEach(AppTab.primaryTabs, id: \.self) { tab in
+                    TabButton(
+                        icon: tab.icon,
+                        fallback: tab.fallbackIcon,
+                        title: tab.title(lang: lang),
+                        tab: tab,
+                        selection: $selection,
+                        namespace: tabSelectionNamespace,
+                        isInteractionEnabled: isInteractionEnabled,
+                        simplifiedEffects: simplifiedEffects
+                    )
+                }
+
+                OverflowTabMenu(
                     selection: $selection,
                     namespace: tabSelectionNamespace,
                     isInteractionEnabled: isInteractionEnabled,
-                    simplifiedEffects: simplifiedEffects
+                    simplifiedEffects: simplifiedEffects,
+                    lang: lang
                 )
             }
-
-            OverflowTabMenu(
-                selection: $selection,
-                namespace: tabSelectionNamespace,
-                isInteractionEnabled: isInteractionEnabled,
-                simplifiedEffects: simplifiedEffects,
-                lang: lang
-            )
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
         .background(tabBarBackground)
-        .lippiSystemGlass(
-            in: tabBarShape,
-            tint: DS.accent.opacity(simplifiedEffects ? 0.14 : 0.28),
-            enabled: !reduceTransparency,
-            forceSystemGlass: !reduceTransparency
-        )
-        .overlay(tabBarRefractionOverlay)
         .overlay(tabBarOverlay)
-        .shadow(color: DS.depthShadow(simplifiedEffects ? 0.20 : 0.34), radius: simplifiedEffects ? 9 : 18, x: 0, y: simplifiedEffects ? 5 : 10)
+        .shadow(color: DS.depthShadow(simplifiedEffects ? 0.14 : 0.20), radius: simplifiedEffects ? 5 : 8, x: 0, y: simplifiedEffects ? 3 : 4)
         .animation(reduceMotion ? nil : DS.motionTabSwitch, value: selection)
         .accessibilityElement(children: .contain)
     }
 
     private var tabBarShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
     }
 
     @ViewBuilder
     private var tabBarBackground: some View {
         let shape = tabBarShape
-        if simplifiedEffects {
+        if reduceTransparency {
+            shape.fill(DS.solidSurface)
+        } else if usesSystemGlass {
             shape
-                .fill(.thickMaterial)
-                .overlay(
-                    shape
-                        .fill(DS.glassFill(0.30, lightOpacity: 0.93))
-                )
+                .fill(DS.glassFill(0.12, lightOpacity: 0.30))
+        } else if simplifiedEffects {
+            shape
+                .fill(DS.glassFill(0.30, lightOpacity: 0.93))
                 .overlay(
                     shape
                         .fill(DS.glassTint)
@@ -2910,166 +2917,59 @@ struct GlassTabBar: View {
                         .opacity(0.26)
                 )
         } else {
-            shape
-                .fill(.thickMaterial)
+            tabBarMaterialBase
                 .overlay(
                     shape
-                        .fill(DS.glassFill(0.42, lightOpacity: 0.95))
-                )
-                .overlay(
-                    shape
-                        .fill(DS.glassDepth)
-                        .opacity(0.62)
+                        .fill(DS.glassFill(0.30, lightOpacity: 0.82))
                 )
                 .overlay(
                     shape
                         .fill(DS.glassTint)
-                        .opacity(0.86)
-                )
-                .overlay(
-                    shape
-                        .fill(DS.surfaceLift)
-                        .blendMode(.screen)
-                        .opacity(0.32)
-                )
-                .overlay(
-                    shape
-                        .fill(DS.brandIridescent)
-                        .blendMode(.screen)
-                        .opacity(0.18)
+                        .opacity(0.36)
                 )
                 .overlay(alignment: .top) {
                     shape
                         .fill(
                             LinearGradient(
-                                colors: [.white.opacity(0.54), .white.opacity(0.20), .white.opacity(0.0)],
+                                colors: [.white.opacity(0.28), .white.opacity(0.08), .clear],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
                         )
-                        .frame(height: 20)
-                        .clipShape(shape)
-                }
-                .overlay(alignment: .bottom) {
-                    shape
-                        .fill(
-                            LinearGradient(
-                                colors: [.clear, DS.accent.opacity(0.18), .white.opacity(0.14)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
                         .frame(height: 18)
                         .clipShape(shape)
-                        .blendMode(.screen)
                 }
         }
     }
 
     @ViewBuilder
-    private var tabBarRefractionOverlay: some View {
-        if !simplifiedEffects {
-            GeometryReader { proxy in
-                let size = proxy.size
-
-                ZStack {
-                    RadialGradient(
-                        colors: [
-                            .white.opacity(0.34),
-                            DS.accent.opacity(0.16),
-                            .clear
-                        ],
-                        center: .topLeading,
-                        startRadius: 2,
-                        endRadius: max(size.width, size.height) * 0.72
-                    )
-                    .frame(width: size.width * 0.62, height: size.height * 1.9)
-                    .offset(x: -size.width * 0.26, y: -size.height * 0.56)
-                    .blendMode(.screen)
-
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    .clear,
-                                    .white.opacity(0.44),
-                                    DS.accent.opacity(0.22),
-                                    .clear
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: size.width * 0.40, height: 2.2)
-                        .rotationEffect(.degrees(-9))
-                        .offset(x: -size.width * 0.16, y: -size.height * 0.28)
-                        .blendMode(.screen)
-
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    .clear,
-                                    DS.accent.opacity(0.20),
-                                    .white.opacity(0.34),
-                                    .clear
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: size.width * 0.32, height: 2.0)
-                        .rotationEffect(.degrees(10))
-                        .offset(x: size.width * 0.22, y: size.height * 0.20)
-                        .blendMode(.screen)
-
-                    LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: 0.00),
-                            .init(color: .white.opacity(0.16), location: 0.42),
-                            .init(color: DS.accent.opacity(0.16), location: 0.55),
-                            .init(color: .clear, location: 1.00)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .frame(width: size.width * 0.48, height: size.height * 1.5)
-                    .rotationEffect(.degrees(14))
-                    .offset(x: size.width * 0.08, y: -size.height * 0.10)
-                    .blendMode(.screen)
-                }
-            }
-            .clipShape(tabBarShape)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+    private var tabBarMaterialBase: some View {
+        let shape = tabBarShape
+        if #available(iOS 26.0, *), DS.systemGlassEffectsEnabled {
+            // The system glass modifier supplies refraction on iOS 26; stacking
+            // a live Material underneath creates a redundant blur pass.
+            shape.fill(DS.glassFill(0.20, lightOpacity: 0.72))
+        } else {
+            shape.fill(.thickMaterial)
         }
     }
 
     @ViewBuilder
     private var tabBarOverlay: some View {
         let shape = tabBarShape
-        if simplifiedEffects {
+        if usesSystemGlass {
+            shape
+                .stroke(DS.glassStroke(0.20, lightOpacity: 0.12), lineWidth: 1)
+        } else if simplifiedEffects {
             shape
                 .stroke(DS.glassStroke(0.34, lightOpacity: 0.18), lineWidth: 1.1)
         } else {
             shape
-                .stroke(DS.glassStroke(0.50, lightOpacity: 0.24), lineWidth: 1.2)
+                .stroke(DS.glassStroke(0.38, lightOpacity: 0.20), lineWidth: 1)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 27, style: .continuous)
-                        .stroke(.white.opacity(0.34), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 23, style: .continuous)
+                        .stroke(.white.opacity(0.16), lineWidth: 0.8)
                         .padding(1)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(DS.depthShadow(0.16, lightOpacity: 0.12), lineWidth: 1)
-                        .padding(2)
-                        .blendMode(.multiply)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(.white.opacity(0.18), lineWidth: 0.8)
-                        .padding(4)
-                        .blendMode(.screen)
                 )
         }
     }
@@ -3087,6 +2987,12 @@ private struct TabButton: View {
     let isInteractionEnabled: Bool
     let simplifiedEffects: Bool
     var isSelected: Bool { selection == tab }
+    private var usesSystemGlass: Bool {
+        if #available(iOS 26.0, *) {
+            return !simplifiedEffects && DS.systemGlassEffectsEnabled
+        }
+        return false
+    }
 
     var body: some View {
         Button {
@@ -3094,34 +3000,34 @@ private struct TabButton: View {
             DS.hapticSoft()
             selection = tab
         } label: {
-            HStack(spacing: isSelected ? 6 : 0) {
+            HStack(spacing: isSelected ? 5 : 0) {
                 Image(safeSystemName: icon, fallback: fallback)
-                    .font(.system(size: 15, weight: isSelected ? .bold : .semibold, design: .rounded))
-                    .frame(width: 21, height: 21)
+                    .font(.system(size: 16, weight: isSelected ? .semibold : .medium, design: .rounded))
+                    .frame(width: 20, height: 20)
                     .symbolRenderingMode(.hierarchical)
+                    .symbolVariant(isSelected ? .fill : .none)
                     .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.04 : 1.0))
                     .animation(reduceMotion ? nil : DS.motionTabSwitch, value: isSelected)
 
                 if isSelected {
                     Text(title)
-                        .font(.caption.weight(.bold))
+                        .font(.caption.weight(.semibold))
                         .singleLine()
-                        .lineLimit(1)
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
             }
-            .padding(.horizontal, isSelected ? 12 : 0)
-            .frame(width: isSelected ? nil : 42, height: 42)
-            .frame(minWidth: isSelected ? 64 : 42, minHeight: 42)
+            .padding(.horizontal, isSelected ? 10 : 0)
+            .frame(width: isSelected ? nil : 40, height: 44)
+            .frame(minWidth: isSelected ? 60 : 40, minHeight: 44)
             .background(pillBackground)
+            .overlay(pillOverlay)
+            .foregroundStyle(isSelected ? DS.accent : DS.text(simplifiedEffects ? 0.72 : 0.80))
             .lippiSystemGlass(
                 in: Capsule(style: .continuous),
                 tint: isSelected ? DS.accent.opacity(0.22) : DS.accent.opacity(0.10),
                 interactive: true,
-                enabled: !simplifiedEffects
+                enabled: isSelected && !simplifiedEffects
             )
-            .overlay(pillOverlay)
-            .foregroundStyle(isSelected ? DS.textPrimary : DS.text(simplifiedEffects ? 0.72 : 0.80))
             .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.012 : 0.992))
             .animation(
                 reduceMotion ? nil : DS.motionTabSwitch,
@@ -3138,12 +3044,15 @@ private struct TabButton: View {
 
     @ViewBuilder
     private var pillBackground: some View {
-        if simplifiedEffects {
+        if usesSystemGlass {
             Capsule()
-                .fill(isSelected ? DS.glassFill(0.22, lightOpacity: 0.54) : DS.glassFill(0.12, lightOpacity: 0.34))
+                .fill(isSelected ? DS.accent.opacity(0.14) : Color.clear)
+        } else if simplifiedEffects {
+            Capsule()
+                .fill(isSelected ? DS.glassFill(0.22, lightOpacity: 0.54) : Color.clear)
         } else {
             Capsule()
-                .fill(isSelected ? DS.glassFill(0.28, lightOpacity: 0.68) : DS.glassFill(0.14, lightOpacity: 0.38))
+                .fill(isSelected ? DS.glassFill(0.28, lightOpacity: 0.68) : Color.clear)
                 .overlay {
                     Capsule()
                         .fill(
@@ -3172,9 +3081,9 @@ private struct TabButton: View {
     @ViewBuilder
     private var pillOverlay: some View {
         Capsule()
-            .strokeBorder(isSelected ? DS.glassStroke(0.34) : DS.glassStroke(0.16), lineWidth: 1)
+            .strokeBorder(isSelected ? DS.glassStroke(0.34) : Color.clear, lineWidth: 1)
             .overlay(alignment: .top) {
-                if isSelected && !simplifiedEffects {
+                if isSelected && !simplifiedEffects && !usesSystemGlass {
                     Capsule()
                         .fill(.white.opacity(0.30))
                         .frame(height: 1.2)
@@ -3196,6 +3105,12 @@ private struct OverflowTabMenu: View {
 
     private var isSelected: Bool { selection.isOverflow }
     private var title: String { L10n.tr("tab.more", lang) }
+    private var usesSystemGlass: Bool {
+        if #available(iOS 26.0, *) {
+            return !simplifiedEffects && DS.systemGlassEffectsEnabled
+        }
+        return false
+    }
 
     var body: some View {
         Menu {
@@ -3211,8 +3126,8 @@ private struct OverflowTabMenu: View {
         } label: {
             ZStack(alignment: .topTrailing) {
                 Image(safeSystemName: "ellipsis", fallback: "ellipsis")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .frame(width: 21, height: 21)
+                    .font(.system(size: 16, weight: isSelected ? .semibold : .medium, design: .rounded))
+                    .frame(width: 20, height: 20)
                     .symbolRenderingMode(.hierarchical)
 
                 if isSelected {
@@ -3223,16 +3138,16 @@ private struct OverflowTabMenu: View {
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            .frame(width: 42, height: 42)
+            .frame(width: 40, height: 44)
             .background(menuBackground)
+            .overlay(menuOverlay)
+            .foregroundStyle(isSelected ? DS.accent : DS.text(simplifiedEffects ? 0.72 : 0.80))
             .lippiSystemGlass(
                 in: Capsule(style: .continuous),
                 tint: isSelected ? DS.accent.opacity(0.22) : DS.accent.opacity(0.10),
                 interactive: true,
-                enabled: !simplifiedEffects
+                enabled: isSelected && !simplifiedEffects
             )
-            .overlay(menuOverlay)
-            .foregroundStyle(isSelected ? DS.textPrimary : DS.text(simplifiedEffects ? 0.72 : 0.80))
             .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.012 : 0.992))
             .animation(reduceMotion ? nil : DS.motionTabSwitch, value: isSelected)
             .shadow(color: isSelected && !simplifiedEffects ? DS.depthShadow(0.18) : .clear, radius: isSelected ? 6 : 0, x: 0, y: 3)
@@ -3245,12 +3160,15 @@ private struct OverflowTabMenu: View {
 
     @ViewBuilder
     private var menuBackground: some View {
-        if simplifiedEffects {
+        if usesSystemGlass {
             Capsule()
-                .fill(isSelected ? DS.glassFill(0.22, lightOpacity: 0.54) : DS.glassFill(0.12, lightOpacity: 0.34))
+                .fill(isSelected ? DS.accent.opacity(0.14) : Color.clear)
+        } else if simplifiedEffects {
+            Capsule()
+                .fill(isSelected ? DS.glassFill(0.22, lightOpacity: 0.54) : Color.clear)
         } else {
             Capsule()
-                .fill(isSelected ? DS.glassFill(0.28, lightOpacity: 0.68) : DS.glassFill(0.14, lightOpacity: 0.38))
+                .fill(isSelected ? DS.glassFill(0.28, lightOpacity: 0.68) : Color.clear)
                 .overlay {
                     Capsule()
                         .fill(
@@ -3279,9 +3197,9 @@ private struct OverflowTabMenu: View {
     @ViewBuilder
     private var menuOverlay: some View {
         Capsule()
-            .strokeBorder(isSelected ? DS.glassStroke(0.34) : DS.glassStroke(0.16), lineWidth: 1)
+            .strokeBorder(isSelected ? DS.glassStroke(0.34) : Color.clear, lineWidth: 1)
             .overlay(alignment: .top) {
-                if isSelected && !simplifiedEffects {
+                if isSelected && !simplifiedEffects && !usesSystemGlass {
                     Capsule()
                         .fill(.white.opacity(0.30))
                         .frame(height: 1.2)
@@ -3301,13 +3219,17 @@ struct LippiSingleApp: App {
 
     init() {
         #if os(iOS)
-        let nav = UINavigationBarAppearance()
-        nav.configureWithTransparentBackground()
-        nav.backgroundColor = .clear
-        nav.shadowColor = .clear
-        UINavigationBar.appearance().standardAppearance   = nav
-        UINavigationBar.appearance().scrollEdgeAppearance = nav
-        UINavigationBar.appearance().compactAppearance    = nav
+        if #available(iOS 26.0, *) {
+            // Standard bars receive Liquid Glass from the system.
+        } else {
+            let nav = UINavigationBarAppearance()
+            nav.configureWithTransparentBackground()
+            nav.backgroundColor = .clear
+            nav.shadowColor = .clear
+            UINavigationBar.appearance().standardAppearance   = nav
+            UINavigationBar.appearance().scrollEdgeAppearance = nav
+            UINavigationBar.appearance().compactAppearance    = nav
+        }
 
         UIScrollView.appearance().backgroundColor = .clear
         UITableView.appearance().backgroundColor  = .clear

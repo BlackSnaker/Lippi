@@ -20,7 +20,8 @@ struct HealthView: View {
     @State private var selectedPreset: BreathingPreset = .balance
     @State private var isRunning = false
     @State private var phaseIndex = 0
-    @State private var phaseProgress: CGFloat = 0
+    @State private var phaseBaseProgress: CGFloat = 0
+    @State private var phaseStartedAt: Date?
     @State private var cycleCount = 1
     @State private var runnerTask: Task<Void, Never>?
     @State private var sessionStartedAt: Date?
@@ -62,15 +63,15 @@ struct HealthView: View {
                             .lippiMotionScene(3)
                         Color.clear.frame(height: 84)
                     }
-                    .padding(20)
+                    .lippiContentColumn()
                 }
                 .scrollIndicators(.hidden)
                 .lippiScrollPerformance()
             }
             .navigationTitle(L10n.tr(.tab_health, lang))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 92) }
+            .clearNavBarBackgroundIfAvailable()
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 88) }
         }
         .onAppear {
             tryAutoNarrationIfNeeded()
@@ -165,37 +166,41 @@ struct HealthView: View {
 
                 BreathingCoachWidget(
                     phase: activeStep.phase,
-                    progress: phaseProgress,
+                    baseProgress: phaseBaseProgress,
+                    phaseStartedAt: phaseStartedAt,
+                    phaseDuration: activeStep.duration,
                     isRunning: isRunning,
                     phaseTitle: s(activeStep.phase.titleKey),
                     phaseHint: s(activeStep.phase.hintKey)
                 )
 
-                HStack(spacing: 10) {
-                    Button {
-                        if isRunning {
-                            pauseSession()
-                        } else {
-                            startSession()
-                        }
-                    } label: {
-                        Label(
-                            isRunning ? s("break.breathing.button.pause") : s("break.breathing.button.start"),
-                            systemImage: isRunning ? "pause.fill" : "play.fill"
-                        )
-                        .labelStyle(TightLabelStyle())
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(LippiButtonStyle(kind: .primary))
-
-                    Button {
-                        resetSession()
-                    } label: {
-                        Label(s("break.breathing.button.reset"), systemImage: "arrow.counterclockwise")
+                LippiGlassEffectGroup(spacing: 10) {
+                    HStack(spacing: 10) {
+                        Button {
+                            if isRunning {
+                                pauseSession()
+                            } else {
+                                startSession()
+                            }
+                        } label: {
+                            Label(
+                                isRunning ? s("break.breathing.button.pause") : s("break.breathing.button.start"),
+                                systemImage: isRunning ? "pause.fill" : "play.fill"
+                            )
                             .labelStyle(TightLabelStyle())
                             .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(LippiButtonStyle(kind: .primary))
+
+                        Button {
+                            resetSession()
+                        } label: {
+                            Label(s("break.breathing.button.reset"), systemImage: "arrow.counterclockwise")
+                                .labelStyle(TightLabelStyle())
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(LippiButtonStyle(kind: .secondary))
                     }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary))
                 }
             }
         }
@@ -467,11 +472,15 @@ struct HealthView: View {
     }
 
     private func formatSessionDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: lang.localeIdentifier)
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        date.formatted(
+            .dateTime
+                .day()
+                .month(.twoDigits)
+                .year()
+                .hour()
+                .minute()
+                .locale(Locale(identifier: lang.localeIdentifier))
+        )
     }
 
     private func commitActiveSegmentIfNeeded() {
@@ -511,6 +520,8 @@ struct HealthView: View {
 
     private func pauseSession(haptic: Bool = true) {
         guard isRunning else { return }
+        phaseBaseProgress = currentPhaseProgress(at: .now)
+        phaseStartedAt = nil
         commitActiveSegmentIfNeeded()
         isRunning = false
         runnerTask?.cancel()
@@ -539,7 +550,8 @@ struct HealthView: View {
         runnerTask?.cancel()
         runnerTask = nil
         phaseIndex = 0
-        phaseProgress = 0
+        phaseBaseProgress = 0
+        phaseStartedAt = nil
         cycleCount = 1
         clearSessionTracking()
 
@@ -550,9 +562,6 @@ struct HealthView: View {
 
     private func runLoop() {
         runnerTask?.cancel()
-
-        let fps = reduceMotion ? 24.0 : 60.0
-        let frameNanos = UInt64((1_000_000_000.0 / fps).rounded())
 
         runnerTask = Task { @MainActor in
             while !Task.isCancelled && self.isRunning {
@@ -566,23 +575,17 @@ struct HealthView: View {
 
                 let step = steps[safeIndex]
                 BreathingHaptics.phase(step.phase)
+                let remainingFraction = max(0, 1 - min(max(self.phaseBaseProgress, 0), 1))
+                let remainingDuration = max(0.01, step.duration * Double(remainingFraction))
+                self.phaseStartedAt = .now
 
-                let totalFrames = max(1, Int((step.duration * fps).rounded()))
-                let startFrame = min(totalFrames, max(0, Int((self.phaseProgress * CGFloat(totalFrames)).rounded())))
+                try? await Task.sleep(
+                    nanoseconds: UInt64((remainingDuration * 1_000_000_000).rounded())
+                )
+                guard !Task.isCancelled && self.isRunning else { return }
 
-                if startFrame >= totalFrames {
-                    self.phaseProgress = 0
-                } else {
-                    for frame in startFrame...totalFrames {
-                        guard !Task.isCancelled && self.isRunning else { return }
-                        self.phaseProgress = CGFloat(frame) / CGFloat(totalFrames)
-                        if frame < totalFrames {
-                            try? await Task.sleep(nanoseconds: frameNanos)
-                        }
-                    }
-                }
-
-                self.phaseProgress = 0
+                self.phaseBaseProgress = 0
+                self.phaseStartedAt = nil
                 if safeIndex + 1 >= steps.count {
                     self.phaseIndex = 0
                     self.cycleCount += 1
@@ -593,39 +596,52 @@ struct HealthView: View {
             }
         }
     }
+
+    private func currentPhaseProgress(at date: Date) -> CGFloat {
+        let base = min(max(phaseBaseProgress, 0), 1)
+        guard isRunning, let phaseStartedAt else { return base }
+        let elapsed = max(0, date.timeIntervalSince(phaseStartedAt))
+        return min(1, base + CGFloat(elapsed / max(activeStep.duration, 0.01)))
+    }
 }
 
 private struct BreathingCoachWidget: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let phase: BreathingPhase
-    let progress: CGFloat
+    let baseProgress: CGFloat
+    let phaseStartedAt: Date?
+    let phaseDuration: TimeInterval
     let isRunning: Bool
     let phaseTitle: String
     let phaseHint: String
 
-    private var phaseProgress: CGFloat {
-        reduceMotion ? (progress > 0 ? 1 : 0) : min(max(progress, 0), 1)
+    private func phaseProgress(at date: Date) -> CGFloat {
+        if reduceMotion { return isRunning ? 1 : min(max(baseProgress, 0), 1) }
+        let base = min(max(baseProgress, 0), 1)
+        guard isRunning, let phaseStartedAt else { return base }
+        let elapsed = max(0, date.timeIntervalSince(phaseStartedAt))
+        return min(1, base + CGFloat(elapsed / max(phaseDuration, 0.01)))
     }
 
-    private var sphereScale: CGFloat {
+    private func sphereScale(progress: CGFloat) -> CGFloat {
         let minScale: CGFloat = 0.72
         let maxScale: CGFloat = 1.0
 
         switch phase {
         case .inhale:
-            return minScale + (maxScale - minScale) * phaseProgress
+            return minScale + (maxScale - minScale) * progress
         case .hold:
             return maxScale
         case .exhale:
-            return maxScale - (maxScale - minScale) * phaseProgress
+            return maxScale - (maxScale - minScale) * progress
         case .rest:
             return minScale
         }
     }
 
-    private var ringProgress: CGFloat {
-        isRunning ? max(0.02, phaseProgress) : 0.02
+    private func ringProgress(progress: CGFloat) -> CGFloat {
+        isRunning ? max(0.02, progress) : 0.02
     }
 
     private var accent: Color {
@@ -642,6 +658,19 @@ private struct BreathingCoachWidget: View {
     }
 
     var body: some View {
+        Group {
+            if isRunning && !reduceMotion {
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                    content(progress: phaseProgress(at: timeline.date))
+                        .transaction { $0.animation = nil }
+                }
+            } else {
+                content(progress: phaseProgress(at: .now))
+            }
+        }
+    }
+
+    private func content(progress: CGFloat) -> some View {
         VStack(spacing: 12) {
             ZStack {
                 Circle()
@@ -667,10 +696,10 @@ private struct BreathingCoachWidget: View {
                             .stroke(DS.glassStroke(0.20), lineWidth: 1)
                     )
                     .frame(width: 188, height: 188)
-                    .scaleEffect(sphereScale)
+                    .scaleEffect(sphereScale(progress: progress))
 
                 Circle()
-                    .trim(from: 0, to: ringProgress)
+                    .trim(from: 0, to: ringProgress(progress: progress))
                     .stroke(
                         AngularGradient(
                             colors: [accent.opacity(0.30), accent, accent.opacity(0.30)],
@@ -747,13 +776,6 @@ private struct BreathingWeekMiniChart: View {
         max(points.map(\.minutes).max() ?? 0, 1)
     }
 
-    private var dayFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: lang.localeIdentifier)
-        formatter.setLocalizedDateFormatFromTemplate("EEE")
-        return formatter
-    }
-
     private func barHeight(for minutes: Int) -> CGFloat {
         let maxHeight: CGFloat = 62
         if minutes <= 0 { return 6 }
@@ -780,7 +802,13 @@ private struct BreathingWeekMiniChart: View {
                             .frame(width: 18, height: barHeight(for: point.minutes))
                     }
 
-                    Text(dayFormatter.string(from: point.date))
+                    Text(
+                        point.date.formatted(
+                            .dateTime
+                                .weekday(.abbreviated)
+                                .locale(Locale(identifier: lang.localeIdentifier))
+                        )
+                    )
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(DS.text(0.62))
                         .lineLimit(1)
@@ -824,6 +852,10 @@ private final class BreathingAnalyticsStore: ObservableObject {
     @Published private(set) var sessions: [BreathingSessionEntry] = []
 
     private let fileURL: URL
+    private let saveQueue = DispatchQueue(label: "BreathingAnalyticsStore.save", qos: .utility)
+    private let loadQueue = DispatchQueue(label: "BreathingAnalyticsStore.load", qos: .userInitiated)
+    private var hasFinishedInitialLoad = false
+    private var needsSaveAfterLoad = false
 
     var totalSessions: Int { sessions.count }
 
@@ -900,17 +932,45 @@ private final class BreathingAnalyticsStore: ObservableObject {
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let decoded = try? JSONDecoder().decode([BreathingSessionEntry].self, from: data) else {
-            sessions = []
-            return
+        let url = fileURL
+        loadQueue.async { [weak self] in
+            let loaded: [BreathingSessionEntry]
+            if let data = try? Data(contentsOf: url),
+               let decoded = try? JSONDecoder().decode([BreathingSessionEntry].self, from: data) {
+                loaded = decoded
+            } else {
+                loaded = []
+            }
+            let sorted = loaded.sorted { $0.startedAt > $1.startedAt }
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if self.sessions.isEmpty {
+                    self.sessions = sorted
+                } else {
+                    let currentIDs = Set(self.sessions.map(\.id))
+                    self.sessions = sorted.filter { !currentIDs.contains($0.id) } + self.sessions
+                }
+                self.hasFinishedInitialLoad = true
+                if self.needsSaveAfterLoad {
+                    self.needsSaveAfterLoad = false
+                    self.save()
+                }
+            }
         }
-        sessions = decoded.sorted { $0.startedAt > $1.startedAt }
     }
 
     private func save() {
-        guard let encoded = try? JSONEncoder().encode(sessions) else { return }
-        try? encoded.write(to: fileURL, options: .atomic)
+        guard hasFinishedInitialLoad else {
+            needsSaveAfterLoad = true
+            return
+        }
+        let snapshot = sessions
+        let url = fileURL
+        saveQueue.async {
+            guard let encoded = try? JSONEncoder().encode(snapshot) else { return }
+            try? encoded.write(to: url, options: .atomic)
+        }
     }
 }
 

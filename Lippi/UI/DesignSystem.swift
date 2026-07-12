@@ -4,7 +4,7 @@ import UIKit
 #endif
 
 // =======================================================
-// MARK: - Design System (iOS26-ish Liquid Glass, improved elements)
+// MARK: - Adaptive Apple design system
 // =======================================================
 struct DS {
     private static var palette: AppThemePalette { AppTheme.current.palette }
@@ -16,6 +16,14 @@ struct DS {
     static var accent: Color { Color(hex: palette.accent) }
     static var backdropBase: Color {
         Color(dynamicDark: palette.backdropDark, light: palette.backdropLight)
+    }
+    static var solidSurface: Color {
+        Color(
+            dynamicDark: palette.bgDarkStops[1],
+            light: palette.bgLightStops[1],
+            darkAlpha: 0.98,
+            lightAlpha: 0.98
+        )
     }
 
     // Brand gradient
@@ -128,17 +136,6 @@ struct DS {
         endPoint: .bottom
     )
 
-    // Specular
-    static let specular = LinearGradient(
-        colors: [
-            Color.white.opacity(0.42),
-            Color.white.opacity(0.14),
-            Color.clear
-        ],
-        startPoint: .topLeading,
-        endPoint: .center
-    )
-
     static let liquidSheen = LinearGradient(
         colors: [
             Color.white.opacity(0.38),
@@ -203,17 +200,9 @@ struct DS {
 
     // Extra polish
     static let hairline: CGFloat = 0.85
-    static let innerGlow = Color(dynamicDark: 0xFFFFFF, light: 0x111827, darkAlpha: 0.06, lightAlpha: 0.04)
-    static let surfaceLift = Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.040, lightAlpha: 0.42)
     static let textPrimary = Color(dynamicDark: 0xFFFFFF, light: 0x0F172A, darkAlpha: 0.95, lightAlpha: 0.95)
     static let textSecondary = Color(dynamicDark: 0xFFFFFF, light: 0x1E293B, darkAlpha: 0.72, lightAlpha: 0.72)
     static let textTertiary = Color(dynamicDark: 0xFFFFFF, light: 0x334155, darkAlpha: 0.56, lightAlpha: 0.56)
-
-    // “Ambient” highlight for pills/buttons
-    static let pillGlow = LinearGradient(
-        colors: [Color.white.opacity(0.20), Color.clear],
-        startPoint: .topLeading, endPoint: .bottomTrailing
-    )
 
     static let cardTopLine = LinearGradient(
         colors: [
@@ -372,11 +361,20 @@ extension View {
         self.overlay(LippiWindowChrome())
     }
 
+    /// Keeps readable content widths on iPad and compact widths on iPhone.
+    func lippiContentColumn(maxWidth: CGFloat = 760, padding: CGFloat = 20) -> some View {
+        self
+            .padding(padding)
+            .frame(maxWidth: maxWidth)
+            .frame(maxWidth: .infinity)
+    }
+
     @ViewBuilder
     func lippiSystemGlass<S: Shape>(
         in shape: S,
         tint: Color? = nil,
         interactive: Bool = false,
+        prominent: Bool = false,
         enabled: Bool = true,
         forceSystemGlass: Bool = false
     ) -> some View {
@@ -385,6 +383,7 @@ extension View {
                 shape: shape,
                 tint: tint,
                 interactive: interactive,
+                prominent: prominent,
                 enabled: enabled,
                 forceSystemGlass: forceSystemGlass
             )
@@ -436,20 +435,53 @@ extension View {
     }
 }
 
+/// Groups nearby Liquid Glass controls into one compositing region on iOS 26.
+/// The fallback deliberately adds no extra layer on older or constrained devices.
+struct LippiGlassEffectGroup<Content: View>: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
+
+    private let spacing: CGFloat?
+    private let content: Content
+
+    init(spacing: CGFloat? = nil, @ViewBuilder content: () -> Content) {
+        self.spacing = spacing
+        self.content = content()
+    }
+
+    @ViewBuilder
+    var body: some View {
+        if #available(iOS 26.0, *),
+           DS.systemGlassEffectsEnabled,
+           !reduceTransparency,
+           !isScrolling {
+            GlassEffectContainer(spacing: spacing) {
+                content
+            }
+        } else {
+            content
+        }
+    }
+}
+
 private struct LippiSystemGlassModifier<S: Shape>: ViewModifier {
     @Environment(\.lippiIsScrolling) private var isScrolling
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     let shape: S
     let tint: Color?
     let interactive: Bool
+    let prominent: Bool
     let enabled: Bool
     let forceSystemGlass: Bool
 
     @ViewBuilder
     func body(content: Content) -> some View {
         let shouldRender = enabled
+            && (interactive || prominent || forceSystemGlass)
             && (forceSystemGlass || DS.systemGlassEffectsEnabled)
             && !isScrolling
+            && !reduceTransparency
         if shouldRender {
             if #available(iOS 26.0, *) {
                 content.glassEffect(
@@ -662,19 +694,6 @@ private struct LippiWindowChrome: View {
                 .frame(height: bottom)
                 .frame(maxHeight: .infinity, alignment: .bottom)
 
-                if !simplified {
-                    AngularGradient(
-                        colors: [
-                            Color.white.opacity(scheme == .dark ? 0.048 : 0.034),
-                            .clear,
-                            Color.white.opacity(scheme == .dark ? 0.032 : 0.022),
-                            .clear
-                        ],
-                        center: .center
-                    )
-                    .opacity(0.68)
-                    .blendMode(.overlay)
-                }
             }
         }
         .ignoresSafeArea()
@@ -698,7 +717,7 @@ struct LippiSectionHeader: View {
     private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 11) {
+        HStack(alignment: .center, spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(DS.glassFill(simplified ? 0.10 : 0.12))
@@ -722,7 +741,7 @@ struct LippiSectionHeader: View {
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(DS.text(0.95))
             }
-            .frame(width: 30, height: 30)
+            .frame(width: 34, height: 34)
             .lippiSystemGlass(
                 in: RoundedRectangle(cornerRadius: 12, style: .continuous),
                 tint: accent.opacity(0.12),
@@ -731,13 +750,13 @@ struct LippiSectionHeader: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(DS.text(0.94))
-                    .singleLine()
+                    .lineLimit(2)
 
                 if let subtitle {
                     Text(subtitle)
-                        .font(.caption2.weight(.semibold))
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(DS.text(0.62))
                         .lineLimit(2)
                         .minimumScaleFactor(0.86)
@@ -746,14 +765,6 @@ struct LippiSectionHeader: View {
             }
 
             Spacer(minLength: 8)
-
-            if !simplified {
-                Circle()
-                    .fill(accent.opacity(0.72))
-                    .frame(width: 5, height: 5)
-                    .shadow(color: accent.opacity(0.45), radius: 5, x: 0, y: 1)
-                    .padding(.trailing, 1)
-            }
         }
         .padding(.bottom, subtitle == nil ? 2 : 4)
     }
@@ -816,7 +827,10 @@ struct GlassCard<Content: View>: View {
         style == .full && !reduceTransparency && !reduceMotion && !scrollPerformanceMode
     }
     private var systemGlassEnabled: Bool {
-        !reduceTransparency && !isScrolling && (!performanceMode || forceSystemGlass)
+        !reduceTransparency
+            && !isScrolling
+            && (style == .full || forceSystemGlass)
+            && (!performanceMode || forceSystemGlass)
     }
     private var systemGlassTint: Color? {
         if useFullEffects { return DS.accent.opacity(0.18) }
@@ -832,16 +846,7 @@ struct GlassCard<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(cardBackground.allowsHitTesting(false))
-            .lippiSystemGlass(
-                in: cardShape,
-                tint: systemGlassTint,
-                enabled: systemGlassEnabled,
-                forceSystemGlass: forceSystemGlass
-            )
             .overlay(cardBorder.allowsHitTesting(false))
-            .overlay(alignment: .bottomTrailing) {
-                fullModeBottomAccent.allowsHitTesting(false)
-            }
             .overlay {
                 if useMagicSheen {
                     LippiLiquidSheen(
@@ -852,18 +857,19 @@ struct GlassCard<Content: View>: View {
                     .clipShape(cardShape)
                 }
             }
-            // двойная тень: мягкая “подушка” + более близкая
+            .lippiSystemGlass(
+                in: cardShape,
+                tint: systemGlassTint,
+                prominent: style == .full,
+                enabled: systemGlassEnabled,
+                forceSystemGlass: forceSystemGlass
+            )
+            // One restrained elevation shadow keeps hierarchy without visual noise.
             .shadow(
                 color: primaryShadowColor,
                 radius: primaryShadowRadius,
                 x: 0,
                 y: primaryShadowY
-            )
-            .shadow(
-                color: secondaryShadowColor,
-                radius: secondaryShadowRadius,
-                x: 0,
-                y: secondaryShadowY
             )
             .opacity(appearOpacity)
             .offset(y: appearOffset)
@@ -901,7 +907,9 @@ struct GlassCard<Content: View>: View {
     @ViewBuilder
     private var cardBackground: some View {
         let shape = cardShape
-        if scrollPerformanceMode {
+        if reduceTransparency {
+            shape.fill(DS.solidSurface)
+        } else if scrollPerformanceMode {
             shape
                 .fill(DS.glassFill(0.085))
                 .overlay { shape.fill(DS.glassTint).opacity(0.11) }
@@ -913,10 +921,8 @@ struct GlassCard<Content: View>: View {
         } else if useLightEffects {
             shape
                 .fill(DS.glassFill(0.095))
-                .overlay { shape.fill(DS.glassDepth).opacity(0.18) }
-                .overlay { shape.fill(DS.glassTint).opacity(0.34) }
-                .overlay { shape.fill(DS.brandIridescent).blendMode(.screen).opacity(0.18) }
-                .overlay { shape.fill(DS.surfaceLift).opacity(0.18) }
+                .overlay { shape.fill(DS.glassDepth).opacity(0.12) }
+                .overlay { shape.fill(DS.glassTint).opacity(0.24) }
         } else {
             fullModeBackground(shape: shape)
         }
@@ -935,67 +941,35 @@ struct GlassCard<Content: View>: View {
                         .blendMode(.overlay)
                 }
             }
-            .overlay {
-                if useFullEffects {
-                    shape
-                        .stroke(DS.innerGlow, lineWidth: 1)
-                        .padding(2)
-                        .blendMode(.screen)
-                }
-            }
-    }
-
-    @ViewBuilder
-    private var fullModeBottomAccent: some View {
-        if useFullEffects {
-            Capsule()
-                .fill(DS.brandIridescent)
-                .frame(width: 68, height: 1.15)
-                .rotationEffect(.degrees(-13))
-                .opacity(0.54)
-                .padding(.trailing, 16)
-                .padding(.bottom, 12)
-        }
     }
 
     private var primaryShadowColor: Color {
         if scrollPerformanceMode { return DS.shadow.opacity(0.06) }
-        return DS.shadow.opacity(useFlatEffects ? 0.08 : (useLightEffects ? 0.20 : 0.36))
+        return DS.shadow.opacity(useFlatEffects ? 0.06 : (useLightEffects ? 0.12 : 0.20))
     }
     private var primaryShadowRadius: CGFloat {
         if scrollPerformanceMode { return 1.2 }
-        return useFlatEffects ? 1.8 : (useLightEffects ? 4 : 12)
+        return useFlatEffects ? 1.8 : (useLightEffects ? 4 : 10)
     }
     private var primaryShadowY: CGFloat {
         if scrollPerformanceMode { return 1 }
-        return useFlatEffects ? 1 : (useLightEffects ? 2 : 7)
+        return useFlatEffects ? 1 : (useLightEffects ? 2 : 5)
     }
-    private var secondaryShadowColor: Color {
-        DS.shadow.opacity(useFlatEffects ? 0.0 : (useFullEffects ? 0.10 : 0.0))
-    }
-    private var secondaryShadowRadius: CGFloat {
-        useFlatEffects ? 0 : (useFullEffects ? 4 : 0)
-    }
-    private var secondaryShadowY: CGFloat {
-        useFlatEffects ? 0 : (useFullEffects ? 2 : 0)
-    }
-
     private func fullModeBackground(shape: RoundedRectangle) -> some View {
         shape
             .fill(DS.glass)
-            .overlay { shape.fill(DS.glassDepth).opacity(0.34) }
-            .overlay { shape.fill(DS.glassTint).opacity(0.80) }
+            .overlay { shape.fill(DS.glassDepth).opacity(0.22) }
+            .overlay { shape.fill(DS.glassTint).opacity(0.46) }
             .overlay {
                 shape
                     .fill(DS.brandIridescent)
-                    .opacity(0.50)
+                    .opacity(0.18)
                     .blendMode(.screen)
             }
-            .overlay { shape.fill(DS.surfaceLift).blendMode(.overlay) }
             .overlay {
                 shape
                     .fill(DS.sheen)
-                    .opacity(0.58)
+                    .opacity(0.24)
                     .blendMode(.screen)
                     .mask(
                         LinearGradient(
@@ -1004,33 +978,6 @@ struct GlassCard<Content: View>: View {
                             endPoint: .center
                         )
                     )
-            }
-            .overlay {
-                shape
-                    .fill(DS.specular)
-                    .opacity(0.54)
-                    .blendMode(.screen)
-                    .mask(
-                        RadialGradient(
-                            colors: [.white, .white.opacity(0)],
-                            center: .topLeading,
-                            startRadius: 0,
-                            endRadius: 220
-                        )
-                    )
-            }
-            .overlay {
-                shape
-                    .fill(
-                        RadialGradient(
-                            colors: [Color.white.opacity(0.18), .clear],
-                            center: .topTrailing,
-                            startRadius: 0,
-                            endRadius: 200
-                        )
-                    )
-                    .blendMode(.screen)
-                    .opacity(0.72)
             }
     }
 }
@@ -1051,6 +998,12 @@ struct LippiButtonStyle: ButtonStyle {
     private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
     private var scrollingEffects: Bool { isScrolling }
     private var systemGlassEnabled: Bool { !simplifiedEffects }
+    private var usesSystemGlass: Bool {
+        if #available(iOS 26.0, *) {
+            return systemGlassEnabled && DS.systemGlassEffectsEnabled
+        }
+        return false
+    }
     private var systemGlassTint: Color? {
         switch kind {
         case .primary:
@@ -1071,15 +1024,9 @@ struct LippiButtonStyle: ButtonStyle {
             .font(.system(.callout, design: .rounded).weight(.semibold))
             .singleLine()
             .padding(.horizontal, compact ? 14 : 18)
-            .padding(.vertical, compact ? 9 : 12)
-            .frame(minHeight: compact ? 34 : 40)
+            .padding(.vertical, compact ? 10 : 12)
+            .frame(minHeight: compact ? 44 : 48)
             .background(background(pressed: pressed))
-            .lippiSystemGlass(
-                in: Capsule(style: .continuous),
-                tint: systemGlassTint,
-                interactive: true,
-                enabled: systemGlassEnabled
-            )
             .overlay(borderOverlay(pressed: pressed))
             .overlay(sheenOverlay(pressed: pressed))
             .foregroundStyle(foreground)
@@ -1087,6 +1034,12 @@ struct LippiButtonStyle: ButtonStyle {
             .opacity(isEnabled ? 1.0 : disabledOpacity)
             .saturation(isEnabled ? 1.0 : 0.86)
             .brightness(isEnabled ? (pressed && !simplifiedEffects ? 0.018 : 0) : -0.02)
+            .lippiSystemGlass(
+                in: Capsule(style: .continuous),
+                tint: systemGlassTint,
+                interactive: true,
+                enabled: systemGlassEnabled
+            )
             .offset(y: reduceMotion ? 0 : (pressed ? 1.2 : 0))
             .scaleEffect(reduceMotion ? 1 : (pressed ? DS.pressScale : 1))
             .shadow(
@@ -1103,53 +1056,82 @@ struct LippiButtonStyle: ButtonStyle {
 
     @ViewBuilder
     private func background(pressed: Bool) -> some View {
-        switch kind {
-        case .primary:
-            Capsule()
-                .fill(DS.brand)
-                .overlay(
-                    Capsule()
-                        .fill(DS.brandIridescent)
-                        .blendMode(.screen)
-                        .opacity(simplifiedEffects ? (pressed ? 0.24 : 0.40) : (pressed ? 0.45 : 0.72))
-                )
-                .opacity(pressed ? 0.92 : 1.0)
-        case .secondary:
-            Capsule()
-                .fill(DS.glassFill(pressed ? 0.18 : 0.13))
-                .overlay(
-                    Capsule()
-                        .fill(DS.glassTint)
-                        .opacity(simplifiedEffects ? (pressed ? 0.10 : 0.18) : (pressed ? 0.18 : 0.34))
-                )
-                .overlay(
-                    Group {
-                        if !simplifiedEffects {
-                            Capsule()
-                                .fill(DS.brandSoftGradient)
-                                .blendMode(.screen)
-                                .opacity(pressed ? 0.12 : 0.26)
-                        }
-                    }
-                )
-        case .destructive:
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.red.opacity(0.34), Color.red.opacity(0.18)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+        if reduceTransparency {
+            switch kind {
+            case .primary:
+                Capsule().fill(DS.brand)
+            case .secondary, .ghost:
+                Capsule().fill(DS.solidSurface)
+            case .destructive:
+                Capsule().fill(
+                    Color(
+                        dynamicDark: 0x5A1A22,
+                        light: 0xFFF0F1,
+                        darkAlpha: 0.98,
+                        lightAlpha: 0.98
                     )
                 )
-                .opacity(pressed ? 0.85 : 1.0)
-        case .ghost:
-            Capsule()
-                .fill(DS.glassFill(pressed ? 0.08 : 0.04))
-                .overlay(
-                    Capsule()
-                        .fill(DS.glassTint)
-                        .opacity(pressed ? 0.10 : 0.18)
-                )
+            }
+        } else if usesSystemGlass {
+            switch kind {
+            case .primary:
+                Capsule().fill(DS.accent.opacity(pressed ? 0.20 : 0.14))
+            case .secondary:
+                Capsule().fill(DS.glassFill(pressed ? 0.08 : 0.035))
+            case .destructive:
+                Capsule().fill(Color.red.opacity(pressed ? 0.18 : 0.11))
+            case .ghost:
+                Capsule().fill(Color.clear)
+            }
+        } else {
+            switch kind {
+            case .primary:
+                Capsule()
+                    .fill(DS.brand)
+                    .overlay(
+                        Capsule()
+                            .fill(DS.brandIridescent)
+                            .blendMode(.screen)
+                            .opacity(simplifiedEffects ? (pressed ? 0.24 : 0.40) : (pressed ? 0.45 : 0.72))
+                    )
+                    .opacity(pressed ? 0.92 : 1.0)
+            case .secondary:
+                Capsule()
+                    .fill(DS.glassFill(pressed ? 0.18 : 0.13))
+                    .overlay(
+                        Capsule()
+                            .fill(DS.glassTint)
+                            .opacity(simplifiedEffects ? (pressed ? 0.10 : 0.18) : (pressed ? 0.18 : 0.34))
+                    )
+                    .overlay(
+                        Group {
+                            if !simplifiedEffects {
+                                Capsule()
+                                    .fill(DS.brandSoftGradient)
+                                    .blendMode(.screen)
+                                    .opacity(pressed ? 0.12 : 0.26)
+                            }
+                        }
+                    )
+            case .destructive:
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.red.opacity(0.34), Color.red.opacity(0.18)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .opacity(pressed ? 0.85 : 1.0)
+            case .ghost:
+                Capsule()
+                    .fill(DS.glassFill(pressed ? 0.08 : 0.04))
+                    .overlay(
+                        Capsule()
+                            .fill(DS.glassTint)
+                            .opacity(pressed ? 0.10 : 0.18)
+                    )
+            }
         }
     }
 
@@ -1158,7 +1140,7 @@ struct LippiButtonStyle: ButtonStyle {
             .strokeBorder(borderColor(pressed: pressed), lineWidth: 1)
             .overlay(
                 Group {
-                    if !simplifiedEffects {
+                    if !simplifiedEffects && !usesSystemGlass {
                         Capsule()
                             .strokeBorder(DS.glassStroke(pressed ? 0.22 : 0.10), lineWidth: 1)
                             .padding(1)
@@ -1169,7 +1151,7 @@ struct LippiButtonStyle: ButtonStyle {
 
     private func sheenOverlay(pressed: Bool) -> some View {
         Group {
-            if !simplifiedEffects {
+            if !simplifiedEffects && !usesSystemGlass {
                 Capsule()
                     .fill(DS.liquidSheen)
                     .opacity(pressed ? 0.10 : (kind == .ghost ? 0.09 : 0.26))

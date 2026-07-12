@@ -10,7 +10,6 @@ struct PomodoroView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
-    @State private var tick: Date = .now
     @State private var customMinutesText: String = ""
     @State private var lastHandledTimerEnd: Date?
 
@@ -45,9 +44,10 @@ struct PomodoroView: View {
     private var isRunning: Bool {
         pomo.phase != .stopped && pomo.phase != .paused && pomo.startDate != nil
     }
+    private var shouldRunTimer: Bool { scenePhase == .active && isRunning }
 
-    private var percentText: String {
-        let p = progress(at: tick)
+    private func percentText(at now: Date) -> String {
+        let p = progress(at: now)
         return "\(Int((p * 100).rounded()))%"
     }
 
@@ -63,97 +63,99 @@ struct PomodoroView: View {
                         // =======================================================
                         // HERO
                         // =======================================================
-                        GlassCard {
-                            VStack(spacing: 14) {
-                                HStack(spacing: 10) {
-                                    Image(safeSystemName: phaseIcon, fallback: "circle")
-                                        .foregroundStyle(DS.text(0.9))
-                                        .padding(10)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                .fill(DS.glassFill(0.10))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                        .fill(DS.brandSoftGradient)
-                                                        .opacity(0.55)
-                                                )
-                                        )
-                                        .lippiSystemGlass(
-                                            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-                                            tint: DS.accent.opacity(0.10)
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                                        )
+                        TimelineView(.animation(minimumInterval: 1.0, paused: !isRunning)) { timeline in
+                            GlassCard {
+                                VStack(spacing: 14) {
+                                    HStack(spacing: 10) {
+                                        Image(safeSystemName: phaseIcon, fallback: "circle")
+                                            .foregroundStyle(DS.text(0.9))
+                                            .padding(10)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                    .fill(DS.glassFill(0.10))
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                            .fill(DS.brandSoftGradient)
+                                                            .opacity(0.55)
+                                                    )
+                                            )
+                                            .lippiSystemGlass(
+                                                in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                                                tint: DS.accent.opacity(0.10)
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                    .stroke(DS.glassStroke(0.14), lineWidth: 1)
+                                            )
 
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(s("pomodoro.hero.title"))
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(DS.text(0.65))
-                                            .singleLine()
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(s("pomodoro.hero.title"))
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(DS.text(0.65))
+                                                .singleLine()
 
-                                        Text(phaseTitle)
-                                            .font(.title2.weight(.semibold))
-                                            .foregroundStyle(DS.text(0.95))
-                                            .singleLine()
-                                    }
+                                            Text(phaseTitle)
+                                                .font(.title2.weight(.semibold))
+                                                .foregroundStyle(DS.text(0.95))
+                                                .singleLine()
+                                        }
 
-                                    Spacer()
+                                        Spacer()
 
-                                    VStack(alignment: .trailing, spacing: 6) {
-                                        phaseStatusChip
-                                        if pomo.round > 0 {
-                                            chip(L10n.fmt("pomodoro.round", lang, pomo.round), systemImage: "circle.grid.2x2")
+                                        VStack(alignment: .trailing, spacing: 6) {
+                                            phaseStatusChip
+                                            if pomo.round > 0 {
+                                                chip(L10n.fmt("pomodoro.round", lang, pomo.round), systemImage: "circle.grid.2x2")
+                                            }
                                         }
                                     }
-                                }
 
-                                if let start = pomo.startDate, let end = pomo.endDate {
-                                    let p = progress(at: tick)
+                                    if let start = pomo.startDate, let end = pomo.endDate {
+                                        let p = progress(at: timeline.date)
 
-                                    RingProgressView(progress: p)
-                                        .transaction { $0.animation = nil }
-                                        .frame(width: 210, height: 210)
-                                        .padding(.top, 4)
+                                        RingProgressView(progress: p)
+                                            .transaction { $0.animation = nil }
+                                            .frame(width: 210, height: 210)
+                                            .padding(.top, 4)
 
-                                    Text(timerInterval: start...end)
-                                        .font(.system(size: 36, weight: .semibold, design: .rounded))
-                                        .monospacedDigit()
-                                        .foregroundStyle(DS.text(0.95))
-                                        .singleLine()
-
-                                    FancyLinearProgressBar(progress: p, height: 12)
-
-                                    HStack(spacing: 10) {
-                                        chip(percentText, systemImage: "chart.bar.fill")
-                                        chip(remainingText(start: start, end: end, now: tick), systemImage: "hourglass")
-                                    }
-                                    .padding(.top, 2)
-
-                                } else if pomo.phase == .paused {
-                                    VStack(spacing: 8) {
-                                        Text(s("pomodoro.paused.title"))
-                                            .font(.title3.weight(.medium))
-                                            .foregroundStyle(DS.text(0.85))
+                                        Text(timerInterval: start...end)
+                                            .font(.system(size: 36, weight: .semibold, design: .rounded))
+                                            .monospacedDigit()
+                                            .foregroundStyle(DS.text(0.95))
                                             .singleLine()
 
-                                        chip(s("pomodoro.paused.subtitle"), systemImage: "play.fill")
-                                    }
-                                    .padding(.vertical, 10)
-                                } else {
-                                    VStack(spacing: 8) {
-                                        Text(s("pomodoro.ready.title"))
-                                            .font(.title3.weight(.medium))
-                                            .foregroundStyle(DS.text(0.85))
-                                            .singleLine()
+                                        FancyLinearProgressBar(progress: p, height: 12)
 
-                                        chip(s("pomodoro.ready.subtitle"), systemImage: "bolt.fill")
+                                        HStack(spacing: 10) {
+                                            chip(percentText(at: timeline.date), systemImage: "chart.bar.fill")
+                                            chip(remainingText(start: start, end: end, now: timeline.date), systemImage: "hourglass")
+                                        }
+                                        .padding(.top, 2)
+
+                                    } else if pomo.phase == .paused {
+                                        VStack(spacing: 8) {
+                                            Text(s("pomodoro.paused.title"))
+                                                .font(.title3.weight(.medium))
+                                                .foregroundStyle(DS.text(0.85))
+                                                .singleLine()
+
+                                            chip(s("pomodoro.paused.subtitle"), systemImage: "play.fill")
+                                        }
+                                        .padding(.vertical, 10)
+                                    } else {
+                                        VStack(spacing: 8) {
+                                            Text(s("pomodoro.ready.title"))
+                                                .font(.title3.weight(.medium))
+                                                .foregroundStyle(DS.text(0.85))
+                                                .singleLine()
+
+                                            chip(s("pomodoro.ready.subtitle"), systemImage: "bolt.fill")
+                                        }
+                                        .padding(.vertical, 10)
                                     }
-                                    .padding(.vertical, 10)
                                 }
+                                .animation(reduceMotion ? nil : DS.motionState, value: pomo.phase)
                             }
-                            .animation(reduceMotion ? nil : DS.motionState, value: pomo.phase)
                         }
                         .lippiMotionScene(0)
 
@@ -174,25 +176,27 @@ struct PomodoroView: View {
                                         .padding(.top, 2)
                                 }
 
-                                HStack(spacing: 12) {
-                                    Button { startFocus(25) } label: {
-                                        Label("25", systemImage: "play.fill")
-                                            .labelStyle(TightLabelStyle())
-                                            .frame(maxWidth: .infinity)
-                                    }
-                                    .buttonStyle(LippiButtonStyle(kind: .primary))
+                                LippiGlassEffectGroup(spacing: 12) {
+                                    HStack(spacing: 12) {
+                                        Button { startFocus(25) } label: {
+                                            Label("25", systemImage: "play.fill")
+                                                .labelStyle(TightLabelStyle())
+                                                .frame(maxWidth: .infinity)
+                                        }
+                                        .buttonStyle(LippiButtonStyle(kind: .primary))
 
-                                    Button { startFocus(50) } label: {
-                                        Text("50").singleLine().frame(maxWidth: .infinity)
-                                    }
-                                    .buttonStyle(LippiButtonStyle(kind: .secondary))
+                                        Button { startFocus(50) } label: {
+                                            Text("50").singleLine().frame(maxWidth: .infinity)
+                                        }
+                                        .buttonStyle(LippiButtonStyle(kind: .secondary))
 
-                                    Button { pomo.startShortBreak() } label: {
-                                        Label(s("pomodoro.quick.break"), systemImage: "cup.and.saucer")
-                                            .labelStyle(TightLabelStyle())
-                                            .frame(maxWidth: .infinity)
+                                        Button { pomo.startShortBreak() } label: {
+                                            Label(s("pomodoro.quick.break"), systemImage: "cup.and.saucer")
+                                                .labelStyle(TightLabelStyle())
+                                                .frame(maxWidth: .infinity)
+                                        }
+                                        .buttonStyle(LippiButtonStyle(kind: .secondary))
                                     }
-                                    .buttonStyle(LippiButtonStyle(kind: .secondary))
                                 }
                             }
                         }
@@ -282,29 +286,31 @@ struct PomodoroView: View {
                                     accent: Color(hex: 0x30D158)
                                 )
 
-                                HStack(spacing: 12) {
-                                    Button(action: { pomo.pause() }) {
-                                        Label(s("pomodoro.transport.pause"), systemImage: "pause.fill")
-                                            .labelStyle(TightLabelStyle())
-                                            .frame(maxWidth: .infinity)
-                                    }
-                                    .disabled(pomo.phase == .stopped || pomo.phase == .paused)
-                                    .buttonStyle(LippiButtonStyle(kind: .secondary))
+                                LippiGlassEffectGroup(spacing: 12) {
+                                    HStack(spacing: 12) {
+                                        Button(action: { pomo.pause() }) {
+                                            Label(s("pomodoro.transport.pause"), systemImage: "pause.fill")
+                                                .labelStyle(TightLabelStyle())
+                                                .frame(maxWidth: .infinity)
+                                        }
+                                        .disabled(pomo.phase == .stopped || pomo.phase == .paused)
+                                        .buttonStyle(LippiButtonStyle(kind: .secondary))
 
-                                    Button(action: { pomo.resume() }) {
-                                        Label(s("pomodoro.transport.resume"), systemImage: "play.fill")
-                                            .labelStyle(TightLabelStyle())
-                                            .frame(maxWidth: .infinity)
-                                    }
-                                    .disabled(pomo.phase != .paused)
-                                    .buttonStyle(LippiButtonStyle(kind: .primary))
+                                        Button(action: { pomo.resume() }) {
+                                            Label(s("pomodoro.transport.resume"), systemImage: "play.fill")
+                                                .labelStyle(TightLabelStyle())
+                                                .frame(maxWidth: .infinity)
+                                        }
+                                        .disabled(pomo.phase != .paused)
+                                        .buttonStyle(LippiButtonStyle(kind: .primary))
 
-                                    Button(action: { pomo.stop() }) {
-                                        Label(s("pomodoro.transport.stop"), systemImage: "stop.fill")
-                                            .labelStyle(TightLabelStyle())
-                                            .frame(maxWidth: .infinity)
+                                        Button(action: { pomo.stop() }) {
+                                            Label(s("pomodoro.transport.stop"), systemImage: "stop.fill")
+                                                .labelStyle(TightLabelStyle())
+                                                .frame(maxWidth: .infinity)
+                                        }
+                                        .buttonStyle(LippiButtonStyle(kind: .destructive))
                                     }
-                                    .buttonStyle(LippiButtonStyle(kind: .destructive))
                                 }
                             }
                         }
@@ -313,30 +319,32 @@ struct PomodoroView: View {
                         // ✅ воздух под TabBar
                         Color.clear.frame(height: 84)
                     }
-                    .padding(20)
+                    .lippiContentColumn()
                 }
                 .lippiScrollPerformance()
             }
             .navigationTitle(s("pomodoro.nav_title"))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearNavBarBackgroundIfAvailable()
 
             // ✅ нижний отступ под TabBar (на всякий, если скролл короткий)
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 92) }
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 88) }
 
-            .onReceive(Timer.publish(every: 1.0, tolerance: 0.12, on: .main, in: .common).autoconnect()) { t in
-                guard scenePhase == .active else { return }
-                guard isRunning else { return }
-                tick = t
-                guard let end = pomo.endDate else { return }
-                if end <= t,
-                   pomo.phase != .stopped,
-                   pomo.phase != .paused,
-                   pomo.startDate != nil {
-                    guard lastHandledTimerEnd != end else { return }
-                    lastHandledTimerEnd = end
-                    PomodoroAlarmCenter.shared.start(phaseTitle: phaseTitle)
-                    pomo.advance()
+            .task(id: shouldRunTimer) {
+                guard shouldRunTimer else { return }
+                while !Task.isCancelled {
+                    let now = Date.now
+                    if let end = pomo.endDate,
+                       end <= now,
+                       pomo.phase != .stopped,
+                       pomo.phase != .paused,
+                       pomo.startDate != nil,
+                       lastHandledTimerEnd != end {
+                        lastHandledTimerEnd = end
+                        PomodoroAlarmCenter.shared.start(phaseTitle: phaseTitle)
+                        pomo.advance()
+                    }
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
                 }
             }
         }

@@ -112,6 +112,8 @@ final class EyeExerciseStore: ObservableObject {
     private let settingsURL: URL
     private let historyURL: URL
     private let achieveURL: URL
+    private let ioQueue = DispatchQueue(label: "EyeExerciseStore.io", qos: .utility)
+    private var pendingSettingsSave: DispatchWorkItem?
 
     private var lastSuggestedAt: Date?
 
@@ -126,12 +128,7 @@ final class EyeExerciseStore: ObservableObject {
         } else {
             self.settings = EyeExerciseSettings()
         }
-        if let data = try? Data(contentsOf: historyURL), let h = try? JSONDecoder().decode([EyeSessionHistory].self, from: data) {
-            self.history = h
-        }
-        if let data = try? Data(contentsOf: achieveURL), let a = try? JSONDecoder().decode(Set<EyeAchievement>.self, from: data) {
-            self.achievements = a
-        }
+        loadAuxiliaryData()
 
         // Auto-suggest hook
         NotificationCenter.default.addObserver(forName: .focusWorkLogged, object: nil, queue: .main) { [weak self] note in
@@ -182,9 +179,61 @@ final class EyeExerciseStore: ObservableObject {
         if !added.isEmpty { achievements.formUnion(added); saveAchievements() }
     }
 
-    private func saveSettings() { try? JSONEncoder().encode(settings).write(to: settingsURL, options: .atomic) }
-    private func saveHistory()  { try? JSONEncoder().encode(history ).write(to: historyURL,  options: .atomic) }
-    private func saveAchievements() { try? JSONEncoder().encode(achievements).write(to: achieveURL, options: .atomic) }
+    private func loadAuxiliaryData() {
+        let historyURL = historyURL
+        let achieveURL = achieveURL
+        ioQueue.async { [weak self] in
+            let loadedHistory: [EyeSessionHistory]
+            if let data = try? Data(contentsOf: historyURL),
+               let decoded = try? JSONDecoder().decode([EyeSessionHistory].self, from: data) {
+                loadedHistory = decoded
+            } else {
+                loadedHistory = []
+            }
+
+            let loadedAchievements: Set<EyeAchievement>
+            if let data = try? Data(contentsOf: achieveURL),
+               let decoded = try? JSONDecoder().decode(Set<EyeAchievement>.self, from: data) {
+                loadedAchievements = decoded
+            } else {
+                loadedAchievements = []
+            }
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                let currentIDs = Set(self.history.map(\.id))
+                self.history = loadedHistory.filter { !currentIDs.contains($0.id) } + self.history
+                self.achievements.formUnion(loadedAchievements)
+            }
+        }
+    }
+
+    private func saveSettings() {
+        pendingSettingsSave?.cancel()
+        let snapshot = settings
+        let url = settingsURL
+        let work = DispatchWorkItem {
+            try? JSONEncoder().encode(snapshot).write(to: url, options: .atomic)
+        }
+        pendingSettingsSave = work
+        ioQueue.asyncAfter(deadline: .now() + 0.25, execute: work)
+    }
+
+    private func saveHistory() {
+        let snapshot = history
+        let url = historyURL
+        ioQueue.async {
+            try? JSONEncoder().encode(snapshot).write(to: url, options: .atomic)
+        }
+    }
+
+    private func saveAchievements() {
+        let snapshot = achievements
+        let url = achieveURL
+        ioQueue.async {
+            try? JSONEncoder().encode(snapshot).write(to: url, options: .atomic)
+        }
+    }
 }
 
 // =======================================================
@@ -210,6 +259,7 @@ struct EyeFeedback {
 // =======================================================
 struct EyeExerciseGameView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.lippiIsScrolling) private var isScrolling
     @EnvironmentObject private var store: EyeExerciseStore
@@ -267,7 +317,11 @@ struct EyeExerciseGameView: View {
     private var cfg: EyeExerciseSettings { store.settings }
     private var progress: Double { Double(hits + misses) / Double(max(1, cfg.targetsPerSession)) }
     private var frameInterval: TimeInterval {
-        DS.animationFrameInterval(active: true, reduceMotion: reduceMotion, isScrolling: isScrolling)
+        (reduceMotion || isScrolling || DS.runtimeConstrained) ? (1.0 / 30.0) : (1.0 / 60.0)
+    }
+    private var gameLoopInterval: TimeInterval? {
+        guard scenePhase == .active, state == .playing || state == .onBreak else { return nil }
+        return frameInterval
     }
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
@@ -314,9 +368,14 @@ struct EyeExerciseGameView: View {
             .padding(20)
         }
         .onAppear { bootstrap() }
-        .onReceive(Timer.publish(every: frameInterval, tolerance: frameInterval * 0.25, on: .main, in: .common).autoconnect()) { t in
-            guard state == .playing || state == .onBreak else { return }
-            tick(t)
+        .task(id: gameLoopInterval) {
+            guard let interval = gameLoopInterval else { return }
+            while !Task.isCancelled {
+                tick(.now)
+                try? await Task.sleep(
+                    nanoseconds: UInt64((interval * 1_000_000_000).rounded())
+                )
+            }
         }
     }
 

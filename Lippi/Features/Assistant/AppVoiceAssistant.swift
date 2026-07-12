@@ -1778,6 +1778,7 @@ struct AppVoiceAssistantSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.lippiIsScrolling) private var isScrolling
 
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
 
@@ -1892,17 +1893,18 @@ struct AppVoiceAssistantSheet: View {
 
     private var liquidAmbient: some View {
         let tones = assistant.state.liquidTones
+        let simplified = reduceTransparency || isScrolling
         return ZStack {
             Circle()
-                .fill(tones[0].opacity(reduceTransparency ? 0.10 : 0.22))
+                .fill(tones[0].opacity(simplified ? 0.08 : 0.22))
                 .frame(width: 260, height: 260)
-                .blur(radius: reduceTransparency ? 0 : 56)
+                .blur(radius: simplified ? 0 : 56)
                 .offset(x: -138, y: -305)
 
             Circle()
-                .fill(tones[1].opacity(reduceTransparency ? 0.08 : 0.20))
+                .fill(tones[1].opacity(simplified ? 0.06 : 0.20))
                 .frame(width: 230, height: 230)
-                .blur(radius: reduceTransparency ? 0 : 50)
+                .blur(radius: simplified ? 0 : 50)
                 .offset(x: 155, y: -185)
         }
         .allowsHitTesting(false)
@@ -2117,6 +2119,8 @@ struct VoiceAssistantLauncherButton: View {
     @State private var didTriggerTouchDownTap = false
 
     let title: String
+    let actionTitle: String
+    let openTitle: String
     let state: AppVoiceAssistantState
     let onTap: () -> Void
     let onLongPress: () -> Void
@@ -2149,19 +2153,7 @@ struct VoiceAssistantLauncherButton: View {
                 )
                 .overlay(
                     Circle()
-                        .fill(DS.liquidSheen)
-                )
-                .overlay(
-                    LippiLiquidSheen(
-                        cornerRadius: 28,
-                        duration: state.isActive ? 2.8 : 5.8,
-                        intensity: state.isActive ? 1.05 : 0.70
-                    )
-                    .clipShape(Circle())
-                )
-                .overlay(
-                    Circle()
-                        .stroke(.white.opacity(0.28), lineWidth: 1)
+                        .stroke(.white.opacity(state.isActive ? 0.34 : 0.20), lineWidth: 1)
                 )
 
             Image(systemName: state.liquidIcon)
@@ -2176,7 +2168,14 @@ struct VoiceAssistantLauncherButton: View {
         .animation(reduceMotion ? nil : DS.motionMagic, value: state.isActive)
         .animation(reduceMotion ? nil : DS.motionMagic, value: isPressed)
         .accessibilityLabel(Text(title))
+        .accessibilityHint(Text(actionTitle))
         .accessibilityAddTraits(.isButton)
+        .accessibilityAction {
+            onTap()
+        }
+        .accessibilityAction(named: Text(openTitle)) {
+            onLongPress()
+        }
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in

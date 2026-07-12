@@ -14,6 +14,7 @@ private enum AuthMode: String, CaseIterable {
 
 struct AppRootView: View {
     @EnvironmentObject private var auth: AuthStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -29,9 +30,12 @@ struct AppRootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            DS.backdropBase.ignoresSafeArea()
+        }
         .ignoresSafeArea()
-        .animation(DS.motionNavigate, value: auth.isRestoring)
-        .animation(DS.motionNavigate, value: auth.isAuthenticated)
+        .animation(reduceMotion ? nil : DS.motionNavigate, value: auth.isRestoring)
+        .animation(reduceMotion ? nil : DS.motionNavigate, value: auth.isAuthenticated)
         .task {
             auth.bootstrapIfNeeded()
         }
@@ -60,6 +64,7 @@ private struct AuthLoadingView: View {
 }
 
 struct AuthView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var auth: AuthStore
 
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
@@ -92,12 +97,11 @@ struct AuthView: View {
                     securityCard
                         .lippiMotionScene(4)
                 }
-                .padding(20)
+                .lippiContentColumn(maxWidth: 680)
             }
             .scrollIndicators(.hidden)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
         .alert(t(.auth_error_title), isPresented: Binding(
             get: { auth.errorMessage != nil },
             set: { if !$0 { auth.errorMessage = nil } }
@@ -185,6 +189,7 @@ struct AuthView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 9)
+                            .frame(minHeight: 44)
                             .background(DS.glassFill(lang == option ? 0.15 : 0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .lippiSystemGlass(
                                 in: RoundedRectangle(cornerRadius: 12, style: .continuous),
@@ -230,7 +235,7 @@ struct AuthView: View {
                 HStack(spacing: 8) {
                     ForEach(AuthMode.allCases, id: \.rawValue) { item in
                         Button {
-                            withAnimation(DS.motionState) {
+                            withAnimation(reduceMotion ? nil : DS.motionState) {
                                 mode = item
                             }
                         } label: {
@@ -238,6 +243,7 @@ struct AuthView: View {
                                 .font(.footnote.weight(.semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
+                                .frame(minHeight: 44)
                                 .background(
                                     Capsule(style: .continuous)
                                         .fill(mode == item ? AnyShapeStyle(DS.brand) : AnyShapeStyle(DS.glassFill(0.08)))
@@ -252,7 +258,7 @@ struct AuthView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .animation(DS.motionState, value: mode)
+                .animation(reduceMotion ? nil : DS.motionState, value: mode)
 
                 Text(modeSubtitle(mode))
                     .font(.caption)
@@ -307,6 +313,7 @@ struct AuthView: View {
                         } label: {
                             Image(safeSystemName: showPassword ? "eye.slash.fill" : "eye.fill", fallback: "eye")
                                 .foregroundStyle(DS.text(0.75))
+                                .frame(width: 44, height: 44)
                         }
                         .buttonStyle(.plain)
                     }
@@ -321,7 +328,6 @@ struct AuthView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .primary))
-                .buttonStyle(PressScaleStyle(scale: 0.985, opacity: 0.95))
                 .disabled(!canSubmit || auth.isBusy)
 
                 if auth.isBusy {
@@ -331,8 +337,8 @@ struct AuthView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.94)))
                 }
             }
-            .animation(DS.motionState, value: mode)
-            .animation(DS.motionState, value: auth.isBusy)
+            .animation(reduceMotion ? nil : DS.motionState, value: mode)
+            .animation(reduceMotion ? nil : DS.motionState, value: auth.isBusy)
         }
     }
 

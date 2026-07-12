@@ -90,8 +90,18 @@ enum AppTheme: String, CaseIterable, Identifiable {
         }
     }
 
+    private static let paletteCache: [AppTheme: AppThemePalette] = {
+        Dictionary(uniqueKeysWithValues: AppTheme.allCases.map { theme in
+            (theme, makePalette(for: theme))
+        })
+    }()
+
     var palette: AppThemePalette {
-        switch self {
+        Self.paletteCache[self] ?? Self.makePalette(for: Self.defaultTheme)
+    }
+
+    private static func makePalette(for theme: AppTheme) -> AppThemePalette {
+        switch theme {
         case .aurora:
             return AppThemePalette(
                 brandA: 0x0A84FF,

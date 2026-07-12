@@ -170,7 +170,7 @@ struct GoalPlannerView: View {
 
                         Color.clear.frame(height: 72)
                     }
-                    .padding(20)
+                    .lippiContentColumn()
                 }
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
@@ -178,11 +178,10 @@ struct GoalPlannerView: View {
             }
             .navigationTitle(s("goals.nav_title"))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearNavBarBackgroundIfAvailable()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(s("common.close")) { dismiss() }
-                        .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -202,7 +201,7 @@ struct GoalPlannerView: View {
             padding: 8,
             cornerRadius: 24,
             style: .lightweight,
-            forceSystemGlass: !reduceTransparency
+            forceSystemGlass: false
         ) {
             HStack(spacing: 8) {
                 ForEach(GoalPlannerMode.allCases) { mode in
@@ -271,7 +270,7 @@ struct GoalPlannerView: View {
             padding: 0,
             cornerRadius: 30,
             style: .full,
-            forceSystemGlass: !reduceTransparency
+            forceSystemGlass: false
         ) {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 14) {
@@ -713,7 +712,7 @@ struct GoalPlannerView: View {
             padding: 0,
             cornerRadius: 30,
             style: .full,
-            forceSystemGlass: !reduceTransparency
+            forceSystemGlass: false
         ) {
             VStack(spacing: 0) {
                 roadmapChatHeader(brief, showsCloseButton: false)
@@ -886,7 +885,7 @@ struct GoalPlannerView: View {
                 .lippiSystemGlass(
                     in: Rectangle(),
                     tint: DS.accent.opacity(0.04),
-                    forceSystemGlass: !reduceTransparency
+                    forceSystemGlass: false
                 )
                 .ignoresSafeArea()
 
@@ -894,7 +893,7 @@ struct GoalPlannerView: View {
                 padding: 0,
                 cornerRadius: 32,
                 style: .full,
-                forceSystemGlass: !reduceTransparency
+                forceSystemGlass: false
             ) {
                 VStack(spacing: 0) {
                     roadmapChatHeader(brief)
@@ -1150,7 +1149,9 @@ struct GoalPlannerView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                TimelineView(.animation(minimumInterval: reduceMotion ? 1.0 / 12.0 : 1.0 / 30.0)) { timeline in
+                // The visible state changes once per step, so a display-linked
+                // schedule only burns frame budget while networking is active.
+                TimelineView(.periodic(from: .now, by: 1.15)) { timeline in
                     let activeStep = Int(timeline.date.timeIntervalSinceReferenceDate / 1.15) % processingSteps.count
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -1165,7 +1166,7 @@ struct GoalPlannerView: View {
         .lippiSystemGlass(
             in: RoundedRectangle(cornerRadius: 22, style: .continuous),
             tint: DS.accent.opacity(0.08),
-            forceSystemGlass: !reduceTransparency
+            forceSystemGlass: false
         )
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(DS.glassStroke(0.13), lineWidth: 1))
         .lippiMagicAppear(delay: 0.02, y: 10, scale: 0.975)
@@ -1262,34 +1263,24 @@ struct GoalPlannerView: View {
     }
 
     private var processingEmblem: some View {
-        TimelineView(.animation(minimumInterval: DS.animationFrameInterval(active: isGenerating, reduceMotion: reduceMotion, isScrolling: isScrolling))) { timeline in
-            let fraction = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.45) / 1.45
+        ZStack {
+            Circle()
+                .stroke(DS.accent.opacity(0.18), lineWidth: 7)
 
-            ZStack {
-                Circle()
-                    .stroke(DS.accent.opacity(0.18), lineWidth: 7)
+            ProgressView()
+                .controlSize(.large)
+                .tint(DS.accent)
 
-                Circle()
-                    .trim(from: 0.08, to: 0.72)
-                    .stroke(
-                        DS.accent,
-                        style: StrokeStyle(lineWidth: 7, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(fraction * 360))
-
-                Image(safeSystemName: "sparkles", fallback: "wand.and.stars")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(DS.textPrimary)
-                    .symbolEffect(.pulse, options: .repeating)
-            }
-            .frame(width: 74, height: 74)
-            .lippiSystemGlass(
-                in: Circle(),
-                tint: DS.accent.opacity(0.12),
-                forceSystemGlass: !reduceTransparency
-            )
+            Image(safeSystemName: "sparkles", fallback: "wand.and.stars")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(DS.textPrimary)
         }
         .frame(width: 74, height: 74)
+        .lippiSystemGlass(
+            in: Circle(),
+            tint: DS.accent.opacity(0.12),
+            forceSystemGlass: false
+        )
     }
 
     private var processingSteps: [(title: String, icon: String)] {
@@ -2291,7 +2282,11 @@ struct GoalPlannerView: View {
                 .opacity(0.28)
                 .ignoresSafeArea()
         )
-        .lippiSystemGlass(in: Rectangle(), tint: DS.accent.opacity(0.05))
+        .lippiSystemGlass(
+            in: Rectangle(),
+            tint: DS.accent.opacity(0.05),
+            prominent: true
+        )
     }
 
     private var chatComposerField: some View {
@@ -3238,7 +3233,7 @@ struct GoalPlanProgressAudit: Codable, Hashable {
     var daysSinceRoadmapCreated: Int
     var oldestActiveTaskAgeDays: Int
     var overdueExamples: [String]
-    var missedTasks: [GoalMissedTask]
+    var missedTasks: [GoalMissedTask] = []
     var nextActiveTask: String?
 
     var completionRate: Double {

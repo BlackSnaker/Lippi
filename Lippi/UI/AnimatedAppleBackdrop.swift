@@ -92,7 +92,10 @@ struct AnimatedAppleBackdrop: View {
 extension View {
     @ViewBuilder
     func clearNavBarBackgroundIfAvailable() -> some View {
-        if #available(iOS 16.0, *) {
+        if #available(iOS 26.0, *) {
+            // Let the standard navigation bar adopt Liquid Glass automatically.
+            self
+        } else if #available(iOS 16.0, *) {
             self
                 .toolbarBackground(.clear, for: .navigationBar)
                 .toolbarBackgroundVisibility(.visible, for: .navigationBar)

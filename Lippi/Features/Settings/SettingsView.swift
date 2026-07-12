@@ -13,6 +13,9 @@ import UIKit
 // MARK: - Settings (glass, dark Apple-style backdrop) — polished elements
 // =======================================================
 struct SettingsView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var eye: EyeExerciseStore
     @EnvironmentObject private var store: TaskStore
@@ -44,11 +47,8 @@ struct SettingsView: View {
     private var tasksDoneCount: Int { store.tasks.filter { $0.isCompleted }.count }
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private var rightColWidth: CGFloat {
-        #if os(iOS)
-        UIScreen.main.bounds.width < 390 ? 136 : rightColWidthBase
-        #else
-        rightColWidthBase
-        #endif
+        if dynamicTypeSize.isAccessibilitySize { return 120 }
+        return horizontalSizeClass == .compact ? min(148, rightColWidthBase) : rightColWidthBase
     }
 
     private func t(_ key: L10nKey) -> String {
@@ -241,19 +241,19 @@ struct SettingsView: View {
                                     .lippiMotionScene(2)
                             }
                         }
-                        .padding(20)
+                        .lippiContentColumn()
                     }
-                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 92) }
+                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 88) }
                     .lippiScrollPerformance()
                     .onChange(of: selectedScope) { _, newScope in
                         let target = primaryAnchor(for: newScope)
                         DispatchQueue.main.async {
-                            withAnimation(DS.motionNavigate) {
+                            withAnimation(reduceMotion ? nil : DS.motionNavigate) {
                                 proxy.scrollTo(target, anchor: .top)
                             }
                         }
                     }
-                    .animation(DS.motionState, value: selectedScope)
+                    .animation(reduceMotion ? nil : DS.motionState, value: selectedScope)
                 }
                 #if os(iOS)
                 .scrollIndicators(.hidden)
@@ -261,7 +261,7 @@ struct SettingsView: View {
             }
             .navigationTitle(t(.settings_nav_title))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearNavBarBackgroundIfAvailable()
             .alert(t(.settings_alert_clear_title), isPresented: $confirmClear) {
                 Button(t(.common_delete), role: .destructive) { store.clearAll() }
                 Button(t(.common_cancel), role: .cancel) { }
@@ -440,7 +440,6 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .secondary))
-                .buttonStyle(PressScaleStyle(scale: 0.985, opacity: 0.95))
             }
         }
     }
@@ -462,7 +461,7 @@ struct SettingsView: View {
 
             let target = primaryAnchor(for: scope)
             DispatchQueue.main.async {
-                withAnimation(DS.motionNavigate) {
+                withAnimation(reduceMotion ? nil : DS.motionNavigate) {
                     proxy.scrollTo(target, anchor: .top)
                 }
             }
@@ -491,7 +490,7 @@ struct SettingsView: View {
             #if os(iOS)
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             #endif
-            withAnimation(DS.motionNavigate) {
+            withAnimation(reduceMotion ? nil : DS.motionNavigate) {
                 proxy.scrollTo(item.anchor, anchor: .top)
             }
         } label: {
@@ -810,7 +809,6 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .primary))
-                .buttonStyle(PressScaleStyle())
 
                 Button { daily.testFireIn(3) } label: {
                     Label(s("settings.daily.test"), systemImage: "paperplane.fill")
@@ -818,7 +816,6 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .secondary))
-                .buttonStyle(PressScaleStyle())
             }
 
             Text(s("settings.daily.info"))
@@ -924,7 +921,6 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(LippiButtonStyle(kind: .primary))
-            .buttonStyle(PressScaleStyle())
         }
     }
 
@@ -1139,7 +1135,6 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .primary))
-                .buttonStyle(PressScaleStyle())
                 .disabled(!healthVoiceEnabled)
                 .opacity(healthVoiceEnabled ? 1 : 0.62)
 
@@ -1151,7 +1146,6 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .secondary))
-                .buttonStyle(PressScaleStyle())
                 .disabled(!healthVoiceAssistant.isSpeaking)
                 .opacity(healthVoiceAssistant.isSpeaking ? 1 : 0.70)
             }
@@ -1180,7 +1174,6 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(LippiButtonStyle(kind: .destructive))
-            .buttonStyle(PressScaleStyle(scale: 0.985, opacity: 0.95))
         }
     }
 
@@ -1554,7 +1547,7 @@ struct SettingsView: View {
         valueText: String,
         control: () -> some View
     ) -> some View {
-        HStack(alignment: .center, spacing: 10) {
+        let rowLabel = HStack(alignment: .top, spacing: 10) {
             Image(safeSystemName: icon, fallback: icon)
                 .foregroundStyle(DS.text(0.86))
                 .frame(width: 22, height: 22, alignment: .center)
@@ -1562,31 +1555,44 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .foregroundStyle(DS.text(0.94))
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .layoutPriority(2)
 
                 Text(subtitle)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(DS.text(0.55))
                     .lineLimit(2)
                     .layoutPriority(1)
             }
             .fixedSize(horizontal: false, vertical: true)
+        }
 
-            Spacer(minLength: 8)
+        let trailingControl = VStack(alignment: .trailing, spacing: 6) {
+            Text(valueText)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(DS.text(0.78))
+                .monospacedDigit()
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .trailing)
 
-            VStack(alignment: .trailing, spacing: 6) {
-                Text(valueText)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(DS.text(0.78))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+            control()
+        }
 
-                control()
-                    .scaleEffect(0.98)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 12) {
+                    rowLabel
+                    trailingControl
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            } else {
+                HStack(alignment: .center, spacing: 10) {
+                    rowLabel
+                    Spacer(minLength: 8)
+                    trailingControl
+                        .frame(width: rightColWidth, alignment: .trailing)
+                }
             }
-            .frame(width: rightColWidth, alignment: .trailing)
         }
         .padding(.horizontal, rowHInset)
         .padding(.vertical, rowVInset)
@@ -1616,7 +1622,7 @@ struct SettingsView: View {
         title: String,
         subtitle: String
     ) -> some View {
-        HStack(alignment: .center, spacing: 10) {
+        let rowLabel = HStack(alignment: .top, spacing: 10) {
             Image(safeSystemName: icon, fallback: icon)
                 .foregroundStyle(DS.text(0.86))
                 .frame(width: 22, height: 22, alignment: .center)
@@ -1624,20 +1630,19 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .foregroundStyle(DS.text(0.94))
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .layoutPriority(2)
 
                 Text(subtitle)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(DS.text(0.55))
                     .lineLimit(2)
                     .layoutPriority(1)
             }
             .fixedSize(horizontal: false, vertical: true)
+        }
 
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 7) {
+        let trailingControl = VStack(alignment: .trailing, spacing: 7) {
                 Menu {
                     ForEach(PomodoroRingtone.allCases) { tone in
                         Button {
@@ -1667,6 +1672,7 @@ struct SettingsView: View {
                     .foregroundStyle(DS.text(0.88))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
+                    .frame(minHeight: 44)
                     .background(DS.glassFill(0.10), in: Capsule())
                     .overlay(
                         Capsule()
@@ -1689,6 +1695,7 @@ struct SettingsView: View {
                         .foregroundStyle(DS.text(0.84))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
+                        .frame(minHeight: 44)
                         .background(DS.glassFill(0.10), in: Capsule())
                         .overlay(
                             Capsule()
@@ -1697,8 +1704,23 @@ struct SettingsView: View {
                         )
                 }
                 .buttonStyle(PressScaleStyle(scale: 0.99, opacity: 0.96))
+        }
+
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 12) {
+                    rowLabel
+                    trailingControl
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            } else {
+                HStack(alignment: .center, spacing: 10) {
+                    rowLabel
+                    Spacer(minLength: 8)
+                    trailingControl
+                        .frame(minWidth: rightColWidth, alignment: .trailing)
+                }
             }
-            .frame(minWidth: rightColWidth, alignment: .trailing)
         }
         .padding(.horizontal, rowHInset)
         .padding(.vertical, rowVInset)
@@ -1875,7 +1897,6 @@ struct CountdownSettingsSection: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .primary))
-                .buttonStyle(PressScaleStyle())
 
                 Button(role: .destructive) { countdown.clear() } label: {
                     Label(s("settings.countdown.reset"), systemImage: "trash")
@@ -1883,7 +1904,6 @@ struct CountdownSettingsSection: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .destructive))
-                .buttonStyle(PressScaleStyle(scale: 0.985, opacity: 0.95))
             }
 
             if let ev = countdown.event {

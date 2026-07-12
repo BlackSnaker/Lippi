@@ -54,6 +54,10 @@ struct CountdownCardView: View {
         if !isSceneActive || !isCardVisible { return 3.0 }
         return reduceMotion ? 2.0 : 1.0
     }
+    private var textTimerSchedule: TimeInterval? {
+        guard isSceneActive, isCardVisible, countdown.event != nil else { return nil }
+        return textTimerInterval
+    }
 
     var body: some View {
         GlassCard(padding: 18, cornerRadius: 24) {
@@ -62,7 +66,6 @@ struct CountdownCardView: View {
 
                     header(ev)
 
-                    // ❗️ТУТ БОЛЬШЕ НЕТ TimelineView: весь layout/материалы/тексты не гоняются на 60fps
                     content(ev)
 
                     actions
@@ -71,16 +74,14 @@ struct CountdownCardView: View {
                 emptyState
             }
         }
-        // Текст обновляем 1 раз/сек (или реже при Reduce Motion / неактивной сцене)
-        .onReceive(
-            Timer.publish(
-                every: textTimerInterval,
-                on: .main,
-                in: .common
-            ).autoconnect()
-        ) { t in
-            guard isCardVisible else { return }
-            textTick = t
+        .task(id: textTimerSchedule) {
+            guard let interval = textTimerSchedule else { return }
+            while !Task.isCancelled {
+                textTick = .now
+                try? await Task.sleep(
+                    nanoseconds: UInt64((interval * 1_000_000_000).rounded())
+                )
+            }
         }
         .onAppear { isCardVisible = true }
         .onDisappear { isCardVisible = false }
@@ -123,13 +124,7 @@ struct CountdownCardView: View {
                     .overlay(RoundedRectangle(cornerRadius: 18).stroke(DS.stroke, lineWidth: 1))
                     .shadow(color: DS.depthShadow(0.12), radius: 6, x: 0, y: 3)
 
-                // ✅ Display-sync только здесь: layout/тексты не гоняются на каждом кадре.
-                CountdownRingAnimated(
-                    reduceMotion: reduceMotion,
-                    sceneActive: isSceneActive && isCardVisible
-                ) { now in
-                    progress(at: now, ev: ev)
-                }
+                RingProgressView(progress: progress(at: textTick, ev: ev), lineWidth: 14)
                 .frame(width: 92, height: 92)
                 .transaction { $0.animation = nil }
             }
@@ -144,13 +139,7 @@ struct CountdownCardView: View {
                 // ТЕКСТ таймера — от textTick (1/сек)
                 timerChip(ev)
 
-                // ✅ Display-sync только здесь: layout/тексты не гоняются на каждом кадре.
-                CountdownBarAnimated(
-                    reduceMotion: reduceMotion,
-                    sceneActive: isSceneActive && isCardVisible
-                ) { now in
-                    progress(at: now, ev: ev)
-                }
+                FancyLinearProgressBar(progress: progress(at: textTick, ev: ev), height: 10)
                 .frame(maxWidth: 280)
                 .transaction { $0.animation = nil }
 
@@ -265,52 +254,6 @@ struct CountdownCardView: View {
             }
 
             Spacer()
-        }
-    }
-}
-
-// =======================================================
-// MARK: - Animated Ring (isolated display-sync)
-// =======================================================
-private struct CountdownRingAnimated: View {
-    @Environment(\.lippiIsScrolling) private var isScrolling
-
-    let reduceMotion: Bool
-    let sceneActive: Bool
-    let compute: (Date) -> Double
-
-    private var frameInterval: TimeInterval {
-        DS.animationFrameInterval(active: sceneActive, reduceMotion: reduceMotion, isScrolling: isScrolling)
-    }
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: frameInterval,
-                                paused: !sceneActive)) { timeline in
-            RingProgressView(progress: compute(timeline.date), lineWidth: 14)
-                .transaction { $0.animation = nil }
-        }
-    }
-}
-
-// =======================================================
-// MARK: - Animated Bar (isolated display-sync)
-// =======================================================
-private struct CountdownBarAnimated: View {
-    @Environment(\.lippiIsScrolling) private var isScrolling
-
-    let reduceMotion: Bool
-    let sceneActive: Bool
-    let compute: (Date) -> Double
-
-    private var frameInterval: TimeInterval {
-        DS.animationFrameInterval(active: sceneActive, reduceMotion: reduceMotion, isScrolling: isScrolling)
-    }
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: frameInterval,
-                                paused: !sceneActive)) { timeline in
-            FancyLinearProgressBar(progress: compute(timeline.date), height: 10)
-                .transaction { $0.animation = nil }
         }
     }
 }
