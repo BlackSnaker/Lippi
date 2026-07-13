@@ -43,40 +43,6 @@
 
 ---
 
-## Screenshots / Скриншоты
-
-<p align="center"><strong>Русский интерфейс</strong></p>
-
-<p align="center">
-  <img src="docs/screenshots/01-today.png" alt="Lippi Today in Russian" width="220">
-  <img src="docs/screenshots/02-tasks.png" alt="Lippi Tasks in Russian" width="220">
-  <img src="docs/screenshots/03-smart-goals.png" alt="Lippi Smart Goals in Russian" width="220">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/04-voice-assistant.png" alt="Lippi Voice Assistant in Russian" width="220">
-  <img src="docs/screenshots/05-pomodoro.png" alt="Lippi Pomodoro in Russian" width="220">
-</p>
-
-<p align="center"><sub>Сегодня · Задачи · Умные цели · Голосовой помощник · Pomodoro</sub></p>
-
-<p align="center"><strong>English interface</strong></p>
-
-<p align="center">
-  <img src="docs/screenshots/en/01-today.png" alt="Lippi Today in English" width="220">
-  <img src="docs/screenshots/en/02-tasks.png" alt="Lippi Tasks in English" width="220">
-  <img src="docs/screenshots/en/03-smart-goals.png" alt="Lippi Smart Goals in English" width="220">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/en/04-voice-assistant.png" alt="Lippi Voice Assistant in English" width="220">
-  <img src="docs/screenshots/en/05-pomodoro.png" alt="Lippi Pomodoro in English" width="220">
-</p>
-
-<p align="center"><sub>Today · Tasks · Smart Goals · Voice Assistant · Pomodoro</sub></p>
-
----
-
 ## Change History / История изменений
 
 <div align="center">
