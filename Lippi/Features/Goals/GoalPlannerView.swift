@@ -52,6 +52,9 @@ struct GoalPlannerView: View {
     @State private var progressSummaryIssue: String?
     @State private var userStateNote: String = ""
     @State private var didHandleProgressDeepLink = false
+    @State private var showPlanningOptions = false
+    @State private var showManualDetails = false
+    @State private var showRoadmapDetails = false
 
     private let engine = GoalRoadmapEngine()
     private let progressEngine = GoalProgressSummaryEngine()
@@ -100,7 +103,7 @@ struct GoalPlannerView: View {
             .components(separatedBy: "\n\n")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-        return Array(blocks.suffix(3))
+        return Array(blocks.suffix(1))
     }
     private var selectedUserState: GoalUserState {
         get { GoalUserState(rawValue: userStateRaw) ?? .calm }
@@ -114,15 +117,17 @@ struct GoalPlannerView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        plannerModeSwitcher
-                            .lippiMotionScene(0)
+                        if roadmap == nil {
+                            plannerModeSwitcher
+                                .lippiMotionScene(0)
 
-                        if plannerMode == .assistant {
-                            smartGoalChatCard
-                                .lippiMotionScene(1)
-                        } else {
-                            manualRoadmapCard
-                                .lippiMotionScene(1)
+                            if plannerMode == .assistant {
+                                smartGoalChatCard
+                                    .lippiMotionScene(1)
+                            } else {
+                                manualRoadmapCard
+                                    .lippiMotionScene(1)
+                            }
                         }
 
                         if let roadmap {
@@ -130,42 +135,51 @@ struct GoalPlannerView: View {
                                 adaptationCard(audit)
                                     .lippiMotionScene(2)
                             }
-                            GoalProgressSummaryCard(
-                                roadmap: roadmap,
-                                summary: progressSummary,
-                                isSummarizing: isSummarizingProgress,
-                                issue: progressSummaryIssue,
-                                lang: lang,
-                                userState: Binding(
-                                    get: { selectedUserState },
-                                    set: { selectedUserState = $0 }
-                                ),
-                                stateNote: $userStateNote,
-                                weeklyEnabled: $weeklyProgressSummaryEnabled,
-                                onGenerate: {
-                                    Task { await generateProgressSummary() }
-                                },
-                                onWeeklyChanged: {
-                                    refreshProgressNotifications()
-                                }
-                            )
-                            .lippiMotionScene(3)
-                            if let progressSummary {
-                                GoalProgressSummaryPage(summary: progressSummary, lang: lang)
-                                    .lippiMotionScene(4)
-                            }
                             roadmapOverview(roadmap)
-                                .lippiMotionScene(5)
-                            clarityCard(roadmap)
-                                .lippiMotionScene(6)
-                            if !(roadmap.evidence ?? []).isEmpty {
-                                evidenceCard(roadmap)
-                                    .lippiMotionScene(7)
-                            }
+                                .lippiMotionScene(3)
                             milestonesCard(roadmap)
-                                .lippiMotionScene(8)
-                            habitsAndRisksCard(roadmap)
-                                .lippiMotionScene(9)
+                                .lippiMotionScene(4)
+                            roadmapDetailsToggle
+                                .lippiMotionScene(5)
+
+                            if showRoadmapDetails {
+                                GoalProgressSummaryCard(
+                                    roadmap: roadmap,
+                                    summary: progressSummary,
+                                    isSummarizing: isSummarizingProgress,
+                                    issue: progressSummaryIssue,
+                                    lang: lang,
+                                    userState: Binding(
+                                        get: { selectedUserState },
+                                        set: { selectedUserState = $0 }
+                                    ),
+                                    stateNote: $userStateNote,
+                                    weeklyEnabled: $weeklyProgressSummaryEnabled,
+                                    onGenerate: {
+                                        Task { await generateProgressSummary() }
+                                    },
+                                    onWeeklyChanged: {
+                                        refreshProgressNotifications()
+                                    }
+                                )
+                                .lippiMotionScene(6)
+
+                                if let progressSummary {
+                                    GoalProgressSummaryPage(summary: progressSummary, lang: lang)
+                                        .lippiMotionScene(7)
+                                }
+
+                                clarityCard(roadmap)
+                                    .lippiMotionScene(8)
+
+                                if !(roadmap.evidence ?? []).isEmpty {
+                                    evidenceCard(roadmap)
+                                        .lippiMotionScene(9)
+                                }
+
+                                habitsAndRisksCard(roadmap)
+                                    .lippiMotionScene(10)
+                            }
                         }
 
                         Color.clear.frame(height: 72)
@@ -197,91 +211,47 @@ struct GoalPlannerView: View {
     }
 
     private var plannerModeSwitcher: some View {
-        GlassCard(
-            padding: 8,
-            cornerRadius: 24,
-            style: .lightweight,
-            forceSystemGlass: false
-        ) {
-            HStack(spacing: 8) {
-                ForEach(GoalPlannerMode.allCases) { mode in
-                    plannerModeButton(mode)
-                }
+        Picker(s("goals.nav_title"), selection: $plannerMode) {
+            ForEach(GoalPlannerMode.allCases) { mode in
+                Label(mode.title(lang: lang), systemImage: mode.icon)
+                    .tag(mode)
             }
         }
-    }
-
-    private func plannerModeButton(_ mode: GoalPlannerMode) -> some View {
-        let isSelected = plannerMode == mode
-        let tone = mode == .assistant ? DS.accent : Color(hex: 0x30D158)
-
-        return Button {
-            guard plannerMode != mode else { return }
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
-                plannerMode = mode
-                generationIssue = nil
-            }
-
+        .pickerStyle(.segmented)
+        .controlSize(.regular)
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(DS.glassFill(0.07))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(DS.glassStroke(0.10), lineWidth: 1)
+        )
+        .onChange(of: plannerMode) { _, _ in
+            generationIssue = nil
             #if os(iOS)
             UISelectionFeedbackGenerator().selectionChanged()
             #endif
-        } label: {
-            HStack(spacing: 9) {
-                Image(safeSystemName: mode.icon, fallback: "sparkles")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(isSelected ? DS.textPrimary : tone)
-                    .frame(width: 28, height: 28)
-                    .background(tone.opacity(isSelected ? 0.22 : 0.10), in: Circle())
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(mode.title(lang: lang))
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(DS.textPrimary)
-                        .singleLine()
-
-                    Text(mode.subtitle(lang: lang))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(DS.text(0.62))
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.82)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 11)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(DS.glassFill(isSelected ? 0.13 : 0.055))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(tone.opacity(isSelected ? 0.12 : 0.04)))
-            )
-            .lippiSystemGlass(
-                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
-                tint: tone.opacity(isSelected ? 0.10 : 0.04),
-                interactive: true
-            )
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(isSelected ? tone.opacity(0.28) : DS.glassStroke(0.10), lineWidth: 1))
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private var manualRoadmapCard: some View {
         GlassCard(
             padding: 0,
-            cornerRadius: 30,
-            style: .full,
+            cornerRadius: 26,
+            style: .lightweight,
             forceSystemGlass: false
         ) {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 14) {
                     LippiSectionHeader(
                         title: manualText("Ручная дорожная карта", "Manual roadmap"),
-                        subtitle: manualText("Собери маршрут сам: этапы, критерии и первые действия", "Build it yourself: stages, criteria, and first actions"),
+                        subtitle: manualText("Достаточно указать цель", "A goal is enough to begin"),
                         icon: "point.topleft.down.curvedto.point.bottomright.up",
                         accent: Color(hex: 0x30D158)
                     )
 
-                    manualRoadmapHint
                     manualTextField(
                         title: manualText("Цель", "Goal"),
                         placeholder: manualText("Например: запустить MVP за 4 месяца", "Example: launch an MVP in 4 months"),
@@ -318,20 +288,40 @@ struct GoalPlannerView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
 
-                manualCriteriaSection
-                    .padding(.horizontal, 16)
-
-                manualMilestonesSection
-                    .padding(.horizontal, 16)
-
-                manualSupportSection
-                    .padding(.horizontal, 16)
-
-                manualPreviewFooter
+                manualAdvancedFields
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
             }
         }
+    }
+
+    private var manualAdvancedFields: some View {
+        DisclosureGroup(isExpanded: $showManualDetails) {
+            VStack(spacing: 16) {
+                manualCriteriaSection
+                manualMilestonesSection
+                manualSupportSection
+                manualPreviewFooter
+            }
+            .padding(.top, 14)
+        } label: {
+            Label(
+                manualText("Дополнительные детали", "Additional details"),
+                systemImage: "slider.horizontal.3"
+            )
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(DS.textPrimary)
+        }
+        .tint(DS.accent)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(DS.glassFill(0.055))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(DS.glassStroke(0.10), lineWidth: 1)
+        )
     }
 
     private var manualRoadmapHint: some View {
@@ -710,75 +700,69 @@ struct GoalPlannerView: View {
 
         return GlassCard(
             padding: 0,
-            cornerRadius: 30,
-            style: .full,
+            cornerRadius: 26,
+            style: .lightweight,
             forceSystemGlass: false
         ) {
             VStack(spacing: 0) {
-                roadmapChatHeader(brief, showsCloseButton: false)
+                roadmapChatHeader(showsCloseButton: false)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    chatMessageBubble(
-                        text: hasDisplayedGoal ? s("goals.chat.goal_received") : s("goals.chat.ask_goal"),
-                        icon: "sparkles",
-                        tone: DS.accent
-                    )
-
-                    if hasDisplayedGoal {
-                        chatMessageBubble(
-                            title: s("goals.chat.user_goal"),
-                            text: displayedGoal,
-                            icon: "flag.checkered",
-                            tone: Color(hex: 0x30D158),
-                            isUser: true
-                        )
-                    }
-
-                    if hasGoalInput {
-                        ForEach(visibleContextBlocks, id: \.self) { block in
+                    if let roadmap {
+                        compactRoadmapReady(roadmap)
+                    } else {
+                        if !hasDisplayedGoal {
                             chatMessageBubble(
-                                title: s("goals.chat.user_context"),
-                                text: block,
-                                icon: "text.alignleft",
-                                tone: Color(hex: 0x64D2FF),
+                                text: s("goals.chat.ask_goal"),
+                                icon: "sparkles",
+                                tone: DS.accent
+                            )
+                        }
+
+                        if hasDisplayedGoal {
+                            chatMessageBubble(
+                                title: s("goals.chat.user_goal"),
+                                text: displayedGoal,
+                                icon: "flag.checkered",
+                                tone: Color(hex: 0x30D158),
                                 isUser: true
                             )
                         }
 
-                        chatPlanningControls(brief)
-
-                        if roadmap == nil && !isGenerating {
-                            if let activeQuestion {
-                                chatQuestionBubble(
-                                    activeQuestion,
-                                    index: activeGuidanceQuestionIndex,
-                                    total: max(currentGuidanceQuestions.count, 1)
-                                )
-                            } else {
+                        if hasGoalInput {
+                            ForEach(visibleContextBlocks, id: \.self) { block in
                                 chatMessageBubble(
-                                    text: s("goals.chat.enough_context"),
-                                    icon: "checkmark.seal.fill",
-                                    tone: Color(hex: 0x30D158)
+                                    title: s("goals.chat.user_context"),
+                                    text: block,
+                                    icon: "text.alignleft",
+                                    tone: Color(hex: 0x64D2FF),
+                                    isUser: true
                                 )
                             }
-                        }
-                    }
 
-                    if isGenerating {
-                        chatProcessingPanel
-                    } else {
-                        if let generationIssue {
+                            planningOptionsDisclosure(brief)
+
+                            if !isGenerating {
+                                if let activeQuestion {
+                                    chatQuestionBubble(
+                                        activeQuestion,
+                                        index: activeGuidanceQuestionIndex,
+                                        total: max(currentGuidanceQuestions.count, 1)
+                                    )
+                                } else {
+                                    chatMessageBubble(
+                                        text: s("goals.chat.enough_context"),
+                                        icon: "checkmark.seal.fill",
+                                        tone: Color(hex: 0x30D158)
+                                    )
+                                }
+                            }
+                        }
+
+                        if isGenerating {
+                            chatProcessingPanel
+                        } else if let generationIssue {
                             chatIssuePanel(generationIssue)
-                        }
-
-                        if let roadmap,
-                           let audit = progressAudit(for: roadmap),
-                           audit.shouldSuggestAdjustment {
-                            chatAdaptationPanel(audit)
-                        }
-
-                        if roadmap != nil {
-                            chatReadyPanel
                         }
                     }
                 }
@@ -789,13 +773,58 @@ struct GoalPlannerView: View {
         }
     }
 
+    private func compactRoadmapReady(_ roadmap: GoalRoadmap) -> some View {
+        HStack(alignment: .top, spacing: 11) {
+            Image(safeSystemName: "checkmark", fallback: "checkmark.circle.fill")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(hex: 0x30D158))
+                .frame(width: 32, height: 32)
+                .background(Color(hex: 0x30D158).opacity(0.13), in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(roadmap.title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+
+                Text(s("goals.chat.ready"))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(hex: 0x30D158).opacity(0.055))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(DS.glassStroke(0.10), lineWidth: 1)
+        )
+    }
+
+    private func planningOptionsDisclosure(_ brief: GoalRequestBrief) -> some View {
+        DisclosureGroup(isExpanded: $showPlanningOptions) {
+            chatPlanningControls(brief)
+                .padding(.top, 12)
+        } label: {
+            Label(s("goals.chat.controls_title"), systemImage: "slider.horizontal.3")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(DS.textPrimary)
+        }
+        .tint(DS.accent)
+        .padding(12)
+        .background(DS.glassFill(0.05), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(DS.glassStroke(0.10), lineWidth: 1)
+        )
+    }
+
     private func chatPlanningControls(_ brief: GoalRequestBrief) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(s("goals.chat.controls_title"), systemImage: "slider.horizontal.3")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(DS.text(0.70))
-                .labelStyle(TightLabelStyle())
-
             HStack(spacing: 10) {
                 optionPicker(
                     title: s("goals.input.horizon"),
@@ -817,13 +846,6 @@ struct GoalPlannerView: View {
                 infoPill(title: GoalRoadmapEngine.primaryAIPrivacyLabel(lang: lang), icon: "lock.shield.fill")
             }
         }
-        .padding(12)
-        .background(DS.glassFill(0.065), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
-            tint: DS.accent.opacity(0.06)
-        )
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.11), lineWidth: 1))
     }
 
     private var heroCard: some View {
@@ -896,7 +918,7 @@ struct GoalPlannerView: View {
                 forceSystemGlass: false
             ) {
                 VStack(spacing: 0) {
-                    roadmapChatHeader(brief)
+                    roadmapChatHeader()
 
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
@@ -963,35 +985,26 @@ struct GoalPlannerView: View {
         .accessibilityAddTraits(.isModal)
     }
 
-    private func roadmapChatHeader(_ brief: GoalRequestBrief, showsCloseButton: Bool = true) -> some View {
+    private func roadmapChatHeader(showsCloseButton: Bool = true) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(DS.glassFill(0.12))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(DS.brandSoftGradient).opacity(0.42))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.18), lineWidth: 1))
-
-                Image(safeSystemName: "bubble.left.and.text.bubble.right.fill", fallback: "sparkles")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(DS.textPrimary)
-            }
-            .frame(width: 46, height: 46)
-            .lippiSystemGlass(
-                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
-                tint: DS.accent.opacity(0.12)
-            )
+            Image(safeSystemName: "sparkles", fallback: "sparkles")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(DS.accent)
+                .frame(width: 36, height: 36)
+                .background(DS.accent.opacity(0.12), in: Circle())
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(s("goals.chat.title"))
-                    .font(.headline.weight(.bold))
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.86)
 
-                HStack(spacing: 6) {
-                    infoPill(title: brief.responseLanguage.title, icon: "globe")
-                    infoPill(title: horizon.title(lang: lang), icon: "calendar")
-                }
+                Text(hasGoalInput
+                     ? "\(horizon.title(lang: lang)) · \(intensity.title(lang: lang))"
+                     : s("goals.chat.intro_subtitle"))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
             }
 
             Spacer(minLength: 8)
@@ -1009,8 +1022,8 @@ struct GoalPlannerView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 10)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
     }
 
     private func chatMessageBubble(
@@ -1047,10 +1060,6 @@ struct GoalPlannerView: View {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(DS.glassFill(isUser ? 0.12 : 0.075))
                     .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(tone.opacity(isUser ? 0.11 : 0.07)))
-            )
-            .lippiSystemGlass(
-                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
-                tint: tone.opacity(0.07)
             )
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
 
@@ -1657,7 +1666,7 @@ struct GoalPlannerView: View {
     }
 
     private func roadmapOverview(_ roadmap: GoalRoadmap) -> some View {
-        GlassCard(padding: 16, cornerRadius: 26, style: .full) {
+        GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
             VStack(alignment: .leading, spacing: 14) {
                 Text(roadmap.title)
                     .font(.title3.weight(.bold))
@@ -1671,14 +1680,74 @@ struct GoalPlannerView: View {
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
 
-                HStack(alignment: .center, spacing: 8) {
-                    confidenceBadge(roadmap.confidence)
-                    infoPill(title: roadmap.source.title(lang: lang), icon: roadmap.source.icon)
-                    infoPill(title: horizon.title(lang: lang), icon: "calendar")
-                    infoPill(title: intensity.title(lang: lang), icon: "dial.medium")
+                HStack(spacing: 7) {
+                    Label(horizon.title(lang: lang), systemImage: "calendar")
+
+                    Circle()
+                        .fill(DS.textTertiary)
+                        .frame(width: 3, height: 3)
+
+                    Label(roadmap.source.title(lang: lang), systemImage: roadmap.source.icon)
                 }
+                .font(.caption.weight(.medium))
+                .foregroundStyle(DS.textSecondary)
+                .labelStyle(TightLabelStyle())
             }
         }
+    }
+
+    private var roadmapDetailsToggle: some View {
+        Button {
+            // The detail stack can be large. Insert it without a full-tree layout
+            // animation and animate only the lightweight disclosure indicator.
+            showRoadmapDetails.toggle()
+        } label: {
+            HStack(spacing: 11) {
+                Image(safeSystemName: "ellipsis.circle", fallback: "info.circle")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(DS.accent)
+                    .frame(width: 36, height: 36)
+                    .background(DS.accent.opacity(0.11), in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(showRoadmapDetails
+                         ? manualText("Скрыть детали", "Hide details")
+                         : manualText("Показать детали", "Show details"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DS.textPrimary)
+
+                    Text(manualText(
+                        "Прогресс, критерии и поддержка",
+                        "Progress, criteria, and support"
+                    ))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(safeSystemName: "chevron.down", fallback: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .rotationEffect(.degrees(showRoadmapDetails ? 180 : 0))
+                    .frame(width: 28, height: 44)
+                    .animation(reduceMotion ? nil : DS.motionQuick, value: showRoadmapDetails)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(DS.glassFill(0.055))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(DS.glassStroke(0.10), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.988, opacity: 0.97))
+        .accessibilityAddTraits(showRoadmapDetails ? .isSelected : [])
     }
 
     private func adaptationCard(_ audit: GoalPlanProgressAudit) -> some View {
@@ -1970,7 +2039,20 @@ struct GoalPlannerView: View {
 
     private func milestoneRow(_ milestone: GoalMilestone, index: Int) -> some View {
         let tone = milestone.category.tint
-        return VStack(alignment: .leading, spacing: 10) {
+        return DisclosureGroup {
+            VStack(alignment: .leading, spacing: 9) {
+                ForEach(milestone.tasks, id: \.self) { task in
+                    readableItemRow(
+                        task,
+                        icon: "checkmark.circle.fill",
+                        tone: tone,
+                        textColor: DS.text(0.80)
+                    )
+                }
+            }
+            .padding(.top, 10)
+            .padding(.leading, 41)
+        } label: {
             HStack(alignment: .top, spacing: 11) {
                 ZStack {
                     Circle()
@@ -2004,19 +2086,8 @@ struct GoalPlannerView: View {
 
                 Spacer(minLength: 0)
             }
-
-            VStack(alignment: .leading, spacing: 9) {
-                ForEach(milestone.tasks, id: \.self) { task in
-                    readableItemRow(
-                        task,
-                        icon: "checkmark.circle.fill",
-                        tone: tone,
-                        textColor: DS.text(0.80)
-                    )
-                }
-            }
-            .padding(.leading, 41)
         }
+        .tint(tone)
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -2156,7 +2227,6 @@ struct GoalPlannerView: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
             .background(DS.glassFill(0.08), in: Capsule())
-            .lippiSystemGlass(in: Capsule(), tint: DS.accent.opacity(0.06))
             .overlay(Capsule().stroke(DS.glassStroke(0.13), lineWidth: 1))
             .singleLine()
     }
@@ -2177,33 +2247,32 @@ struct GoalPlannerView: View {
         .padding(.horizontal, 9)
         .padding(.vertical, 6)
         .background(DS.glassFill(0.09), in: Capsule())
-        .lippiSystemGlass(
-            in: Capsule(),
-            tint: DS.accent.opacity(0.08)
-        )
         .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
     }
 
     private var bottomActionBar: some View {
         VStack(spacing: 10) {
             if let roadmap {
-                Button { addFirstTasks(from: roadmap) } label: {
-                    Label(addedTasks ? s("goals.action.added") : s("goals.action.add_tasks"), systemImage: addedTasks ? "checkmark.circle.fill" : "plus.circle.fill")
+                HStack(spacing: 10) {
+                    Button { addFirstTasks(from: roadmap) } label: {
+                        Label(
+                            addedTasks ? s("goals.action.added") : s("goals.action.add_tasks"),
+                            systemImage: addedTasks ? "checkmark.circle.fill" : "plus.circle.fill"
+                        )
                         .labelStyle(TightLabelStyle())
                         .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(LippiButtonStyle(kind: addedTasks ? .secondary : .primary))
-            }
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: addedTasks ? .secondary : .primary, compact: true))
 
-            if roadmap != nil {
-                Button {
-                    resetGoalChat()
-                } label: {
-                    Label(s("goals.chat.new_goal"), systemImage: "plus.bubble.fill")
-                        .labelStyle(TightLabelStyle())
-                        .frame(maxWidth: .infinity)
+                    Button {
+                        resetGoalChat()
+                    } label: {
+                        Label(s("goals.chat.new_goal"), systemImage: "plus")
+                            .labelStyle(TightLabelStyle())
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                 }
-                .buttonStyle(LippiButtonStyle(kind: .secondary))
             } else if plannerMode == .manual {
                 Button {
                     createManualRoadmap()
@@ -2216,25 +2285,27 @@ struct GoalPlannerView: View {
                 .buttonStyle(LippiButtonStyle(kind: .primary))
                 .opacity(canCreateManualRoadmap ? 1 : 0.55)
 
-                HStack(spacing: 10) {
-                    Button {
-                        addManualMilestone()
-                    } label: {
-                        Label(manualText("Этап", "Stage"), systemImage: "plus.circle.fill")
-                            .labelStyle(TightLabelStyle())
-                            .frame(maxWidth: .infinity)
-                    }
-                    .disabled(manualMilestones.count >= 6)
-                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+                if showManualDetails {
+                    HStack(spacing: 10) {
+                        Button {
+                            addManualMilestone()
+                        } label: {
+                            Label(manualText("Этап", "Stage"), systemImage: "plus.circle.fill")
+                                .labelStyle(TightLabelStyle())
+                                .frame(maxWidth: .infinity)
+                        }
+                        .disabled(manualMilestones.count >= 6)
+                        .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
 
-                    Button {
-                        resetManualPlanner()
-                    } label: {
-                        Label(manualText("Очистить", "Clear"), systemImage: "eraser.fill")
-                            .labelStyle(TightLabelStyle())
-                            .frame(maxWidth: .infinity)
+                        Button {
+                            resetManualPlanner()
+                        } label: {
+                            Label(manualText("Очистить", "Clear"), systemImage: "eraser.fill")
+                                .labelStyle(TightLabelStyle())
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                     }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
                 }
             } else {
                 chatComposerField
@@ -2437,9 +2508,10 @@ struct GoalPlannerView: View {
         addedTasks = false
         savedProgressSummary = ""
 
-        withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+        withAnimation(reduceMotion ? nil : DS.motionSmooth) {
             roadmap = result
         }
+        showRoadmapDetails = false
         saveRoadmap(result)
 
         #if os(iOS)
@@ -2564,7 +2636,7 @@ struct GoalPlannerView: View {
     private func addManualMilestone() {
         guard manualMilestones.count < 6 else { return }
         let nextIndex = manualMilestones.count
-        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+        withAnimation(reduceMotion ? nil : DS.motionState) {
             manualMilestones.append(
                 ManualRoadmapMilestone(
                     category: TaskCategory.allCases[safe: nextIndex % TaskCategory.allCases.count] ?? .other
@@ -2579,7 +2651,7 @@ struct GoalPlannerView: View {
 
     private func removeManualMilestone(id: UUID) {
         guard manualMilestones.count > 1 else { return }
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+        withAnimation(reduceMotion ? nil : DS.motionState) {
             manualMilestones.removeAll { $0.id == id }
         }
 
@@ -2596,6 +2668,7 @@ struct GoalPlannerView: View {
         manualHabitText = ""
         manualRiskText = ""
         manualMilestones = ManualRoadmapMilestone.starter
+        showManualDetails = false
 
         #if os(iOS)
         UISelectionFeedbackGenerator().selectionChanged()
@@ -2618,6 +2691,8 @@ struct GoalPlannerView: View {
         addedTasks = false
         savedRoadmap = ""
         savedProgressSummary = ""
+        showPlanningOptions = false
+        showRoadmapDetails = false
         refreshProgressNotifications()
         resetManualPlanner()
     }
@@ -2669,6 +2744,9 @@ struct GoalPlannerView: View {
             progressSummary = nil
             generationIssue = nil
             progressSummaryIssue = nil
+            if !adaptingToProgress {
+                showRoadmapDetails = false
+            }
             saveRoadmap(result)
             savedProgressSummary = ""
             scheduleRoadmapReadyNotification(result)
@@ -2751,6 +2829,7 @@ struct GoalPlannerView: View {
         progressSummary = nil
         generationIssue = nil
         progressSummaryIssue = nil
+        showRoadmapDetails = false
         saveRoadmap(result)
         savedProgressSummary = ""
 
@@ -2848,7 +2927,9 @@ struct GoalPlannerView: View {
     private func handleProgressDeepLinkIfNeeded() {
         guard openProgressSummaryOnAppear, !didHandleProgressDeepLink else { return }
         didHandleProgressDeepLink = true
-        guard roadmap != nil, progressSummary == nil else { return }
+        guard roadmap != nil else { return }
+        showRoadmapDetails = true
+        guard progressSummary == nil else { return }
         Task { await generateProgressSummary() }
     }
 }
@@ -2899,7 +2980,7 @@ enum GoalPlanningIntensity: String, GoalPlannerOption {
     }
 }
 
-enum GoalPlannerMode: String, CaseIterable, Identifiable {
+enum GoalPlannerMode: String, CaseIterable, Identifiable, Hashable {
     case assistant
     case manual
 

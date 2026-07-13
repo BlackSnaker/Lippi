@@ -10,9 +10,11 @@ struct TodayView: View {
     @EnvironmentObject private var store: TaskStore
     @EnvironmentObject private var stats: StatsStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var showAdd = false
     @State private var showImportantNow = false
+    @State private var showStats = false
     @Binding var showGoalPlanner: Bool
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
@@ -23,7 +25,6 @@ struct TodayView: View {
     private var completedTodayCount: Int { stats.today.tasksDone }
     private var focusedMinutesToday: Int { stats.today.focusMinutes }
     private var productiveStreak: Int { stats.productiveStreak }
-    private var activeTasks: [TaskItem] { taskOverview.active }
     private var overdueTasks: [TaskItem] { taskOverview.overdue }
     private var dueTodayTasks: [TaskItem] { taskOverview.dueToday }
     private var upcomingTasks: [TaskItem] { taskOverview.upcoming }
@@ -55,13 +56,6 @@ struct TodayView: View {
         return L10n.fmt("today.status.progress", lang, completionPercent)
     }
 
-    private var quickActionColumns: [GridItem] {
-        [
-            GridItem(.flexible(), spacing: 10, alignment: .top),
-            GridItem(.flexible(), spacing: 10, alignment: .top)
-        ]
-    }
-
     private var appLocale: Locale { Locale(identifier: lang.rawValue) }
 
     private var greetingTitle: String {
@@ -90,7 +84,7 @@ struct TodayView: View {
                         quickActions
                             .lippiMotionScene(2)
                         smartGoalsEntry
-                        StatsCardView()
+                        statsSummaryEntry
                             .lippiMotionScene(4)
                     }
                     .lippiContentColumn()
@@ -106,15 +100,6 @@ struct TodayView: View {
             .clearNavBarBackgroundIfAvailable()
             .toolbarBackgroundVisibility(.visible, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showImportantNow = true
-                    } label: {
-                        Image(safeSystemName: "sparkles.rectangle.stack.fill", fallback: "sparkles")
-                    }
-                    .accessibilityLabel(s("today.summary.title"))
-                }
-
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAdd = true } label: {
                         Image(safeSystemName: "plus", fallback: "plus.circle.fill")
@@ -135,6 +120,11 @@ struct TodayView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $showStats) {
+                statsSheet
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
         }
         // ✅ Убираем системный фон NavigationStack “на всякий”
         .background(Color.clear)
@@ -142,126 +132,143 @@ struct TodayView: View {
 
     // MARK: - Subviews
     private var headerCard: some View {
-        GlassCard(padding: 18, cornerRadius: 30, style: .full) {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .center, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(Date.now, format: .dateTime.weekday(.wide).day().month())
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(DS.textSecondary)
-                            .singleLine()
+        GlassCard(padding: 18, cornerRadius: 28, style: .full) {
+            VStack(alignment: .leading, spacing: 16) {
+                greetingHero
 
-                        Text(greetingTitle)
-                            .font(.largeTitle.weight(.bold))
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(2)
-
-                        Text(s("today.header.subtitle"))
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.90)
-                            .allowsTightening(true)
-                    }
-
-                    Spacer(minLength: 0)
-
-                    dayProgressBadge
-                }
-
-                dailySnapshotStrip
-
-                HStack(spacing: 8) {
-                    statusPill
-                    Spacer(minLength: 0)
-                    Text(briefingLabel)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(DS.textTertiary)
-                        .singleLine()
-                }
+                Divider()
+                    .overlay(DS.glassStroke(0.10))
 
                 focusSummaryPanel
 
-                HStack(spacing: 8) {
-                    heroMetricChip(title: s("today.metric.active"), value: "\(activeTasksCount)", systemImage: "circle", tone: DS.brandA)
-                    heroMetricChip(title: s("today.metric.deadlines"), value: "\(overdueTasksCount + dueTodayCount)", systemImage: "calendar", tone: overdueTasksCount > 0 ? Color(hex: 0xFF453A) : Color(hex: 0xFF9F0A))
-                    heroMetricChip(title: s("today.metric.done_today"), value: "\(completedTodayCount)", systemImage: "checkmark.circle.fill", tone: Color(hex: 0x30D158))
-                }
+                Divider()
+                    .overlay(DS.glassStroke(0.10))
+
+                dailySnapshotStrip
             }
         }
         .lippiMagicAppear(delay: 0.03, y: 14, scale: 0.975)
+    }
+
+    private var greetingHero: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 18) {
+                    greetingBlock
+                    Spacer(minLength: 0)
+                    dayProgressBadge
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    greetingBlock
+                    dayProgressBadge
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            }
+
+            dayBriefingButton
+        }
+    }
+
+    private var greetingBlock: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(safeSystemName: "calendar", fallback: "calendar")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.accent)
+
+                Text(Date.now, format: .dateTime.weekday(.wide).day().month())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+            }
+
+            Text(greetingTitle)
+                .font(.system(.title2, design: .rounded).weight(.bold))
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(2)
+        }
+    }
+
+    private var dayBriefingButton: some View {
+        Button {
+            showImportantNow = true
+        } label: {
+            HStack(spacing: 11) {
+                Image(safeSystemName: statusSymbol, fallback: "sparkles")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(statusTone)
+                    .frame(width: 30, height: 30)
+                    .background(statusTone.opacity(0.13), in: Circle())
+
+                Text(todayStatusText)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(safeSystemName: "chevron.right", fallback: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .frame(width: 24, height: 44)
+            }
+            .padding(.leading, 10)
+            .padding(.trailing, 8)
+            .padding(.vertical, 2)
+            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(statusTone.opacity(0.055))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(DS.glassStroke(0.10), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.988, opacity: 0.96))
+        .accessibilityHint(Text(s("today.summary.title")))
     }
 
     private var smartGoalsEntry: some View {
         Button {
             showGoalPlanner = true
         } label: {
-            GlassCard(padding: 16, cornerRadius: 24, style: .full) {
+            GlassCard(padding: 15, cornerRadius: 22, style: .flat) {
                 HStack(alignment: .center, spacing: 12) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(DS.glassFill(0.12))
-                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(DS.brandSoftGradient).opacity(0.50))
-                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.18), lineWidth: 1))
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(DS.accent.opacity(0.14))
 
                         Image(safeSystemName: "wand.and.stars", fallback: "sparkles")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundStyle(DS.text(0.96))
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .foregroundStyle(DS.accent)
                     }
-                    .frame(width: 48, height: 48)
-                    .lippiSystemGlass(
-                        in: RoundedRectangle(cornerRadius: 18, style: .continuous),
-                        tint: DS.accent.opacity(0.14),
-                        interactive: true
-                    )
+                    .frame(width: 44, height: 44)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(s("goals.entry.title"))
-                            .font(.headline.weight(.bold))
+                            .font(.headline.weight(.semibold))
                             .foregroundStyle(DS.textPrimary)
-                            .singleLine()
+                            .lineLimit(2)
 
                         Text(s("goals.entry.subtitle"))
-                            .font(.caption.weight(.semibold))
+                            .font(.caption.weight(.medium))
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(2)
-                            .minimumScaleFactor(0.86)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Image(safeSystemName: "arrow.up.forward", fallback: "chevron.right")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(DS.text(0.90))
-                        .frame(width: 38, height: 38)
-                        .background(DS.glassFill(0.10), in: Circle())
-                        .lippiSystemGlass(in: Circle(), tint: DS.accent.opacity(0.09), interactive: true)
-                        .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
+                    Image(safeSystemName: "chevron.right", fallback: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(DS.textTertiary)
+                        .frame(width: 24, height: 44)
                 }
                 .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             }
         }
         .buttonStyle(.plain)
         .lippiMagicAppear(delay: 0.10, y: 12, scale: 0.98)
-    }
-
-    private var statusPill: some View {
-        Label(todayStatusText, systemImage: statusSymbol)
-            .font(.caption.weight(.semibold))
-            .labelStyle(TightLabelStyle())
-            .foregroundStyle(DS.text(0.84))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(DS.glassFill(0.08))
-                    .overlay(Capsule().fill(statusTone.opacity(0.16)))
-            )
-            .lippiSystemGlass(
-                in: Capsule(style: .continuous),
-                tint: statusTone.opacity(0.09)
-            )
-            .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
-            .singleLine()
     }
 
     private var statusSymbol: String {
@@ -279,29 +286,21 @@ struct TodayView: View {
     private var focusSummaryPanel: some View {
         let task = priorityTask
 
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(DS.glassFill(0.12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill((task?.category.tint ?? DS.brandA).opacity(0.24))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(DS.glassStroke(0.18), lineWidth: 1)
-                        )
+                        .fill((task?.category.tint ?? DS.brandA).opacity(0.14))
 
                     Image(safeSystemName: task?.category.symbol ?? "sparkles", fallback: "sparkles")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundStyle(DS.text(0.94))
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .foregroundStyle(task?.category.tint ?? DS.brandA)
                 }
-                .frame(width: 42, height: 42)
+                .frame(width: 44, height: 44)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(s("today.focus.title"))
-                        .font(.caption.weight(.bold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(DS.textTertiary)
                         .textCase(.uppercase)
                         .singleLine()
@@ -321,7 +320,7 @@ struct TodayView: View {
                                 .font(.caption.weight(.semibold))
                                 .labelStyle(TightLabelStyle())
                                 .foregroundStyle(DS.textSecondary)
-                                .singleLine()
+                                .lineLimit(2)
                         }
                     }
                 }
@@ -343,19 +342,25 @@ struct TodayView: View {
                     }
                     .buttonStyle(LippiButtonStyle(kind: .primary, compact: true))
                 }
-
             }
         }
-        .padding(.leading, 14)
-        .overlay(alignment: .leading) {
-            Capsule()
-                .fill((task?.category.tint ?? DS.accent).opacity(0.88))
-                .frame(width: 3, height: 72)
-        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill((task?.category.tint ?? DS.accent).opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(DS.glassStroke(0.10), lineWidth: 1)
+        )
     }
 
     private var dailySnapshotStrip: some View {
-        HStack(spacing: 8) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(spacing: 8))
+
+        return layout {
             dailySnapshotMetric(
                 value: focusTimeText,
                 title: s("today.metric.focus"),
@@ -409,13 +414,16 @@ struct TodayView: View {
     private var dayProgressBadge: some View {
         ZStack {
             Circle()
-                .stroke(DS.glassStroke(0.14), lineWidth: 7)
+                .fill(DS.glassFill(0.055))
+
+            Circle()
+                .stroke(DS.glassStroke(0.12), lineWidth: 6)
 
             Circle()
                 .trim(from: 0, to: completionProgress)
                 .stroke(
                     AngularGradient(colors: [DS.brandA, DS.brandB], center: .center),
-                    style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
 
@@ -430,64 +438,98 @@ struct TodayView: View {
                     .foregroundStyle(DS.textTertiary)
             }
         }
-        .frame(width: 76, height: 76)
-        .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(DS.glassFill(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(DS.brandSoftGradient)
-                        .opacity(0.55)
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(DS.glassStroke(0.16), lineWidth: 1)
-        )
+        .frame(width: 68, height: 68)
+        .padding(2)
         .animation(reduceMotion ? nil : DS.motionQuick, value: completionProgress)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(completionPercent)% \(s("today.progress.day"))")
     }
 
-    private func heroMetricChip(title: String, value: String, systemImage: String, tone: Color) -> some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 6) {
-                ZStack {
-                    Circle()
-                        .fill(DS.glassFill(0.12))
-                        .overlay(Circle().fill(tone.opacity(0.20)))
-                        .overlay(Circle().stroke(DS.glassStroke(0.18), lineWidth: 1))
+    private var weeklyStatsSnapshot: (focus: Int, tasks: Int, activeDays: Int) {
+        let data = stats.series(last: 7)
+        let totals = stats.totals(for: data)
+        return (
+            focus: totals.focus,
+            tasks: totals.tasks,
+            activeDays: data.filter(\.hasActivity).count
+        )
+    }
 
-                    Image(safeSystemName: systemImage, fallback: systemImage)
+    private var statsSummaryEntry: some View {
+        let snapshot = weeklyStatsSnapshot
+        let focus = L10n.fmt("today.metric.focus_minutes", lang, snapshot.focus)
+        let summary = L10n.fmt(
+            "stats.insight.body",
+            lang,
+            focus,
+            snapshot.tasks,
+            snapshot.activeDays,
+            7
+        )
+
+        return Button {
+            showStats = true
+        } label: {
+            GlassCard(padding: 15, cornerRadius: 22, style: .flat) {
+                HStack(alignment: .center, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color(hex: 0x64D2FF).opacity(0.14))
+
+                        Image(safeSystemName: "chart.line.uptrend.xyaxis", fallback: "chart.bar.fill")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(hex: 0x64D2FF))
+                    }
+                    .frame(width: 44, height: 44)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(s("stats.header.title"))
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(2)
+
+                        Text(summary)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Image(safeSystemName: "chevron.right", fallback: "chevron.right")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(DS.text(0.90))
+                        .foregroundStyle(DS.textTertiary)
+                        .frame(width: 24, height: 44)
                 }
-                .frame(width: 24, height: 24)
-            }
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(value)
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    .singleLine()
-
-                Text(title)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(DS.textTertiary)
-                    .singleLine()
+                .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .buttonStyle(.plain)
+        .accessibilityHint(Text(s("stats.header.subtitle")))
     }
 
-    private var briefingLabel: String {
-        if overdueTasksCount > 0 {
-            return L10n.fmt("today.summary.overdue", lang, overdueTasksCount)
+    private var statsSheet: some View {
+        NavigationStack {
+            ZStack {
+                AppBackdrop(renderMode: .force)
+
+                ScrollView {
+                    StatsCardView()
+                        .lippiContentColumn()
+                }
+                .scrollIndicators(.hidden)
+                .lippiScrollPerformance()
+            }
+            .navigationTitle(s("stats.header.title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .clearNavBarBackgroundIfAvailable()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(s("common.close")) {
+                        showStats = false
+                    }
+                }
+            }
         }
-        if dueTodayCount > 0 {
-            return L10n.fmt("today.summary.due_today", lang, dueTodayCount)
-        }
-        return s("today.summary.clear")
     }
 
     private var importantTasks: [TaskItem] {
@@ -837,10 +879,6 @@ struct TodayView: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
         .background(category.chipFill, in: Capsule())
-        .lippiSystemGlass(
-            in: Capsule(),
-            tint: category.tint.opacity(0.08)
-        )
         .overlay(Capsule().stroke(category.chipStroke, lineWidth: 1))
         .singleLine()
     }
@@ -853,16 +891,12 @@ struct TodayView: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
         .background(dueTone(for: task).opacity(0.14), in: Capsule())
-        .lippiSystemGlass(
-            in: Capsule(),
-            tint: dueTone(for: task).opacity(0.08)
-        )
         .overlay(Capsule().stroke(dueTone(for: task).opacity(0.28), lineWidth: 1))
         .singleLine()
     }
 
     private var todayPlanCard: some View {
-        let preview = Array(upcomingTasks.prefix(3))
+        let preview = Array(upcomingTasks.prefix(2))
 
         return GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
             VStack(alignment: .leading, spacing: 14) {
@@ -902,14 +936,14 @@ struct TodayView: View {
                             Text(s("today.plan.empty_subtitle"))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(DS.textTertiary)
-                                .singleLine()
+                                .lineLimit(2)
                         }
                     }
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     VStack(spacing: 4) {
-                        ForEach(Array(preview.enumerated()), id: \.element.id) { index, task in
+                        ForEach(preview) { task in
                             planTaskRow(task)
                         }
 
@@ -943,7 +977,7 @@ struct TodayView: View {
                 Text(task.title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(DS.textPrimary)
-                    .singleLine()
+                    .lineLimit(2)
 
                 HStack(spacing: 7) {
                     Text(task.category.title)
@@ -1025,34 +1059,18 @@ struct TodayView: View {
     }
 
     private var quickActions: some View {
-        GlassCard(padding: 14, cornerRadius: 24, style: .full) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 8) {
-                    LippiSectionHeader(
-                        title: s("today.quick.title"),
-                        subtitle: s("today.quick.subtitle"),
-                        icon: "bolt.fill",
-                        accent: Color(hex: 0x64D2FF)
-                    )
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 10))
+            : AnyLayout(HStackLayout(spacing: 10))
 
-                    Spacer()
+        return VStack(alignment: .leading, spacing: 10) {
+            Text(s("today.quick.title"))
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(DS.textPrimary)
+                .padding(.horizontal, 2)
 
-                    Label(s("today.quick.today"), systemImage: "sparkles")
-                        .font(.caption2.weight(.semibold))
-                        .labelStyle(TightLabelStyle())
-                        .foregroundStyle(DS.textSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(DS.glassFill(0.08), in: Capsule())
-                        .lippiSystemGlass(
-                            in: Capsule(),
-                            tint: Color(hex: 0x64D2FF).opacity(0.07)
-                        )
-                        .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
-                        .padding(.top, 2)
-                }
-
-                LazyVGrid(columns: quickActionColumns, spacing: 10) {
+            LippiGlassEffectGroup(spacing: 10) {
+                layout {
                     quickActionTile(
                         title: s("today.quick.new"),
                         icon: "plus",
@@ -1060,7 +1078,6 @@ struct TodayView: View {
                     ) {
                         showAdd = true
                     }
-                    .gridCellColumns(2)
 
                     quickActionTile(
                         title: s("today.quick.done"),
@@ -1070,7 +1087,7 @@ struct TodayView: View {
                         if let task = priorityTask { markTaskDone(task) }
                     }
                     .opacity(hasUpcomingTask ? 1.0 : 0.56)
-                    .allowsHitTesting(hasUpcomingTask)
+                    .disabled(!hasUpcomingTask)
 
                     quickActionTile(
                         title: s("today.quick.eyes"),
@@ -1094,51 +1111,37 @@ struct TodayView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            VStack(spacing: 7) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(DS.glassFill(0.11))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(tone.opacity(0.28))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(DS.glassStroke(0.16), lineWidth: 1)
-                        )
+                    Circle()
+                        .fill(tone.opacity(0.14))
 
                     Image(safeSystemName: icon, fallback: icon)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(DS.text(0.94))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(tone)
                 }
-                .frame(width: 28, height: 28)
+                .frame(width: 34, height: 34)
 
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(DS.text(0.94))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
                     .singleLine()
-
-                Spacer(minLength: 8)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 11)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 72)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(DS.glassFill(0.07))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(tone.opacity(0.10))
-                    )
             )
             .lippiSystemGlass(
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous),
-                tint: tone.opacity(0.08),
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                tint: tone.opacity(0.07),
                 interactive: true
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(DS.glassStroke(0.14), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(DS.glassStroke(0.12), lineWidth: 1)
             )
         }
         .buttonStyle(PressScaleStyle(scale: 0.986, opacity: 0.98))

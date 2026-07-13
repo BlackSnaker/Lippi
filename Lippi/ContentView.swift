@@ -3007,13 +3007,12 @@ private struct TabButton: View {
                     .symbolRenderingMode(.hierarchical)
                     .symbolVariant(isSelected ? .fill : .none)
                     .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.04 : 1.0))
-                    .animation(reduceMotion ? nil : DS.motionTabSwitch, value: isSelected)
 
                 if isSelected {
                     Text(title)
                         .font(.caption.weight(.semibold))
                         .singleLine()
-                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .leading)))
                 }
             }
             .padding(.horizontal, isSelected ? 10 : 0)
@@ -3029,10 +3028,6 @@ private struct TabButton: View {
                 enabled: isSelected && !simplifiedEffects
             )
             .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.012 : 0.992))
-            .animation(
-                reduceMotion ? nil : DS.motionTabSwitch,
-                value: isSelected
-            )
             .shadow(color: isSelected && !simplifiedEffects ? DS.depthShadow(0.18) : .clear, radius: isSelected ? 6 : 0, x: 0, y: 3)
         }
         .buttonStyle(.plain)
@@ -3149,7 +3144,6 @@ private struct OverflowTabMenu: View {
                 enabled: isSelected && !simplifiedEffects
             )
             .scaleEffect(reduceMotion || simplifiedEffects ? 1 : (isSelected ? 1.012 : 0.992))
-            .animation(reduceMotion ? nil : DS.motionTabSwitch, value: isSelected)
             .shadow(color: isSelected && !simplifiedEffects ? DS.depthShadow(0.18) : .clear, radius: isSelected ? 6 : 0, x: 0, y: 3)
         }
         .buttonStyle(.plain)

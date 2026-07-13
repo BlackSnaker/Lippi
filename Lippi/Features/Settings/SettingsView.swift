@@ -1841,7 +1841,7 @@ struct PressScaleStyle: ButtonStyle {
             .opacity(configuration.isPressed ? opacity : 1)
             .scaleEffect(configuration.isPressed ? scale : 1)
             .animation(
-                reduceMotion ? nil : DS.motionQuick,
+                reduceMotion ? nil : DS.motionPress,
                 value: configuration.isPressed
             )
     }

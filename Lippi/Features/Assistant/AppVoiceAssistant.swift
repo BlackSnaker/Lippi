@@ -1916,7 +1916,7 @@ struct AppVoiceAssistantSheet: View {
                 HStack(alignment: .top, spacing: 14) {
                     LiquidAssistantCore(
                         state: assistant.state,
-                        reduceMotion: reduceMotion,
+                        reduceMotion: reduceMotion || isScrolling || DS.runtimeConstrained,
                         reduceTransparency: reduceTransparency
                     )
                     .frame(width: 92, height: 92)
@@ -2112,7 +2112,7 @@ struct AppVoiceAssistantSheet: View {
 struct VoiceAssistantLauncherButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @State private var pulse = false
+    @Environment(\.lippiIsScrolling) private var isScrolling
     @State private var isPressed = false
     @State private var pressStart: Date?
     @State private var didTriggerLongPress = false
@@ -2127,6 +2127,10 @@ struct VoiceAssistantLauncherButton: View {
 
     private let holdThreshold: TimeInterval = 0.42
 
+    private var allowsContinuousMotion: Bool {
+        !reduceMotion && !isScrolling && !DS.runtimeConstrained
+    }
+
     private var launcherScale: CGFloat {
         if isPressed { return DS.pressScale }
         return state.isActive ? 1.02 : 1.0
@@ -2134,12 +2138,16 @@ struct VoiceAssistantLauncherButton: View {
 
     var body: some View {
         ZStack {
-            if state.isActive && !reduceMotion {
-                Circle()
-                    .stroke(state.liquidTones[0].opacity(0.40), lineWidth: 1.2)
-                    .frame(width: 70, height: 70)
-                    .scaleEffect(pulse ? 1.24 : 0.92)
-                    .opacity(pulse ? 0.0 : 0.55)
+            if state.isActive && allowsContinuousMotion {
+                LiquidPulseRing(
+                    color: state.liquidTones[0].opacity(0.40),
+                    lineWidth: 1.2,
+                    fromScale: 0.92,
+                    toScale: 1.24,
+                    initialOpacity: 0.55,
+                    duration: 1.25
+                )
+                .frame(width: 70, height: 70)
             }
 
             Circle()
@@ -2165,8 +2173,8 @@ struct VoiceAssistantLauncherButton: View {
         .shadow(color: state.liquidTones[0].opacity(reduceTransparency ? 0.18 : 0.42), radius: state.isActive ? 14 : 8, x: 0, y: 6)
         .scaleEffect(launcherScale)
         .lippiFloating(active: state.isActive, amplitude: 2.0, duration: 3.8)
-        .animation(reduceMotion ? nil : DS.motionMagic, value: state.isActive)
-        .animation(reduceMotion ? nil : DS.motionMagic, value: isPressed)
+        .animation(reduceMotion ? nil : DS.motionState, value: state.isActive)
+        .animation(reduceMotion ? nil : DS.motionPress, value: isPressed)
         .accessibilityLabel(Text(title))
         .accessibilityHint(Text(actionTitle))
         .accessibilityAddTraits(.isButton)
@@ -2210,16 +2218,6 @@ struct VoiceAssistantLauncherButton: View {
                     DS.hapticSoft()
                     onTap()
                 }
-        )
-        .onAppear {
-            guard !reduceMotion else { return }
-            pulse = true
-        }
-        .animation(
-            reduceMotion
-            ? nil
-            : .easeOut(duration: 1.25).repeatForever(autoreverses: false),
-            value: pulse
         )
     }
 }
@@ -2272,15 +2270,18 @@ private struct LiquidAssistantCore: View {
     let state: AppVoiceAssistantState
     let reduceMotion: Bool
     let reduceTransparency: Bool
-    @State private var pulse = false
 
     var body: some View {
         ZStack {
             if state.isActive && !reduceMotion {
-                Circle()
-                    .stroke(state.liquidTones[0].opacity(0.36), lineWidth: 1.3)
-                    .scaleEffect(pulse ? 1.35 : 0.95)
-                    .opacity(pulse ? 0.0 : 0.65)
+                LiquidPulseRing(
+                    color: state.liquidTones[0].opacity(0.36),
+                    lineWidth: 1.3,
+                    fromScale: 0.95,
+                    toScale: 1.35,
+                    initialOpacity: 0.65,
+                    duration: 1.45
+                )
             }
 
             Circle()
@@ -2321,16 +2322,31 @@ private struct LiquidAssistantCore: View {
                 .font(.system(size: 30, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
         }
-        .onAppear {
-            guard !reduceMotion else { return }
-            pulse = true
-        }
-        .animation(
-            reduceMotion
-            ? nil
-            : .easeOut(duration: 1.45).repeatForever(autoreverses: false),
-            value: pulse
-        )
+    }
+}
+
+private struct LiquidPulseRing: View {
+    let color: Color
+    let lineWidth: CGFloat
+    let fromScale: CGFloat
+    let toScale: CGFloat
+    let initialOpacity: Double
+    let duration: Double
+
+    @State private var isExpanded = false
+
+    var body: some View {
+        Circle()
+            .stroke(color, lineWidth: lineWidth)
+            .scaleEffect(isExpanded ? toScale : fromScale)
+            .opacity(isExpanded ? 0 : initialOpacity)
+            .onAppear {
+                withAnimation(.easeOut(duration: duration).repeatForever(autoreverses: false)) {
+                    isExpanded = true
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 

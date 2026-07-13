@@ -182,21 +182,23 @@ struct DS {
     static let radius: CGFloat = 24
     static let pad: CGFloat = 20
 
-    // Motion tokens: one source of truth for smooth, consistent animations.
-    static let motionQuick = Animation.spring(response: 0.20, dampingFraction: 0.98, blendDuration: 0.05)
-    static let motionSmooth = Animation.spring(response: 0.32, dampingFraction: 0.98, blendDuration: 0.08)
-    static let motionGentle = Animation.spring(response: 0.44, dampingFraction: 0.97, blendDuration: 0.10)
-    static let motionEnter = Animation.spring(response: 0.36, dampingFraction: 0.97, blendDuration: 0.10)
-    static let motionMagic = Animation.spring(response: 0.48, dampingFraction: 0.96, blendDuration: 0.12)
-    static let motionNavigate = Animation.spring(response: 0.40, dampingFraction: 0.96, blendDuration: 0.12)
-    static let motionTabSwitch = Animation.spring(response: 0.36, dampingFraction: 0.99, blendDuration: 0.12)
-    static let motionReveal = Animation.spring(response: 0.44, dampingFraction: 0.96, blendDuration: 0.10)
-    static let motionState = Animation.spring(response: 0.26, dampingFraction: 0.96, blendDuration: 0.06)
+    // Motion tokens: brief, precise springs with a shared rhythm across the app.
+    // Duration/bounce parameters use the spring model standardized across Apple frameworks.
+    static let motionPress = Animation.spring(duration: 0.18, bounce: 0.00, blendDuration: 0.02)
+    static let motionQuick = Animation.spring(duration: 0.22, bounce: 0.02, blendDuration: 0.03)
+    static let motionState = Animation.spring(duration: 0.28, bounce: 0.04, blendDuration: 0.04)
+    static let motionTabSwitch = Animation.spring(duration: 0.32, bounce: 0.06, blendDuration: 0.05)
+    static let motionSmooth = Animation.spring(duration: 0.34, bounce: 0.04, blendDuration: 0.05)
+    static let motionEnter = Animation.spring(duration: 0.38, bounce: 0.03, blendDuration: 0.06)
+    static let motionNavigate = Animation.spring(duration: 0.40, bounce: 0.02, blendDuration: 0.06)
+    static let motionReveal = Animation.spring(duration: 0.40, bounce: 0.02, blendDuration: 0.06)
+    static let motionMagic = Animation.spring(duration: 0.42, bounce: 0.04, blendDuration: 0.06)
+    static let motionGentle = Animation.spring(duration: 0.46, bounce: 0.00, blendDuration: 0.08)
     static let motionSweep = Animation.easeInOut(duration: 5.8)
     static let motionFadeQuick = Animation.easeOut(duration: 0.16)
 
-    static let pressScale: CGFloat = 0.974
-    static let press = motionQuick
+    static let pressScale: CGFloat = 0.985
+    static let press = motionPress
 
     // Extra polish
     static let hairline: CGFloat = 0.85
@@ -393,8 +395,8 @@ extension View {
     func lippiMagicAppear(
         _ enabled: Bool = true,
         delay: Double = 0,
-        y: CGFloat = 12,
-        scale: CGFloat = 0.985
+        y: CGFloat = 10,
+        scale: CGFloat = 0.992
     ) -> some View {
         modifier(
             LippiMagicAppearModifier(
@@ -409,7 +411,7 @@ extension View {
     func lippiMotionScene(
         _ index: Int = 0,
         enabled: Bool = true,
-        y: CGFloat = 12
+        y: CGFloat = 10
     ) -> some View {
         modifier(
             LippiMotionSceneModifier(
@@ -596,7 +598,7 @@ private struct LippiMotionSceneModifier: ViewModifier {
         content
             .opacity(shouldAnimate ? (didAppear ? 1 : 0.001) : 1)
             .offset(y: shouldAnimate ? (didAppear ? 0 : y) : 0)
-            .scaleEffect(shouldAnimate ? (didAppear ? 1 : 0.982) : 1)
+            .scaleEffect(shouldAnimate ? (didAppear ? 1 : 0.994) : 1)
             .onAppear {
                 guard enabled else {
                     didAppear = true
@@ -1040,7 +1042,7 @@ struct LippiButtonStyle: ButtonStyle {
                 interactive: true,
                 enabled: systemGlassEnabled
             )
-            .offset(y: reduceMotion ? 0 : (pressed ? 1.2 : 0))
+            .offset(y: reduceMotion ? 0 : (pressed ? 0.7 : 0))
             .scaleEffect(reduceMotion ? 1 : (pressed ? DS.pressScale : 1))
             .shadow(
                 color: shadowColor(pressed: pressed),
@@ -1048,7 +1050,7 @@ struct LippiButtonStyle: ButtonStyle {
                 x: 0,
                 y: shadowY(pressed: pressed)
             )
-            .animation((reduceMotion || scrollingEffects) ? nil : DS.motionMagic, value: pressed)
+            .animation((reduceMotion || scrollingEffects) ? nil : DS.motionPress, value: pressed)
             .onChange(of: configuration.isPressed) { _, newValue in
                 if newValue, isEnabled { DS.hapticSoft() }
             }
