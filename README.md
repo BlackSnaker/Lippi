@@ -81,10 +81,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2012%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Liquid Glass" src="https://img.shields.io/badge/UI-Liquid%20Glass-64D2FF?style=for-the-badge">
-    <img alt="Performance" src="https://img.shields.io/badge/Performance-Smooth%20UI-30D158?style=for-the-badge">
-    <img alt="Navigation" src="https://img.shields.io/badge/Navigation-3%20%2B%20More-BF5AF2?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2013%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Today" src="https://img.shields.io/badge/Today-Calm%20%26%20Focused-64D2FF?style=for-the-badge">
+    <img alt="Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-Simplified-30D158?style=for-the-badge">
+    <img alt="Motion" src="https://img.shields.io/badge/Motion-Apple--style-BF5AF2?style=for-the-badge">
     <img alt="Accessibility" src="https://img.shields.io/badge/Accessibility-Adaptive-FF9F0A?style=for-the-badge">
   </p>
   <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
@@ -94,32 +94,69 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Compact navigation</strong><br>
-      <sub>Today, Tasks, and Pomodoro stay one tap away; secondary areas live in a polished More menu.</sub>
+      <strong>Focused Today</strong><br>
+      <sub>A calmer welcome, clearer daily rhythm, and one obvious next action.</sub>
       <br><br>
-      <strong>Компактная навигация</strong><br>
-      <sub>Сегодня, Задачи и Pomodoro всегда под рукой, а второстепенные разделы собраны в красивом меню «Ещё».</sub>
+      <strong>Сфокусированный «Сегодня»</strong><br>
+      <sub>Спокойное приветствие, понятный ритм дня и одно очевидное следующее действие.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>True full screen</strong><br>
-      <sub>The themed backdrop reaches every physical edge without top or bottom bands.</sub>
+      <strong>Simpler Smart Goals</strong><br>
+      <sub>Start with the essentials and reveal planning depth only when it becomes useful.</sub>
       <br><br>
-      <strong>Настоящий full screen</strong><br>
-      <sub>Тематический фон доходит до физических краёв дисплея без полос сверху и снизу.</sub>
+      <strong>Проще «Умные цели»</strong><br>
+      <sub>Сначала только главное, а подробности планирования открываются по необходимости.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Calmer Liquid Glass</strong><br>
-      <sub>System glass highlights navigation and controls while content surfaces stay clear and lightweight.</sub>
+      <strong>Unified Apple-style motion</strong><br>
+      <sub>Presses, state changes, navigation, and content reveals share one precise spring rhythm.</sub>
       <br><br>
-      <strong>Спокойный Liquid Glass</strong><br>
-      <sub>Системное стекло подчёркивает навигацию и элементы управления, а контент остаётся чистым и лёгким.</sub>
+      <strong>Единые анимации в стиле Apple</strong><br>
+      <sub>Нажатия, смена состояний, навигация и появление контента живут в одном точном ритме.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Responsive by design</strong><br>
-      <sub>Scrolling, timers, persistence, Dynamic Type, VoiceOver, and reduced-effects modes now work together.</sub>
+      <strong>Performance-aware by design</strong><br>
+      <sub>Continuous effects pause when idle, scrolling, saving power, or responding to accessibility settings.</sub>
       <br><br>
-      <strong>Адаптивность во всём</strong><br>
-      <sub>Скролл, таймеры, сохранение, Dynamic Type, VoiceOver и облегчённые режимы работают согласованно.</sub>
+      <strong>Производительность по контексту</strong><br>
+      <sub>Постоянные эффекты останавливаются в покое, при скролле, энергосбережении и специальных настройках.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 13, 2026 - A calmer Today, simpler Smart Goals, and Apple-style motion
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>This update makes Lippi feel lighter and more intentional: the main screen is easier to scan, planning starts without friction, and every interaction follows one responsive motion language.</strong></p>
+      <ul>
+        <li><strong>A focused Today screen:</strong> the welcome surface now prioritizes the day, progress, and the next useful action instead of competing decorative details.</li>
+        <li><strong>Clearer first impression:</strong> typography, spacing, metrics, focus prompts, and primary actions form a calmer hierarchy that is easier to understand at a glance.</li>
+        <li><strong>Simpler Smart Goals:</strong> planning begins with compact mode selection and essential inputs, while optional settings stay available through progressive disclosure.</li>
+        <li><strong>Roadmaps without overload:</strong> the result leads with the overview and milestones; progress tools, evidence, habits, risks, and milestone task lists open only when needed.</li>
+        <li><strong>One Apple-style motion system:</strong> presses, state changes, navigation, and content reveals use brief, precise springs with restrained scale and movement.</li>
+        <li><strong>Faster controls and tabs:</strong> button feedback is immediate, tab labels appear softly, and duplicate nested tab-bar animations no longer compete for layout work.</li>
+        <li><strong>Meaningful assistant animation:</strong> voice-assistant pulses exist only while they communicate an active state instead of running continuously in the background.</li>
+        <li><strong>Adaptive by default:</strong> custom motion responds to Reduce Motion, scrolling, Low Power Mode, and thermal pressure so visual polish never takes priority over responsiveness.</li>
+        <li><strong>Verification:</strong> the changed Swift sources pass syntax and patch-integrity checks; final device validation remains intentionally manual.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Это обновление делает Lippi легче и осмысленнее: главный экран быстрее считывается, планирование начинается без лишних шагов, а все взаимодействия подчиняются единому плавному языку движения.</strong></p>
+      <ul>
+        <li><strong>Сфокусированный экран «Сегодня»:</strong> приветственный блок теперь ставит на первое место день, прогресс и следующее полезное действие вместо конкурирующих декоративных деталей.</li>
+        <li><strong>Понятнее с первого взгляда:</strong> типографика, отступы, метрики, главный фокус и основные действия образуют спокойную и легко читаемую иерархию.</li>
+        <li><strong>Проще «Умные цели»:</strong> планирование начинается с компактного выбора режима и главных полей, а дополнительные настройки доступны через постепенное раскрытие.</li>
+        <li><strong>Дорожные карты без перегруза:</strong> результат сначала показывает обзор и этапы; прогресс, источники, привычки, риски и задачи этапов открываются только тогда, когда нужны.</li>
+        <li><strong>Единая система анимаций в стиле Apple:</strong> нажатия, смена состояний, навигация и появление контента используют короткие точные пружины со сдержанным масштабом и перемещением.</li>
+        <li><strong>Быстрее кнопки и вкладки:</strong> отклик на касание стал мгновенным, подписи вкладок появляются мягко, а вложенные дублирующие анимации больше не заставляют вёрстку выполнять лишнюю работу.</li>
+        <li><strong>Осмысленная анимация ассистента:</strong> пульсация существует только во время активного состояния и не работает постоянно в фоне.</li>
+        <li><strong>Адаптивность по умолчанию:</strong> эффекты учитывают Reduce Motion, прокрутку, энергосбережение и нагрев, поэтому красота не мешает отзывчивости.</li>
+        <li><strong>Проверка:</strong> изменённые Swift-файлы прошли проверку синтаксиса и целостности патча; финальная проверка на устройстве намеренно оставлена ручной.</li>
+      </ul>
     </td>
   </tr>
 </table>
