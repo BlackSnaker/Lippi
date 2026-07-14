@@ -100,11 +100,20 @@ struct TodayView: View {
             .clearNavBarBackgroundIfAvailable()
             .toolbarBackgroundVisibility(.visible, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showAdd = true } label: {
-                        Image(safeSystemName: "plus", fallback: "plus.circle.fill")
+                if #available(iOS 26.0, *) {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        smartGoalsToolbarButton
+                            .buttonStyle(.glass)
+
+                        addTaskToolbarButton
+                            .buttonStyle(.glass)
                     }
-                    .accessibilityLabel(s("today.toolbar.new_task"))
+                    .sharedBackgroundVisibility(.visible)
+                } else {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        smartGoalsToolbarButton
+                        addTaskToolbarButton
+                    }
                 }
             }
             // ✅ Нижний отступ под TabBar (чтобы контент не уходил под него)
@@ -131,6 +140,21 @@ struct TodayView: View {
     }
 
     // MARK: - Subviews
+    private var smartGoalsToolbarButton: some View {
+        Button { showGoalPlanner = true } label: {
+            Image(safeSystemName: "wand.and.stars", fallback: "sparkles")
+        }
+        .accessibilityLabel(s("goals.nav_title"))
+        .accessibilityHint(s("goals.entry.subtitle"))
+    }
+
+    private var addTaskToolbarButton: some View {
+        Button { showAdd = true } label: {
+            Image(safeSystemName: "plus", fallback: "plus.circle.fill")
+        }
+        .accessibilityLabel(s("today.toolbar.new_task"))
+    }
+
     private var headerCard: some View {
         GlassCard(padding: 18, cornerRadius: 28, style: .full) {
             VStack(alignment: .leading, spacing: 16) {

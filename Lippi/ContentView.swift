@@ -1776,6 +1776,7 @@ final class PomodoroManager: ObservableObject {
     @Published private(set) var round: Int = 0
     @Published private(set) var startDate: Date?
     @Published private(set) var endDate: Date?
+    @Published private(set) var sessionTotalDuration: TimeInterval?
     @Published var config = PomodoroConfig()
 
     weak var stats: StatsStore?
@@ -1784,12 +1785,17 @@ final class PomodoroManager: ObservableObject {
     private var pausedRemaining: TimeInterval?
     private var pausedPhase: PomodoroPhase?
     private var movementScheduledAt: Date?
+    private var accumulatedFocusSeconds: TimeInterval = 0
+
+    var pausedSessionRemaining: TimeInterval? { pausedRemaining }
 
     init() {
         WidgetUpdater.clearPomodoro()
     }
 
     func startFocus(customMinutes: Int? = nil) {
+        logFocusIfNeeded()
+        accumulatedFocusSeconds = 0
         phase = .focus
         start(
             for: customMinutes ?? config.focusMinutes,
@@ -1820,11 +1826,16 @@ final class PomodoroManager: ObservableObject {
     }
 
     func pause() {
-        guard phase != .paused, let end = endDate else { return }
-        pausedPhase = phase
+        guard phase != .paused, phase != .stopped, let end = endDate else { return }
+        let activePhase = phase
+        if activePhase == .focus, let startDate {
+            accumulatedFocusSeconds += max(Date.now.timeIntervalSince(startDate), 0)
+        }
+        pausedPhase = activePhase
         pausedRemaining = max(end.timeIntervalSinceNow, 0)
         endDate = nil
         phase = .paused
+        cancelTimerNotifications()
         syncPomodoroWidget()
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *) {
@@ -1843,6 +1854,14 @@ final class PomodoroManager: ObservableObject {
         pausedRemaining = nil
         pausedPhase = nil
         phase = restorePhase
+
+        if let endDate {
+            scheduleTimerNotification(
+                title: titleForPhase(restorePhase),
+                body: notificationBody(for: restorePhase),
+                at: endDate
+            )
+        }
 
         if restorePhase == .focus {
             scheduleMovementIfNeeded(resume: true)
@@ -1871,8 +1890,9 @@ final class PomodoroManager: ObservableObject {
         pausedRemaining = nil
         pausedPhase = nil
         movementScheduledAt = nil
-        NotificationManager.shared.cancel(ids: notifIds)
-        notifIds.removeAll()
+        accumulatedFocusSeconds = 0
+        sessionTotalDuration = nil
+        cancelTimerNotifications()
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *) { Task { await PomodoroLiveManager.endAll() } }
         #endif
@@ -1880,13 +1900,17 @@ final class PomodoroManager: ObservableObject {
     }
 
     private func start(for minutes: Int, title: String, notifBody: String) {
+        cancelTimerNotifications()
         let secs = atLeastOneSecond(TimeInterval(minutes * 60))
+        sessionTotalDuration = secs
         startDate = .now
         endDate = Date(timeIntervalSinceNow: secs)
+        pausedRemaining = nil
+        pausedPhase = nil
 
-        let id = "pomodoro-\(UUID().uuidString)"
-        notifIds.append(id)
-        if let endDate { NotificationManager.shared.schedule(id: id, title: title, body: notifBody, at: endDate) }
+        if let endDate {
+            scheduleTimerNotification(title: title, body: notifBody, at: endDate)
+        }
 
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *), let s = startDate {
@@ -1897,7 +1921,6 @@ final class PomodoroManager: ObservableObject {
     }
 
     func advance() {
-        logFocusIfNeeded()
         switch phase {
         case .focus:
             round += 1
@@ -1916,14 +1939,47 @@ final class PomodoroManager: ObservableObject {
     }
 
     private func logFocusIfNeeded() {
-        guard phase == .focus, let s = startDate else { return }
-        let secs = max(0, Date().timeIntervalSince(s))
+        let pausedFocus = phase == .paused && pausedPhase == .focus
+        guard phase == .focus || pausedFocus else { return }
+
+        var secs = accumulatedFocusSeconds
+        if phase == .focus, let startDate {
+            secs += max(0, Date.now.timeIntervalSince(startDate))
+        }
+        accumulatedFocusSeconds = 0
+        guard secs > 0 else { return }
+
         stats?.recordFocus(seconds: secs, on: Date())
 
         // NEW: сообщаем системе, сколько подряд отработано — для автопредложения гимнастики глаз
         NotificationCenter.default.post(name: .focusWorkLogged,
                                         object: nil,
                                         userInfo: ["seconds": secs])
+    }
+
+    private func scheduleTimerNotification(title: String, body: String, at date: Date) {
+        let id = "pomodoro-\(UUID().uuidString)"
+        notifIds.append(id)
+        NotificationManager.shared.schedule(id: id, title: title, body: body, at: date)
+    }
+
+    private func cancelTimerNotifications() {
+        guard !notifIds.isEmpty else { return }
+        NotificationManager.shared.cancel(ids: notifIds)
+        notifIds.removeAll()
+    }
+
+    private func notificationBody(for phase: PomodoroPhase) -> String {
+        switch phase {
+        case .focus:
+            return L10n.trCurrent("pomodoro.notification.focus_body")
+        case .shortBreak:
+            return L10n.trCurrent("pomodoro.notification.short_break_body")
+        case .longBreak:
+            return L10n.trCurrent("pomodoro.notification.long_break_body")
+        case .paused, .stopped:
+            return ""
+        }
     }
 
     private func titleForPhase(_ p: PomodoroPhase) -> String {
@@ -2529,23 +2585,32 @@ struct ContentView: View {
             bottomToolbarOverlay
                 .zIndex(10)
         }
-        .overlay(alignment: .top) {
-            if pomodoroAlarm.isActive {
-                PomodoroAlarmBanner(
-                    title: L10n.tr("pomodoro.alarm.title", lang),
-                    subtitle: L10n.fmt("pomodoro.alarm.subtitle", lang, pomodoroAlarm.finishedPhaseTitle),
-                    stopTitle: L10n.tr("pomodoro.alarm.stop", lang)
-                ) {
-                    pomodoroAlarm.stop()
+        .overlay {
+            GeometryReader { proxy in
+                let alarmTopSpacing = max(68, proxy.safeAreaInsets.top + 16)
+
+                VStack(spacing: 0) {
+                    if pomodoroAlarm.isActive {
+                        PomodoroAlarmBanner(
+                            title: L10n.tr("pomodoro.alarm.title", lang),
+                            subtitle: L10n.fmt("pomodoro.alarm.subtitle", lang, pomodoroAlarm.finishedPhaseTitle),
+                            stopTitle: L10n.tr("pomodoro.alarm.stop", lang)
+                        ) {
+                            pomodoroAlarm.stop()
+                        }
+                        .padding(.horizontal, 14)
+                        .transition(
+                            reduceMotion
+                            ? .opacity
+                            : .move(edge: .top).combined(with: .opacity)
+                        )
+                        .zIndex(9)
+                    }
+
+                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 8)
-                .transition(
-                    reduceMotion
-                    ? .opacity
-                    : .move(edge: .top).combined(with: .opacity)
-                )
-                .zIndex(9)
+                .padding(.top, alarmTopSpacing)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .overlay(alignment: .bottomTrailing) {

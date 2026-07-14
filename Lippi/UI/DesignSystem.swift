@@ -991,6 +991,7 @@ struct LippiButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, destructive, ghost }
     var kind: Kind = .primary
     var compact: Bool = false
+    var allowsMultiline: Bool = false
 
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1024,7 +1025,7 @@ struct LippiButtonStyle: ButtonStyle {
 
         return configuration.label
             .font(.system(.callout, design: .rounded).weight(.semibold))
-            .singleLine()
+            .modifier(LippiButtonLabelLayoutModifier(allowsMultiline: allowsMultiline))
             .padding(.horizontal, compact ? 14 : 18)
             .padding(.vertical, compact ? 10 : 12)
             .frame(minHeight: compact ? 44 : 48)
@@ -1234,6 +1235,22 @@ struct LippiButtonStyle: ButtonStyle {
             return simplifiedEffects ? 1 : 2
         case .ghost:
             return 0
+        }
+    }
+}
+
+private struct LippiButtonLabelLayoutModifier: ViewModifier {
+    let allowsMultiline: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if allowsMultiline {
+            content
+                .lineLimit(nil)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            content.singleLine()
         }
     }
 }

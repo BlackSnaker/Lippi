@@ -47,10 +47,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2013%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Today" src="https://img.shields.io/badge/Today-Calm%20%26%20Focused-64D2FF?style=for-the-badge">
-    <img alt="Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-Simplified-30D158?style=for-the-badge">
-    <img alt="Motion" src="https://img.shields.io/badge/Motion-Apple--style-BF5AF2?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2014%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Pomodoro" src="https://img.shields.io/badge/Pomodoro-Focused-64D2FF?style=for-the-badge">
+    <img alt="Eye Health" src="https://img.shields.io/badge/Eye%20Health-Clear-30D158?style=for-the-badge">
+    <img alt="Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-One%20Tap-BF5AF2?style=for-the-badge">
     <img alt="Accessibility" src="https://img.shields.io/badge/Accessibility-Adaptive-FF9F0A?style=for-the-badge">
   </p>
   <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
@@ -60,32 +60,73 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Focused Today</strong><br>
-      <sub>A calmer welcome, clearer daily rhythm, and one obvious next action.</sub>
+      <strong>Focused Pomodoro</strong><br>
+      <sub>One clear timer, contextual controls, readable phases, and a calmer setup flow.</sub>
       <br><br>
-      <strong>Сфокусированный «Сегодня»</strong><br>
-      <sub>Спокойное приветствие, понятный ритм дня и одно очевидное следующее действие.</sub>
+      <strong>Сфокусированный Pomodoro</strong><br>
+      <sub>Один ясный таймер, контекстные действия, читаемые этапы и спокойная настройка.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Simpler Smart Goals</strong><br>
-      <sub>Start with the essentials and reveal planning depth only when it becomes useful.</sub>
+      <strong>Clear Eye Health</strong><br>
+      <sub>Weekly rhythm, three essential progress signals, and statistics that explain themselves.</sub>
       <br><br>
-      <strong>Проще «Умные цели»</strong><br>
-      <sub>Сначала только главное, а подробности планирования открываются по необходимости.</sub>
+      <strong>Понятное здоровье глаз</strong><br>
+      <sub>Недельный ритм, три главных показателя прогресса и наглядная статистика.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Unified Apple-style motion</strong><br>
-      <sub>Presses, state changes, navigation, and content reveals share one precise spring rhythm.</sub>
+      <strong>Smart Goals nearby</strong><br>
+      <sub>A dedicated Liquid Glass shortcut keeps intelligent planning beside the primary add action.</sub>
       <br><br>
-      <strong>Единые анимации в стиле Apple</strong><br>
-      <sub>Нажатия, смена состояний, навигация и появление контента живут в одном точном ритме.</sub>
+      <strong>«Умные цели» рядом</strong><br>
+      <sub>Отдельная Liquid Glass-кнопка держит умное планирование рядом с основным добавлением.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Performance-aware by design</strong><br>
-      <sub>Continuous effects pause when idle, scrolling, saving power, or responding to accessibility settings.</sub>
+      <strong>Readable and reliable</strong><br>
+      <sub>Labels wrap naturally, Dynamic Type stays comfortable, and timer state survives pause and resume correctly.</sub>
       <br><br>
-      <strong>Производительность по контексту</strong><br>
-      <sub>Постоянные эффекты останавливаются в покое, при скролле, энергосбережении и специальных настройках.</sub>
+      <strong>Читаемо и надёжно</strong><br>
+      <sub>Подписи переносятся, крупный текст остаётся удобным, а таймер корректно переживает паузу и продолжение.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 14, 2026 - Focused Pomodoro, clearer Eye Health, and Smart Goals one tap away
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>This update turns two active experiences into calm, self-explanatory tools: Pomodoro now keeps the session and its next action at the center, while Eye Health presents progress without visual noise.</strong></p>
+      <ul>
+        <li><strong>A focused Pomodoro screen:</strong> one prominent progress ring combines the phase, remaining time, cycle status, and the action that matters now.</li>
+        <li><strong>Contextual timer controls:</strong> start, pause, resume, stop, skip, short break, and long break appear only when relevant instead of competing at once.</li>
+        <li><strong>Calmer session setup:</strong> 25- and 50-minute presets stay immediate, while custom duration expands only when requested.</li>
+        <li><strong>Reliable pause and resume:</strong> remaining time, scheduled notifications, accumulated focus statistics, and session duration now stay consistent across state changes.</li>
+        <li><strong>A safer completion banner:</strong> the Stop control appears below the device safe area instead of crowding Dynamic Island.</li>
+        <li><strong>Readable at every text size:</strong> Pomodoro labels and actions can grow vertically and wrap naturally without ellipses or cramped two-column controls.</li>
+        <li><strong>Eye Health without overload:</strong> quick start, weekly goal, streak, and total sessions form one clear opening card, followed by compact progress, milestones, and one rotating daily tip.</li>
+        <li><strong>Only three progress signals:</strong> accuracy leads with a visual ring, supported by average reaction and best streak; detailed trends remain in Statistics.</li>
+        <li><strong>Statistics that explain themselves:</strong> accuracy, reaction time, session history, progress bars, and a refined millisecond chart use a calmer hierarchy and render only the latest 30 sessions.</li>
+        <li><strong>Smart Goals one tap away:</strong> a dedicated Liquid Glass shortcut now sits beside Add on Today, with a shared glass background that keeps both actions visually connected.</li>
+        <li><strong>Verification:</strong> the complete app source passes Swift type checking for the iOS 18.5 Simulator SDK, Swift syntax checks, and patch-integrity validation; device launch remains intentionally manual.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Это обновление превращает два активных сценария в спокойные и понятные инструменты: Pomodoro держит в центре текущую сессию и следующее действие, а «Глаза» показывают прогресс без визуального шума.</strong></p>
+      <ul>
+        <li><strong>Сфокусированный экран Pomodoro:</strong> одно выразительное кольцо объединяет этап, оставшееся время, цикл и главное действие текущего момента.</li>
+        <li><strong>Контекстное управление таймером:</strong> старт, пауза, продолжение, остановка, переход к следующему этапу, короткий и длинный перерыв появляются только тогда, когда нужны.</li>
+        <li><strong>Спокойная настройка сессии:</strong> пресеты на 25 и 50 минут доступны сразу, а произвольная длительность раскрывается только по запросу.</li>
+        <li><strong>Надёжные пауза и продолжение:</strong> остаток времени, запланированные уведомления, накопленная статистика фокуса и длительность сессии теперь согласованы при каждой смене состояния.</li>
+        <li><strong>Безопасный баннер завершения:</strong> кнопка «Выключить» показывается ниже safe area и больше не прижимается к Dynamic Island.</li>
+        <li><strong>Читаемо при любом размере текста:</strong> подписи и действия Pomodoro свободно растут по высоте и переносятся без многоточий и тесных колонок.</li>
+        <li><strong>«Глаза» без перегруза:</strong> быстрый старт, недельная цель, серия и число сессий собраны в одном ясном блоке, а ниже остаются компактный прогресс, достижения и один меняющийся совет дня.</li>
+        <li><strong>Только три показателя прогресса:</strong> точность стала главным визуальным акцентом, а средняя реакция и лучшая серия поддерживают её; подробная динамика осталась в «Статистике».</li>
+        <li><strong>Статистика, которую легко понять:</strong> точность, реакция, история сессий, шкалы результата и обновлённый график в миллисекундах получили спокойную иерархию; для плавности выводятся последние 30 сессий.</li>
+        <li><strong>«Умные цели» в одном касании:</strong> отдельная Liquid Glass-кнопка появилась рядом с добавлением на экране «Сегодня», а общая стеклянная подложка визуально объединяет оба действия.</li>
+        <li><strong>Проверка:</strong> весь код приложения прошёл Swift type checking под iOS 18.5 Simulator SDK, проверку синтаксиса и целостности патча; запуск на устройстве намеренно оставлен ручным.</li>
+      </ul>
     </td>
   </tr>
 </table>

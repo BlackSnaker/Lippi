@@ -13,6 +13,7 @@ import Charts
 // =======================================================
 public struct EyeHealthHomeView: View {
     @EnvironmentObject private var eye: EyeExerciseStore
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var showGame = false
     @State private var showStats = false
@@ -30,8 +31,18 @@ public struct EyeHealthHomeView: View {
     private var weekGoalLeft: Int { max(0, 7 - weekSessionsCount) }
     private var unlockedAchievementsCount: Int { eye.achievements.count }
     private var totalAchievementsCount: Int { EyeAchievement.allCases.count }
-    private var tPrimary: Color { DS.textPrimary }
-    private var tSecondary: Color { DS.textSecondary }
+    private var achievementProgress: Double {
+        guard totalAchievementsCount > 0 else { return 0 }
+        return Double(unlockedAchievementsCount) / Double(totalAchievementsCount)
+    }
+    private var lastSession: EyeSessionHistory? { eye.history.first }
+    private var lastAccuracy: Int {
+        guard let lastSession, lastSession.total > 0 else { return 0 }
+        return Int((Double(lastSession.hits) / Double(lastSession.total) * 100).rounded())
+    }
+    private var nextAchievement: EyeAchievement? {
+        EyeAchievement.allCases.first { !eye.achievements.contains($0) }
+    }
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
 
@@ -44,24 +55,17 @@ public struct EyeHealthHomeView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        header
+                        heroCard
                             .lippiMotionScene(0)
 
-                        // ——— Быстрый старт ———
-                        quickStartCard
+                        progressCard
                             .lippiMotionScene(1)
 
-                        // ——— Прогресс ———
-                        GlassCard(style: .lightweight) { progressBlock }
+                        achievementsCard
                             .lippiMotionScene(2)
 
-                        // ——— Достижения ———
-                        GlassCard(style: .lightweight) { achievementsBlock }
+                        dailyTipCard
                             .lippiMotionScene(3)
-
-                        // ——— Советы ———
-                        GlassCard(style: .lightweight) { tipsBlock }
-                            .lippiMotionScene(4)
 
                         Color.clear.frame(height: 84)
                     }
@@ -86,298 +90,466 @@ public struct EyeHealthHomeView: View {
         .sheet(isPresented: $showSettings) { EyeSettingsView().environmentObject(eye) }
     }
 
-    // Header
-    private var header: some View {
-        GlassCard(padding: 16, cornerRadius: 22, style: .lightweight) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 10) {
-                    LippiSectionHeader(
-                        title: s("eye.home.header_title"),
-                        subtitle: s("eye.home.header_subtitle"),
-                        icon: "eye.fill",
-                        accent: Color(hex: 0x30D158)
+    // MARK: - Primary focus
+
+    private var heroCard: some View {
+        GlassCard(
+            padding: 18,
+            cornerRadius: 30,
+            style: .full,
+            forceSystemGlass: false
+        ) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color(hex: 0x30D158).opacity(0.14))
+
+                        Image(safeSystemName: "eye.fill", fallback: "eye")
+                            .font(.system(size: 19, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(hex: 0x30D158))
+                    }
+                    .frame(width: 48, height: 48)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(DS.glassStroke(0.13), lineWidth: 1)
                     )
-                    Spacer()
-                    capsule(weekGoalLeft == 0 ? s("eye.home.goal_done") : L10n.fmt("eye.home.goal_left", lang, weekGoalLeft))
-                        .padding(.top, 2)
-                }
 
-                HStack(spacing: 8) {
-                    heroMetric(icon: "flame.fill", title: s("eye.home.metric_streak"), value: L10n.fmt("eye.home.days_short", lang, eye.dayStreak))
-                    heroMetric(icon: "calendar", title: s("eye.home.metric_week"), value: "\(weekSessionsCount)/7")
-                    heroMetric(icon: "trophy.fill", title: s("eye.home.metric_achievements"), value: "\(unlockedAchievementsCount)")
-                }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(s("eye.home.header_title"))
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(DS.textPrimary)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(s("eye.home.week_activity"))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(tSecondary)
-                            .singleLine()
-                        Spacer()
-                        Text("\(weekSessionsCount)/7")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(tPrimary)
-                            .monospacedDigit()
+                        Text(s("eye.home.header_subtitle"))
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    FancyLinearProgressBar(progress: weekProgress, height: 10)
-                        .transaction { $0.animation = nil }
+                    Spacer(minLength: 8)
 
-                    Text(
-                        weekGoalLeft == 0
-                        ? s("eye.home.goal_done_subtitle")
-                        : L10n.fmt("eye.home.goal_remaining_subtitle", lang, weekGoalLeft)
-                    )
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(DS.text(0.62))
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                )
-            }
-        }
-    }
-
-    private var quickStartCard: some View {
-        GlassCard(style: .lightweight) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 8) {
-                    LippiSectionHeader(
-                        title: s("eye.home.quick_title"),
-                        subtitle: s("eye.home.quick_subtitle"),
-                        icon: "bolt.fill",
-                        accent: Color(hex: 0x64D2FF)
-                    )
-                    Spacer()
                     Button { showSettings = true } label: {
-                        Label(s("eye.home.settings"), systemImage: "gearshape")
-                            .labelStyle(TightLabelStyle())
+                        Image(safeSystemName: "gearshape", fallback: "slider.horizontal.3")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(DS.textSecondary)
+                            .frame(width: 44, height: 44)
+                            .background(DS.glassFill(0.07), in: Circle())
+                            .overlay(Circle().stroke(DS.glassStroke(0.12), lineWidth: 1))
                     }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
-                    .padding(.top, 2)
+                    .buttonStyle(PressScaleStyle(scale: 0.96, opacity: 0.88))
+                    .accessibilityLabel(Text(s("eye.home.settings")))
                 }
 
-                Text(L10n.fmt("eye.home.quick_description", lang, eye.settings.targetsPerSession))
-                    .font(.footnote)
-                    .foregroundStyle(tSecondary)
-
-                HStack(spacing: 8) {
-                    quickBadge(title: s("eye.home.metric_week"), value: "\(weekSessionsCount)/7", systemImage: "calendar")
-                    quickBadge(title: s("eye.home.metric_achievements"), value: "\(unlockedAchievementsCount)/\(totalAchievementsCount)", systemImage: "trophy.fill")
-                }
-
-                HStack(spacing: 12) {
-                    Button { showGame = true } label: {
-                        Label(s("eye.home.start_training"), systemImage: "play.fill")
-                            .labelStyle(TightLabelStyle())
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(LippiButtonStyle(kind: .primary))
-
-                    Button { showStats = true } label: {
-                        Label(s("eye.home.stats"), systemImage: "chart.line.uptrend.xyaxis")
-                            .labelStyle(TightLabelStyle())
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(LippiButtonStyle(kind: .secondary))
-                }
+                weeklyGoalSummary
+                primaryActions
             }
         }
     }
 
-    private func heroMetric(icon: String, title: String, value: String) -> some View {
-        HStack(spacing: 7) {
-            Image(safeSystemName: icon, fallback: icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(DS.text(0.84))
+    private var weeklyGoalSummary: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 18))
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(DS.textTertiary)
-                    .singleLine()
-                Text(value)
-                    .font(.caption.weight(.semibold))
+        return layout {
+            EyeProgressRing(
+                progress: weekProgress,
+                value: "\(min(weekSessionsCount, 7))/7",
+                caption: s("eye.home.metric_week"),
+                tone: Color(hex: 0x30D158)
+            )
+            .frame(width: 116, height: 116)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(weekGoalLeft == 0 ? s("eye.home.goal_done") : s("eye.home.week_activity"))
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    .singleLine()
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(
+                    weekGoalLeft == 0
+                    ? s("eye.home.goal_done_subtitle")
+                    : L10n.fmt("eye.home.goal_remaining_subtitle", lang, weekGoalLeft)
+                )
+                .font(.footnote)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 16) {
+                    inlineMetric(
+                        icon: "flame.fill",
+                        value: L10n.fmt("eye.home.days_short", lang, eye.dayStreak),
+                        title: s("eye.home.metric_streak"),
+                        tone: Color(hex: 0xFF9F0A)
+                    )
+                    inlineMetric(
+                        icon: "checkmark.circle.fill",
+                        value: "\(totalSessions)",
+                        title: s("eye.stats.sessions"),
+                        tone: Color(hex: 0x64D2FF)
+                    )
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(14)
+        .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(DS.glassStroke(0.14), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(DS.glassStroke(0.10), lineWidth: 1)
         )
     }
 
-    private func quickBadge(title: String, value: String, systemImage: String) -> some View {
+    private func inlineMetric(icon: String, value: String, title: String, tone: Color) -> some View {
         HStack(spacing: 7) {
-            Image(safeSystemName: systemImage, fallback: systemImage)
+            Image(safeSystemName: icon, fallback: "circle.fill")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(DS.text(0.84))
+                .foregroundStyle(tone)
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(DS.textTertiary)
-                    .singleLine()
+            VStack(alignment: .leading, spacing: 0) {
                 Text(value)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(DS.textPrimary)
+                    .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
-                    .singleLine()
+                    .foregroundStyle(DS.textPrimary)
+
+                Text(title)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(DS.glassStroke(0.14), lineWidth: 1)
-        )
     }
 
-    // Прогресс (стрик, мини-график, итог по последней сессии)
-    @ViewBuilder private var progressBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 8) {
+    private var primaryActions: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 10))
+            : AnyLayout(HStackLayout(spacing: 10))
+
+        return layout {
+            Button { showGame = true } label: {
+                Label(s("eye.home.start_training"), systemImage: "play.fill")
+                    .labelStyle(EyeActionLabelStyle())
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(LippiButtonStyle(kind: .primary, allowsMultiline: true))
+
+            Button { showStats = true } label: {
+                Label(s("eye.home.stats"), systemImage: "chart.line.uptrend.xyaxis")
+                    .labelStyle(EyeActionLabelStyle())
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(LippiButtonStyle(kind: .secondary, allowsMultiline: true))
+        }
+    }
+
+    // MARK: - Progress
+
+    private var progressCard: some View {
+        GlassCard(padding: 16, cornerRadius: 26, style: .lightweight) {
+            VStack(alignment: .leading, spacing: 16) {
                 LippiSectionHeader(
                     title: s("eye.home.progress_title"),
                     subtitle: s("eye.home.progress_subtitle"),
-                    icon: "chart.bar.fill",
-                    accent: Color(hex: 0x30D158)
+                    icon: "scope",
+                    accent: Color(hex: 0x64D2FF)
                 )
-                Spacer()
-                capsule(L10n.fmt("eye.home.streak_days", lang, eye.dayStreak))
-                    .padding(.top, 2)
-            }
 
-            if let last = eye.history.first {
-                let metricColumns = [GridItem(.adaptive(minimum: 118), spacing: 10)]
-                LazyVGrid(columns: metricColumns, spacing: 10) {
-                    statTile(title: s("eye.home.last"), value: "\(last.hits)/\(last.total)", sub: s("eye.home.hits"))
-                    statTile(title: s("eye.home.avg_reaction"), value: ms(last.avgReaction), sub: nil)
-                    statTile(title: s("eye.home.best_streak"), value: "\(last.bestStreak)", sub: s("eye.home.in_row"))
+                if let lastSession {
+                    accuracyHighlight(for: lastSession)
+                    supportingProgressMetrics(for: lastSession)
+                } else {
+                    emptyProgress
                 }
-            } else {
-                HStack(spacing: 10) {
-                    Image(safeSystemName: "sparkles", fallback: "sparkles")
-                        .foregroundStyle(DS.text(0.84))
-                    Text(s("eye.home.empty_training"))
-                        .font(.footnote)
-                        .foregroundStyle(tSecondary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                )
             }
-
-            HistoryMiniChart()
-                .frame(height: 140)
-                .padding(10)
-                .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                )
         }
     }
 
-    private func ms(_ v: Double?) -> String {
-        guard let v else { return s("eye.common.em_dash") }
-        return L10n.fmt("eye.unit.ms", lang, Int((v*1000).rounded()))
-    }
+    private func accuracyHighlight(for session: EyeSessionHistory) -> some View {
+        let progress = Double(lastAccuracy) / 100
+        let tone = accuracyTone(progress)
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 18))
 
-    private func statTile(title: String, value: String, sub: String?) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.footnote)
-                .foregroundStyle(tSecondary)
-                .singleLine()
+        return layout {
+            EyeProgressRing(
+                progress: progress,
+                value: "\(lastAccuracy)%",
+                caption: s("eye.stats.accuracy"),
+                tone: tone
+            )
+            .frame(width: 108, height: 108)
 
-            Text(value)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(tPrimary)
-                .singleLine()
-
-            if let s = sub {
-                Text(s)
-                    .font(.caption)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(s("eye.home.last"))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(DS.textTertiary)
-                    .singleLine()
+
+                Text(L10n.fmt("eye.stats.accuracy_detail", lang, session.hits, session.total))
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(s("eye.stats.accuracy_hint"))
+                    .font(.footnote)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 78, alignment: .topLeading)
-        .padding(10)
-        .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(DS.glassFill(0.055))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [tone.opacity(0.13), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(DS.glassStroke(0.14), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(tone.opacity(0.16), lineWidth: 1)
         )
     }
 
-    private func capsule(_ text: String) -> some View {
-        Text(text)
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(tSecondary)
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .background(DS.glassFill(0.08), in: Capsule())
-            .overlay(Capsule().stroke(DS.glassStroke(0.16), lineWidth: 1))
+    private func supportingProgressMetrics(for session: EyeSessionHistory) -> some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 10))
+            : AnyLayout(HStackLayout(spacing: 10))
+
+        return layout {
+            supportingProgressMetric(
+                icon: "timer",
+                title: s("eye.home.avg_reaction"),
+                value: milliseconds(session.avgReaction),
+                tone: Color(hex: 0x64D2FF)
+            )
+            supportingProgressMetric(
+                icon: "flame.fill",
+                title: s("eye.home.best_streak"),
+                value: "\(session.bestStreak)",
+                tone: Color(hex: 0xFF9F0A)
+            )
+        }
     }
 
-    // Блок достижений
-    @ViewBuilder private var achievementsBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 8) {
+    private func supportingProgressMetric(icon: String, title: String, value: String, tone: Color) -> some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack {
+                Image(safeSystemName: icon, fallback: "circle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(tone)
+                    .frame(width: 36, height: 36)
+                    .background(tone.opacity(0.12), in: Circle())
+
+                Spacer(minLength: 0)
+            }
+
+            Text(value)
+                .font(.title2.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(title)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 116, alignment: .topLeading)
+        .padding(14)
+        .background(DS.glassFill(0.05), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(DS.glassStroke(0.09), lineWidth: 1)
+        )
+    }
+
+    private func accuracyTone(_ progress: Double) -> Color {
+        if progress >= 0.85 { return Color(hex: 0x30D158) }
+        if progress >= 0.60 { return Color(hex: 0xFF9F0A) }
+        return Color(hex: 0xFF453A)
+    }
+
+    private var emptyProgress: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(safeSystemName: "sparkles", fallback: "eye")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color(hex: 0x64D2FF))
+                .frame(width: 40, height: 40)
+                .background(Color(hex: 0x64D2FF).opacity(0.12), in: Circle())
+
+            Text(s("eye.home.empty_training"))
+                .font(.footnote)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(DS.glassFill(0.05), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    // MARK: - Milestones and care
+
+    private var achievementsCard: some View {
+        GlassCard(style: .lightweight) {
+            VStack(alignment: .leading, spacing: 14) {
                 LippiSectionHeader(
                     title: s("eye.home.achievements_title"),
                     subtitle: s("eye.home.achievements_subtitle"),
                     icon: "trophy.fill",
                     accent: Color(hex: 0xFF9F0A)
                 )
-                Spacer()
-                capsule("\(unlockedAchievementsCount)/\(totalAchievementsCount)")
-                    .padding(.top, 2)
+
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(unlockedAchievementsCount)/\(totalAchievementsCount)")
+                        .font(.title2.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+
+                    Spacer()
+
+                    Text(achievementSummaryText)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(DS.textSecondary)
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                FancyLinearProgressBar(progress: achievementProgress, height: 8)
+                    .transaction { $0.animation = nil }
+
+                HStack(spacing: 8) {
+                    ForEach(EyeAchievement.allCases) { achievement in
+                        achievementDot(achievement)
+                    }
+                }
             }
-            Text(s("eye.home.achievements_hint"))
-                .font(.footnote)
-                .foregroundStyle(DS.textTertiary)
-            AchievementsGrid().environmentObject(eye)
         }
     }
 
-    // Советы (простые, без медицины)
-    private var tipsBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LippiSectionHeader(
-                title: s("eye.home.tips_title"),
-                subtitle: s("eye.home.tips_subtitle"),
-                icon: "lightbulb.fill",
-                accent: Color(hex: 0xFFD60A)
-            )
-            Text(s("eye.home.tips_intro"))
-                .font(.footnote)
-                .foregroundStyle(DS.textTertiary)
-            TipRow(icon: "clock", text: s("eye.home.tip_1"))
-            TipRow(icon: "sun.max", text: s("eye.home.tip_2"))
-            TipRow(icon: "eye", text: s("eye.home.tip_3"))
-            TipRow(icon: "figure.walk", text: s("eye.home.tip_4"))
+    private var achievementSummaryText: String {
+        if let nextAchievement {
+            return L10n.fmt("eye.home.next_achievement", lang, nextAchievement.title(lang))
         }
+        return s("eye.home.all_achievements_done")
+    }
+
+    private func achievementDot(_ achievement: EyeAchievement) -> some View {
+        let isUnlocked = eye.achievements.contains(achievement)
+
+        return ZStack {
+            Circle()
+                .fill(isUnlocked ? Color(hex: 0xFF9F0A).opacity(0.16) : DS.glassFill(0.055))
+
+            Image(safeSystemName: isUnlocked ? "checkmark" : "lock.fill", fallback: "circle")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(isUnlocked ? Color(hex: 0xFF9F0A) : DS.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 42)
+        .overlay(Circle().stroke(DS.glassStroke(isUnlocked ? 0.15 : 0.08), lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(achievement.title(lang)))
+        .accessibilityValue(Text(isUnlocked ? s("eye.achievement.unlocked") : s("eye.achievement.locked")))
+    }
+
+    private var dailyTipCard: some View {
+        let tip = dailyTip
+
+        return GlassCard(padding: 16, cornerRadius: 24, style: .lightweight) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(safeSystemName: tip.icon, fallback: "lightbulb.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0xFFD60A))
+                    .frame(width: 42, height: 42)
+                    .background(Color(hex: 0xFFD60A).opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(s("eye.home.tip_of_day"))
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(DS.textPrimary)
+
+                    Text(tip.text)
+                        .font(.footnote)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private var dailyTip: (icon: String, text: String) {
+        let tips = [
+            ("clock", s("eye.home.tip_1")),
+            ("sun.max.fill", s("eye.home.tip_2")),
+            ("eye.fill", s("eye.home.tip_3")),
+            ("figure.walk", s("eye.home.tip_4"))
+        ]
+        let day = Calendar.current.ordinality(of: .day, in: .year, for: .now) ?? 1
+        return tips[(day - 1) % tips.count]
+    }
+
+    private func milliseconds(_ value: Double?) -> String {
+        guard let value else { return s("eye.common.em_dash") }
+        return L10n.fmt("eye.unit.ms", lang, Int((value * 1000).rounded()))
+    }
+}
+
+private struct EyeActionLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 7) {
+            configuration.icon
+            configuration.title
+                .lineLimit(nil)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct EyeProgressRing: View {
+    let progress: Double
+    let value: String
+    let caption: String
+    let tone: Color
+
+    private var clampedProgress: Double { min(max(progress, 0), 1) }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(DS.glassStroke(0.10), lineWidth: 10)
+
+            Circle()
+                .trim(from: 0, to: clampedProgress)
+                .stroke(
+                    AngularGradient(colors: [tone.opacity(0.60), tone, DS.brandB], center: .center),
+                    style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+
+            VStack(spacing: 1) {
+                Text(value)
+                    .font(.title3.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(DS.textPrimary)
+
+                Text(caption)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(DS.textTertiary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(15)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -387,181 +559,99 @@ public struct EyeHealthHomeView: View {
 struct HistoryMiniChart: View {
     @EnvironmentObject private var eye: EyeExerciseStore
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
+    let showsAxes: Bool
+
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
+
+    init(showsAxes: Bool = true) {
+        self.showsAxes = showsAxes
+    }
+
     var body: some View {
         #if canImport(Charts)
         if eye.history.isEmpty {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(DS.glassFill(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                )
-                .overlay(
-                    Text(s("eye.chart.empty"))
-                        .font(.footnote)
-                        .foregroundStyle(DS.textSecondary)
-                )
+            emptyState(text: s("eye.chart.empty"))
         } else {
-            let items = eye.history.prefix(20)
+            let items = Array(eye.history.prefix(12).reversed())
             Chart(Array(items.enumerated()), id: \.offset) { idx, h in
                 if let v = h.avgReaction {
-                    LineMark(x: .value(s("eye.chart.session"), items.count - idx), y: .value(s("eye.chart.seconds"), v))
+                    let milliseconds = v * 1000
+
+                    AreaMark(
+                        x: .value(s("eye.chart.session"), idx + 1),
+                        y: .value(s("eye.stats.avg_reaction"), milliseconds)
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color(hex: 0x64D2FF).opacity(0.22), Color(hex: 0x64D2FF).opacity(0.015)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                    LineMark(
+                        x: .value(s("eye.chart.session"), idx + 1),
+                        y: .value(s("eye.stats.avg_reaction"), milliseconds)
+                    )
                         .interpolationMethod(.catmullRom)
-                        .lineStyle(StrokeStyle(lineWidth: 2.2, lineCap: .round))
-                        .foregroundStyle(DS.brand)
-                    PointMark(x: .value(s("eye.chart.session"), items.count - idx), y: .value(s("eye.chart.seconds"), v))
-                        .symbolSize(24)
-                        .foregroundStyle(DS.text(0.8))
+                        .lineStyle(StrokeStyle(lineWidth: 2.6, lineCap: .round, lineJoin: .round))
+                        .foregroundStyle(Color(hex: 0x64D2FF))
+
+                    if idx == items.count - 1 {
+                        PointMark(
+                            x: .value(s("eye.chart.session"), idx + 1),
+                            y: .value(s("eye.stats.avg_reaction"), milliseconds)
+                        )
+                        .symbolSize(46)
+                        .foregroundStyle(Color(hex: 0x64D2FF))
+                    }
                 }
             }
             .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                    AxisGridLine().foregroundStyle(DS.text(0.10))
-                    AxisValueLabel().foregroundStyle(DS.text(0.60)).font(.caption2)
+                if showsAxes {
+                    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                        AxisValueLabel()
+                            .foregroundStyle(DS.textTertiary)
+                            .font(.caption2)
+                    }
                 }
             }
             .chartYAxis {
-                AxisMarks(position: .leading) { _ in
-                    AxisGridLine().foregroundStyle(DS.text(0.10))
-                    AxisValueLabel().foregroundStyle(DS.text(0.60)).font(.caption2)
+                if showsAxes {
+                    AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine().foregroundStyle(DS.glassStroke(0.08))
+                        AxisValueLabel()
+                            .foregroundStyle(DS.textTertiary)
+                            .font(.caption2)
+                    }
                 }
+            }
+            .chartPlotStyle { plot in
+                plot
+                    .background(DS.glassFill(0.025))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
         }
         #else
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(DS.glassFill(0.08))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(DS.glassStroke(0.14), lineWidth: 1)
-            )
-            .overlay(
-                Text(s("eye.chart.not_available")).font(.footnote).foregroundStyle(DS.textSecondary)
-            )
+        emptyState(text: s("eye.chart.not_available"))
         #endif
     }
-}
 
-// =======================================================
-// MARK: - Достижения
-// =======================================================
-struct AchievementsGrid: View {
-    @EnvironmentObject private var eye: EyeExerciseStore
-    @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
-    private var lang: AppLang { L10n.lang(from: langRaw) }
-    private func s(_ key: String) -> String { L10n.tr(key, lang) }
-
-    private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-
-    var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(EyeAchievement.allCases) { a in
-                let unlocked = eye.achievements.contains(a)
-                let statusText = unlocked ? s("eye.achievement.unlocked") : s("eye.achievement.locked")
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(DS.glassFill(unlocked ? 0.16 : 0.08))
-                                .frame(width: 28, height: 28)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                                )
-                            Image(systemName: unlocked ? "seal.fill" : "seal")
-                                .foregroundStyle(unlocked ? AnyShapeStyle(DS.brand) : AnyShapeStyle(DS.textTertiary))
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-
-                        Spacer(minLength: 6)
-
-                        Circle()
-                            .fill(unlocked ? Color(hex: 0x30D158) : DS.glassStroke(0.18))
-                            .frame(width: 8, height: 8)
-                    }
-
-                    Text(a.title(lang))
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.9)
-
-                    Text(statusText)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(unlocked ? DS.text(0.86) : DS.textSecondary)
-                        .singleLine()
-                }
-                .frame(maxWidth: .infinity, minHeight: 94, alignment: .topLeading)
-                .padding(12)
-                .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .lippiSystemGlass(
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-                    tint: (unlocked ? Color(hex: 0x30D158) : DS.accent).opacity(0.07)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.white.opacity(0.06), .clear],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .blendMode(.screen)
-                        )
-                )
-                .shadow(color: DS.depthShadow(0.10), radius: 4, x: 0, y: 2)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(Text("\(a.title(lang)), \(statusText)"))
-            }
-        }
-    }
-}
-
-// =======================================================
-// MARK: - Вспомогательные UI
-// =======================================================
-private struct TipRow: View {
-    let icon: String
-    let text: String
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(DS.glassFill(0.10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                    )
-
-                Image(safeSystemName: icon, fallback: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(DS.text(0.88))
-            }
-            .frame(width: 22, height: 22)
+    private func emptyState(text: String) -> some View {
+        VStack(spacing: 8) {
+            Image(safeSystemName: "chart.line.uptrend.xyaxis", fallback: "chart.bar")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color(hex: 0x64D2FF))
 
             Text(text)
                 .font(.footnote)
                 .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
+                .multilineTextAlignment(.center)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
-            tint: DS.accent.opacity(0.07)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(DS.glassStroke(0.14), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(DS.glassFill(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -570,11 +660,27 @@ private struct TipRow: View {
 // =======================================================
 struct EyeStatsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var eye: EyeExerciseStore
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
-    private let totalColumns = [GridItem(.adaptive(minimum: 132), spacing: 10)]
+
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
+    private var totalSessions: Int { eye.history.count }
+    private var totalHits: Int { eye.history.reduce(0) { $0 + $1.hits } }
+    private var totalMisses: Int { eye.history.reduce(0) { $0 + $1.misses } }
+    private var totalAttempts: Int { totalHits + totalMisses }
+    private var accuracyProgress: Double {
+        guard totalAttempts > 0 else { return 0 }
+        return Double(totalHits) / Double(totalAttempts)
+    }
+    private var accuracyPercent: Int { Int((accuracyProgress * 100).rounded()) }
+    private var bestStreak: Int { eye.history.map(\.bestStreak).max() ?? 0 }
+    private var averageReaction: Double? {
+        let values = eye.history.compactMap(\.avgReaction)
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +) / Double(values.count)
+    }
 
     var body: some View {
         NavigationStack {
@@ -599,11 +705,13 @@ struct EyeStatsView: View {
     private var content: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                GlassCard(style: .lightweight) { HistoryMiniChart().environmentObject(eye).frame(height: 180) }
+                summaryCard
                     .lippiMotionScene(0)
-                GlassCard(style: .lightweight) { totals }
+
+                chartCard
                     .lippiMotionScene(1)
-                GlassCard(style: .lightweight) { sessionsList }
+
+                sessionsCard
                     .lippiMotionScene(2)
             }
             .lippiContentColumn()
@@ -612,103 +720,251 @@ struct EyeStatsView: View {
         .lippiScrollPerformance()
     }
 
-    private var totals: some View {
-        let totalSessions = eye.history.count
-        let totalHits = eye.history.reduce(0) { $0 + $1.hits }
-        let totalMiss = eye.history.reduce(0) { $0 + $1.misses }
-        let bestStreak = eye.history.map(\.bestStreak).max() ?? 0
-        let avgReactionAll: Double? = {
-            let arr = eye.history.compactMap { $0.avgReaction }
-            guard !arr.isEmpty else { return nil }
-            return arr.reduce(0,+) / Double(arr.count)
-        }()
+    private var summaryCard: some View {
+        GlassCard(
+            padding: 18,
+            cornerRadius: 28,
+            style: .full,
+            forceSystemGlass: false
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                LippiSectionHeader(
+                    title: s("eye.stats.totals_title"),
+                    subtitle: s("eye.stats.totals_subtitle"),
+                    icon: "scope",
+                    accent: Color(hex: 0x30D158)
+                )
 
-        return VStack(alignment: .leading, spacing: 12) {
-            LippiSectionHeader(
-                title: s("eye.stats.totals_title"),
-                subtitle: s("eye.stats.totals_subtitle"),
-                icon: "sum",
-                accent: Color(hex: 0x64D2FF)
-            )
-            LazyVGrid(columns: totalColumns, spacing: 10) {
-                stat(s("eye.stats.sessions"), "\(totalSessions)")
-                stat(s("eye.stats.hits"), "\(totalHits)")
-                stat(s("eye.stats.misses"), "\(totalMiss)")
-                stat(s("eye.stats.best_streak"), "\(bestStreak)")
-                stat(s("eye.stats.avg_reaction"), avgReactionAll.map { L10n.fmt("eye.unit.ms", lang, Int(($0*1000).rounded())) } ?? s("eye.common.em_dash"))
+                accuracySummary
+                overviewMetrics
             }
         }
     }
 
-    private func stat(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.footnote)
-                .foregroundStyle(DS.textSecondary)
-            Text(value)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(DS.textPrimary)
+    private var accuracySummary: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 18))
+
+        return layout {
+            EyeProgressRing(
+                progress: accuracyProgress,
+                value: "\(accuracyPercent)%",
+                caption: s("eye.stats.accuracy"),
+                tone: Color(hex: 0x30D158)
+            )
+            .frame(width: 124, height: 124)
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text(s("eye.stats.accuracy"))
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+
+                Text(L10n.fmt("eye.stats.accuracy_detail", lang, totalHits, totalAttempts))
+                    .font(.footnote)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                FancyLinearProgressBar(progress: accuracyProgress, height: 8)
+                    .transaction { $0.animation = nil }
+
+                Text(s("eye.stats.accuracy_hint"))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(DS.glassFill(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(14)
+        .background(DS.glassFill(0.05), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(DS.glassStroke(0.14), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(DS.glassStroke(0.10), lineWidth: 1)
         )
     }
 
-    private var sessionsList: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            LippiSectionHeader(
-                title: s("eye.stats.sessions_title"),
-                subtitle: s("eye.stats.sessions_subtitle"),
-                icon: "list.bullet",
-                accent: Color(hex: 0x30D158)
+    private var overviewMetrics: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 8))
+
+        return layout {
+            overviewMetric(
+                icon: "checkmark.circle.fill",
+                title: s("eye.stats.sessions"),
+                value: "\(totalSessions)",
+                tone: Color(hex: 0x64D2FF)
             )
-            if eye.history.isEmpty {
-                Text(s("eye.stats.history_empty")).font(.footnote).foregroundStyle(.secondary)
-            } else {
-                ForEach(eye.history) { h in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text(h.mode.title(lang))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(DS.textPrimary)
-                            Spacer()
-                            Text(h.date.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(DS.textTertiary)
-                        }
-                        HStack(spacing: 8) {
-                            sessionTag(L10n.fmt("eye.stats.result", lang, h.hits, h.total))
-                            sessionTag(L10n.fmt("eye.stats.misses_value", lang, h.misses))
-                            sessionTag(L10n.fmt("eye.stats.streak_value", lang, h.bestStreak))
-                            if let avg = h.avgReaction {
-                                sessionTag(L10n.fmt("eye.stats.avg_value", lang, L10n.fmt("eye.unit.ms", lang, Int((avg*1000).rounded()))))
-                            }
+            overviewMetric(
+                icon: "timer",
+                title: s("eye.stats.avg_reaction"),
+                value: milliseconds(averageReaction),
+                tone: Color(hex: 0xAF52DE)
+            )
+            overviewMetric(
+                icon: "flame.fill",
+                title: s("eye.stats.best_streak"),
+                value: "\(bestStreak)",
+                tone: Color(hex: 0xFF9F0A)
+            )
+        }
+    }
+
+    private func overviewMetric(icon: String, title: String, value: String, tone: Color) -> some View {
+        HStack(spacing: 9) {
+            Image(safeSystemName: icon, fallback: "circle.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(tone)
+                .frame(width: 30, height: 30)
+                .background(tone.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(DS.textPrimary)
+
+                Text(title)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(DS.glassFill(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var chartCard: some View {
+        GlassCard(style: .lightweight) {
+            VStack(alignment: .leading, spacing: 14) {
+                LippiSectionHeader(
+                    title: s("eye.stats.reaction_title"),
+                    subtitle: s("eye.stats.reaction_subtitle"),
+                    icon: "waveform.path.ecg",
+                    accent: Color(hex: 0x64D2FF)
+                )
+
+                HistoryMiniChart(showsAxes: true)
+                    .environmentObject(eye)
+                    .frame(height: 200)
+            }
+        }
+    }
+
+    private var sessionsCard: some View {
+        let recentSessions = Array(eye.history.prefix(30))
+
+        return GlassCard(style: .lightweight) {
+            VStack(alignment: .leading, spacing: 14) {
+                LippiSectionHeader(
+                    title: s("eye.stats.sessions_title"),
+                    subtitle: s("eye.stats.sessions_subtitle"),
+                    icon: "list.bullet",
+                    accent: Color(hex: 0x30D158)
+                )
+
+                if recentSessions.isEmpty {
+                    Text(s("eye.stats.history_empty"))
+                        .font(.footnote)
+                        .foregroundStyle(DS.textSecondary)
+                } else {
+                    ForEach(recentSessions) { session in
+                        sessionRow(session)
+
+                        if session.id != recentSessions.last?.id {
+                            Divider().overlay(DS.glassStroke(0.08))
                         }
                     }
-                    .padding(12)
-                    .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                    )
                 }
             }
         }
     }
 
-    private func sessionTag(_ text: String) -> some View {
-        Text(text)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(DS.textSecondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(DS.glassFill(0.08), in: Capsule())
-            .overlay(Capsule().stroke(DS.glassStroke(0.14), lineWidth: 1))
-            .singleLine()
+    private func sessionRow(_ session: EyeSessionHistory) -> some View {
+        let progress = session.total > 0 ? Double(session.hits) / Double(session.total) : 0
+        let percent = Int((progress * 100).rounded())
+        let metricLayout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 7))
+            : AnyLayout(HStackLayout(spacing: 10))
+
+        return VStack(alignment: .leading, spacing: 11) {
+            HStack(alignment: .top, spacing: 11) {
+                Image(safeSystemName: modeIcon(session.mode), fallback: "eye")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x64D2FF))
+                    .frame(width: 36, height: 36)
+                    .background(Color(hex: 0x64D2FF).opacity(0.11), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(session.mode.title(lang))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(session.date.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Text("\(percent)%")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(accuracyTone(progress))
+            }
+
+            FancyLinearProgressBar(progress: progress, height: 6)
+                .transaction { $0.animation = nil }
+
+            metricLayout {
+                sessionMetric(title: s("eye.stats.hits"), value: "\(session.hits)/\(session.total)")
+                sessionMetric(title: s("eye.stats.misses"), value: "\(session.misses)")
+                sessionMetric(title: s("eye.stats.avg_reaction"), value: milliseconds(session.avgReaction))
+            }
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func sessionMetric(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func accuracyTone(_ progress: Double) -> Color {
+        if progress >= 0.85 { return Color(hex: 0x30D158) }
+        if progress >= 0.60 { return Color(hex: 0xFF9F0A) }
+        return Color(hex: 0xFF453A)
+    }
+
+    private func modeIcon(_ mode: EyeGameMode) -> String {
+        switch mode {
+        case .classic: return "scope"
+        case .moving: return "move.3d"
+        case .color: return "paintpalette.fill"
+        case .peripheral: return "viewfinder"
+        case .tracking: return "eye.trianglebadge.exclamationmark"
+        }
+    }
+
+    private func milliseconds(_ value: Double?) -> String {
+        guard let value else { return s("eye.common.em_dash") }
+        return L10n.fmt("eye.unit.ms", lang, Int((value * 1000).rounded()))
     }
 }
 
