@@ -13,6 +13,7 @@ import Charts
 // =======================================================
 public struct EyeHealthHomeView: View {
     @EnvironmentObject private var eye: EyeExerciseStore
+    @EnvironmentObject private var healthKit: HealthKitManager
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var showGame = false
@@ -58,14 +59,19 @@ public struct EyeHealthHomeView: View {
                         heroCard
                             .lippiMotionScene(0)
 
-                        progressCard
-                            .lippiMotionScene(1)
+                        if let recommendation = healthEyeRecommendation {
+                            healthEyeCard(recommendation)
+                                .lippiMotionScene(1)
+                        }
 
-                        achievementsCard
+                        progressCard
                             .lippiMotionScene(2)
 
-                        dailyTipCard
+                        achievementsCard
                             .lippiMotionScene(3)
+
+                        dailyTipCard
+                            .lippiMotionScene(4)
 
                         Color.clear.frame(height: 84)
                     }
@@ -88,6 +94,48 @@ public struct EyeHealthHomeView: View {
         }
         .sheet(isPresented: $showStats) { EyeStatsView().environmentObject(eye) }
         .sheet(isPresented: $showSettings) { EyeSettingsView().environmentObject(eye) }
+    }
+
+    private var healthEyeRecommendation: HealthWellnessRecommendation? {
+        guard healthKit.isEnabled,
+              let recommendation = healthKit.recommendation,
+              recommendation.suggestsEyeBreak else { return nil }
+        return recommendation
+    }
+
+    private func healthEyeCard(_ recommendation: HealthWellnessRecommendation) -> some View {
+        GlassCard(padding: 15, cornerRadius: 24, style: .lightweight) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 11) {
+                    Image(safeSystemName: "heart.text.square.fill", fallback: "heart.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0xFF375F))
+                        .frame(width: 40, height: 40)
+                        .background(Color(hex: 0xFF375F).opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(s("healthkit.eyes.title"))
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(DS.textPrimary)
+                        Text(s("healthkit.eyes.description"))
+                            .font(.footnote)
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Button {
+                    eye.settings.targetsPerSession = min(eye.settings.targetsPerSession, 12)
+                    eye.settings.maxTimePerTarget = max(eye.settings.maxTimePerTarget, 3)
+                    showGame = true
+                } label: {
+                    Label(s("healthkit.eyes.start"), systemImage: "eye.fill")
+                        .labelStyle(EyeActionLabelStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .primary, allowsMultiline: true))
+            }
+        }
     }
 
     // MARK: - Primary focus

@@ -44,6 +44,10 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Lippi uses the local network to reach Ollama and the neural voice provider on your Mac.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Lippi uses your activity, sleep, and Apple Watch wellness data to suggest gentler focus plans, breathing practices, and eye breaks.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Lippi saves completed breathing practices as mindful sessions in Apple Health.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Speech recognition is used to process voice assistant commands.</string>
 	<key>NSSupportsLiveActivities</key>

@@ -2114,18 +2114,25 @@ struct VoiceAssistantLauncherButton: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.lippiIsScrolling) private var isScrolling
     @State private var isPressed = false
-    @State private var pressStart: Date?
     @State private var didTriggerLongPress = false
-    @State private var didTriggerTouchDownTap = false
+    @State private var movedBeyondTap = false
+    @State private var longPressTask: Task<Void, Never>?
+
+    @Binding var isCollapsed: Bool
 
     let title: String
     let actionTitle: String
     let openTitle: String
+    let hideTitle: String
+    let showTitle: String
+    let collapsedHint: String
     let state: AppVoiceAssistantState
     let onTap: () -> Void
     let onLongPress: () -> Void
 
     private let holdThreshold: TimeInterval = 0.42
+    private let movementTolerance: CGFloat = 18
+    private let swipeThreshold: CGFloat = 26
 
     private var allowsContinuousMotion: Bool {
         !reduceMotion && !isScrolling && !DS.runtimeConstrained
@@ -2133,50 +2140,120 @@ struct VoiceAssistantLauncherButton: View {
 
     private var launcherScale: CGFloat {
         if isPressed { return DS.pressScale }
-        return state.isActive ? 1.02 : 1.0
+        return state.isActive ? 1.015 : 1.0
     }
 
     var body: some View {
+        HStack(spacing: 4) {
+            if !isCollapsed {
+                collapseButton
+                    .transition(
+                        reduceMotion
+                        ? .opacity
+                        : .move(edge: .trailing).combined(with: .opacity)
+                    )
+            }
+
+            launcherButton
+        }
+        .animation(reduceMotion ? nil : DS.motionState, value: isCollapsed)
+        .onDisappear {
+            longPressTask?.cancel()
+        }
+    }
+
+    private var collapseButton: some View {
+        Button {
+            DS.hapticSoft()
+            isCollapsed = true
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(.thinMaterial)
+                    .frame(width: 30, height: 30)
+                    .lippiSystemGlass(
+                        in: Circle(),
+                        tint: state.liquidTones[0].opacity(0.08),
+                        interactive: true,
+                        enabled: !reduceTransparency
+                    )
+                    .overlay {
+                        Circle()
+                            .stroke(.white.opacity(0.20), lineWidth: 0.8)
+                    }
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(DS.text(0.66))
+            }
+            .frame(width: 44, height: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(hideTitle))
+    }
+
+    private var launcherButton: some View {
         ZStack {
             if state.isActive && allowsContinuousMotion {
                 LiquidPulseRing(
-                    color: state.liquidTones[0].opacity(0.40),
-                    lineWidth: 1.2,
-                    fromScale: 0.92,
-                    toScale: 1.24,
-                    initialOpacity: 0.55,
-                    duration: 1.25
+                    color: state.liquidTones[0].opacity(0.32),
+                    lineWidth: 1,
+                    fromScale: 0.94,
+                    toScale: 1.18,
+                    initialOpacity: 0.46,
+                    duration: 1.35
                 )
-                .frame(width: 70, height: 70)
+                .frame(width: isCollapsed ? 52 : 58, height: 58)
             }
 
-            Circle()
+            Capsule()
                 .fill(state.liquidGradient)
-                .frame(width: 56, height: 56)
+                .frame(width: isCollapsed ? 44 : 48, height: 48)
                 .lippiSystemGlass(
-                    in: Circle(),
-                    tint: state.liquidTones[0].opacity(0.18),
+                    in: Capsule(),
+                    tint: state.liquidTones[0].opacity(0.14),
                     interactive: true,
                     enabled: !reduceTransparency
                 )
                 .overlay(
-                    Circle()
-                        .stroke(.white.opacity(state.isActive ? 0.34 : 0.20), lineWidth: 1)
+                    Capsule()
+                        .stroke(.white.opacity(state.isActive ? 0.30 : 0.18), lineWidth: 0.8)
                 )
 
-            Image(systemName: state.liquidIcon)
-                .font(.system(size: 20, weight: .semibold))
+            if isCollapsed {
+                HStack(spacing: 5) {
+                    Capsule()
+                        .fill(.white.opacity(0.58))
+                        .frame(width: 2, height: 14)
+
+                    Image(systemName: state.liquidIcon)
+                        .font(.system(size: 14, weight: .semibold))
+                }
                 .foregroundStyle(.white)
-                .scaleEffect(state.isActive && !reduceMotion ? 1.06 : 1.0)
+                .transition(.opacity)
+            } else {
+                Image(systemName: state.liquidIcon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .transition(.opacity)
+            }
         }
-        .contentShape(Circle())
-        .shadow(color: state.liquidTones[0].opacity(reduceTransparency ? 0.18 : 0.42), radius: state.isActive ? 14 : 8, x: 0, y: 6)
+        .frame(width: isCollapsed ? 44 : 48, height: 48)
+        .contentShape(Capsule())
+        .shadow(
+            color: state.liquidTones[0].opacity(reduceTransparency ? 0.14 : 0.28),
+            radius: state.isActive ? 10 : 6,
+            x: 0,
+            y: 4
+        )
         .scaleEffect(launcherScale)
-        .lippiFloating(active: state.isActive, amplitude: 2.0, duration: 3.8)
+        .lippiFloating(active: state.isActive, amplitude: 1.2, duration: 4.2)
         .animation(reduceMotion ? nil : DS.motionState, value: state.isActive)
         .animation(reduceMotion ? nil : DS.motionPress, value: isPressed)
+        .animation(reduceMotion ? nil : DS.motionState, value: isCollapsed)
         .accessibilityLabel(Text(title))
-        .accessibilityHint(Text(actionTitle))
+        .accessibilityHint(Text(isCollapsed ? collapsedHint : actionTitle))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction {
             onTap()
@@ -2184,41 +2261,69 @@ struct VoiceAssistantLauncherButton: View {
         .accessibilityAction(named: Text(openTitle)) {
             onLongPress()
         }
+        .accessibilityAction(named: Text(isCollapsed ? showTitle : hideTitle)) {
+            DS.hapticSoft()
+            isCollapsed.toggle()
+        }
         .gesture(
             DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if pressStart == nil {
-                        pressStart = Date()
-                        isPressed = true
-                        didTriggerLongPress = false
-                        didTriggerTouchDownTap = false
+                .onChanged { value in
+                    beginPressIfNeeded()
 
-                        if !state.isActive {
-                            didTriggerTouchDownTap = true
-                            DS.hapticSoft()
-                            onTap()
-                        }
-                    }
-                    guard let pressStart, !didTriggerLongPress else { return }
-                    if Date().timeIntervalSince(pressStart) >= holdThreshold {
-                        didTriggerLongPress = true
+                    let moved = max(abs(value.translation.width), abs(value.translation.height))
+                    if moved > movementTolerance {
+                        movedBeyondTap = true
                         isPressed = false
-                        DS.hapticSoft()
-                        onLongPress()
+                        longPressTask?.cancel()
                     }
                 }
-                .onEnded { _ in
+                .onEnded { value in
                     let isLong = didTriggerLongPress
-                    pressStart = nil
+                    let didMove = movedBeyondTap
+                    let horizontalSwipe = abs(value.translation.width) > swipeThreshold
+                        && abs(value.translation.width) > abs(value.translation.height)
+
+                    longPressTask?.cancel()
+                    longPressTask = nil
                     didTriggerLongPress = false
+                    movedBeyondTap = false
                     isPressed = false
-                    let didTapOnTouchDown = didTriggerTouchDownTap
-                    didTriggerTouchDownTap = false
-                    guard !isLong, !didTapOnTouchDown else { return }
+
+                    guard !isLong else { return }
+
+                    if horizontalSwipe {
+                        if isCollapsed, value.translation.width < 0 {
+                            DS.hapticSoft()
+                            isCollapsed = false
+                        } else if !isCollapsed, value.translation.width > 0 {
+                            DS.hapticSoft()
+                            isCollapsed = true
+                        }
+                        return
+                    }
+
+                    guard !didMove else { return }
                     DS.hapticSoft()
                     onTap()
                 }
         )
+    }
+
+    private func beginPressIfNeeded() {
+        guard !isPressed, longPressTask == nil else { return }
+
+        isPressed = true
+        didTriggerLongPress = false
+        movedBeyondTap = false
+        longPressTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(holdThreshold * 1_000_000_000))
+            guard !Task.isCancelled, isPressed, !movedBeyondTap else { return }
+
+            didTriggerLongPress = true
+            isPressed = false
+            DS.hapticSoft()
+            onLongPress()
+        }
     }
 }
 

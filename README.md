@@ -47,10 +47,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2014%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Pomodoro" src="https://img.shields.io/badge/Pomodoro-Focused-64D2FF?style=for-the-badge">
-    <img alt="Eye Health" src="https://img.shields.io/badge/Eye%20Health-Clear-30D158?style=for-the-badge">
-    <img alt="Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-One%20Tap-BF5AF2?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2018%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Device stability" src="https://img.shields.io/badge/Device-Stable-30D158?style=for-the-badge">
+    <img alt="HealthKit" src="https://img.shields.io/badge/HealthKit-Resilient-FF375F?style=for-the-badge">
+    <img alt="Voice Assistant" src="https://img.shields.io/badge/Assistant-Compact-BF5AF2?style=for-the-badge">
     <img alt="Accessibility" src="https://img.shields.io/badge/Accessibility-Adaptive-FF9F0A?style=for-the-badge">
   </p>
   <p><strong>Beautiful, readable release notes for the current GitHub page.</strong></p>
@@ -60,32 +60,122 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Focused Pomodoro</strong><br>
-      <sub>One clear timer, contextual controls, readable phases, and a calmer setup flow.</sub>
+      <strong>Stable on iPhone</strong><br>
+      <sub>Smart Goals and Settings now open through device-safe, lazily rendered view hierarchies.</sub>
       <br><br>
-      <strong>Сфокусированный Pomodoro</strong><br>
-      <sub>Один ясный таймер, контекстные действия, читаемые этапы и спокойная настройка.</sub>
+      <strong>Стабильно на iPhone</strong><br>
+      <sub>«Умные цели» и настройки получили безопасную для устройства ленивую иерархию экранов.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Clear Eye Health</strong><br>
-      <sub>Weekly rhythm, three essential progress signals, and statistics that explain themselves.</sub>
+      <strong>Resilient HealthKit</strong><br>
+      <sub>One unavailable metric no longer blocks every permitted health and Apple Watch signal.</sub>
       <br><br>
-      <strong>Понятное здоровье глаз</strong><br>
-      <sub>Недельный ритм, три главных показателя прогресса и наглядная статистика.</sub>
+      <strong>Устойчивый HealthKit</strong><br>
+      <sub>Один недоступный показатель больше не блокирует остальные разрешённые данные здоровья.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Smart Goals nearby</strong><br>
-      <sub>A dedicated Liquid Glass shortcut keeps intelligent planning beside the primary add action.</sub>
+      <strong>Calm adaptation</strong><br>
+      <sub>Health, progress, and wellbeing shape the next manageable step without changing the final goal.</sub>
       <br><br>
-      <strong>«Умные цели» рядом</strong><br>
-      <sub>Отдельная Liquid Glass-кнопка держит умное планирование рядом с основным добавлением.</sub>
+      <strong>Бережная адаптация</strong><br>
+      <sub>Здоровье, прогресс и самочувствие определяют посильный следующий шаг, не меняя конечную цель.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Readable and reliable</strong><br>
-      <sub>Labels wrap naturally, Dynamic Type stays comfortable, and timer state survives pause and resume correctly.</sub>
+      <strong>Compact assistant</strong><br>
+      <sub>A smaller voice control can rest at the right edge while remaining one tap away.</sub>
       <br><br>
-      <strong>Читаемо и надёжно</strong><br>
-      <sub>Подписи переносятся, крупный текст остаётся удобным, а таймер корректно переживает паузу и продолжение.</sub>
+      <strong>Компактный помощник</strong><br>
+      <sub>Уменьшенная голосовая кнопка скрывается у правого края, сохраняя вызов в одно касание.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 18, 2026 - Physical-device stability, resilient HealthKit, and a compact voice assistant
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>This reliability update focuses on what only a real iPhone could reveal: Lippi now opens its most complex screens safely, treats Apple Health authorization correctly, and keeps the voice assistant available without covering content.</strong></p>
+      <ul>
+        <li><strong>Device-only crashes resolved:</strong> physical-iPhone crash reports exposed Swift metadata stack overflows while presenting Smart Goals and Settings; both hierarchies are now split into small opaque sections instead of one deeply nested generic view.</li>
+        <li><strong>Lazy rendering preserved:</strong> the structural fix keeps individual cards inside <code>LazyVStack</code>, preventing an eager full-screen render while removing the unsafe type depth.</li>
+        <li><strong>Resilient HealthKit reads:</strong> steps, activity, exercise, sleep, heart-rate signals, respiratory rate, workouts, and mindful sessions are fetched independently, so one unavailable optional metric no longer cancels the complete wellness snapshot.</li>
+        <li><strong>Correct connection semantics:</strong> completing Apple's permission flow establishes the integration; missing samples are shown as “Connected — waiting for fresh data” rather than a failed pairing.</li>
+        <li><strong>Apple Watch is additive:</strong> recent Watch samples enrich recommendations, but their absence no longer invalidates a working Apple Health connection on iPhone.</li>
+        <li><strong>Self-healing onboarding:</strong> returning from system settings triggers a fresh diagnostic pass, and a usable or partially available connection is remembered without repeatedly showing setup as incomplete.</li>
+        <li><strong>Compact voice assistant:</strong> the launcher is now a restrained 48-point control with softer glow and motion; it can collapse into a persistent right-edge tab that still starts or stops listening with one tap.</li>
+        <li><strong>Gestures and accessibility:</strong> swipe left restores the full assistant, swipe right hides it, long press opens its menu, and VoiceOver exposes explicit Hide, Restore, and Open Menu actions.</li>
+        <li><strong>Performance-aware polish:</strong> active assistant motion remains bounded and automatically respects scrolling, Reduce Motion, Reduce Transparency, Low Power constraints, and thermal pressure.</li>
+        <li><strong>Verification:</strong> changed Swift sources pass syntax validation, property lists and entitlements are structurally valid, and the Git patch passes whitespace-integrity checks; final launch validation remains intentionally manual on the physical device.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Это обновление надёжности исправляет то, что проявилось только на настоящем iPhone: сложные экраны теперь открываются безопасно, подключение Apple Здоровья трактуется корректно, а голосовой помощник остаётся рядом и не перекрывает контент.</strong></p>
+      <ul>
+        <li><strong>Исправлены падения только на устройстве:</strong> crash report с физического iPhone показали переполнение стека метаданных Swift при открытии «Умных целей» и настроек; оба экрана разделены на небольшие непрозрачные секции вместо одного чрезмерно вложенного generic-дерева.</li>
+        <li><strong>Ленивая отрисовка сохранена:</strong> карточки по-прежнему остаются отдельными элементами <code>LazyVStack</code>, поэтому исправление не заставляет приложение заранее строить весь длинный экран.</li>
+        <li><strong>Устойчивое чтение HealthKit:</strong> шаги, активность, упражнения, сон, сердечные показатели, дыхание, тренировки и минуты осознанности загружаются независимо; один недоступный необязательный показатель больше не отменяет всю сводку.</li>
+        <li><strong>Правильный статус подключения:</strong> завершение системного окна Apple включает интеграцию, а отсутствие свежих выборок отображается как «Подключено — ждём свежие данные», а не как ошибка сопряжения.</li>
+        <li><strong>Apple Watch дополняют, а не блокируют:</strong> свежие данные часов улучшают рекомендации, но их отсутствие больше не отменяет рабочее подключение Apple Здоровья на iPhone.</li>
+        <li><strong>Самовосстанавливающаяся настройка:</strong> после возвращения из системных настроек Lippi повторяет диагностику и запоминает полностью или частично доступное подключение без бесконечного повторения мастера.</li>
+        <li><strong>Компактный голосовой помощник:</strong> кнопка уменьшена до сдержанных 48 пунктов, свечение и движение смягчены; её можно свернуть в постоянный язычок у правого края, который всё ещё начинает и завершает запись одним касанием.</li>
+        <li><strong>Жесты и доступность:</strong> свайп влево возвращает полную кнопку, свайп вправо скрывает её, удержание открывает меню, а VoiceOver получил отдельные действия скрытия, возврата и открытия меню.</li>
+        <li><strong>Красота без лишней нагрузки:</strong> активная анимация помощника ограничена и автоматически учитывает прокрутку, Reduce Motion, Reduce Transparency, энергосбережение и нагрев устройства.</li>
+        <li><strong>Проверка:</strong> изменённые Swift-файлы прошли проверку синтаксиса, plist и entitlements структурно корректны, а Git-патч не содержит проблем с пробелами; финальный запуск намеренно оставлен для ручной проверки на устройстве.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+### July 17, 2026 - Apple Health and Apple Watch wellness intelligence
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi can now turn permitted Apple Health and Apple Watch signals into calm, explainable wellness suggestions while keeping the user in control of every plan change.</strong></p>
+      <ul>
+        <li><strong>Native HealthKit integration:</strong> sleep, steps, active energy, exercise time, resting heart rate, heart-rate variability, respiratory rate, workouts, and mindful minutes are read through Apple's permission system.</li>
+        <li><strong>Personal baseline, not generic scoring:</strong> recent signals are compared with the user's own available history before Lippi suggests a recovery, gentle, balanced, or focus-ready routine.</li>
+        <li><strong>Dedicated Health Summary:</strong> a native two-section Health tab keeps the daily rhythm, Apple Health signals, seven-day wellbeing check-ins, recovery practices, and Smart Goal pacing clear without enlarging the compact bottom navigation.</li>
+        <li><strong>Explainable plan adaptation:</strong> Lippi shows the proposed daily step limit, focus duration, reasons, and any overdue steps that would be redistributed; nothing changes until the user confirms, and every applied adjustment remains visible with its date.</li>
+        <li><strong>Apple Watch awareness:</strong> Lippi recognizes recent Watch-generated wellness samples in the shared HealthKit store and refreshes important signals in the background.</li>
+        <li><strong>Self-healing connection diagnostics:</strong> Lippi distinguishes unavailable Apple Health, restrictions, a locked device, cancelled permission requests, missing or stale Watch data, background refresh failures, and denied mindful-session writes, then offers the safest matching recovery action.</li>
+        <li><strong>Clear recovery without resetting plans:</strong> promptable permissions open directly in Apple's Health authorization sheet; previously reviewed access opens the system Lippi settings page. Returning to Lippi automatically rechecks the connection.</li>
+        <li><strong>Cinematic first connection:</strong> the initial Apple Watch setup now opens as a dedicated full-screen scene with original product artwork, restrained depth motion, a secure-connection sequence, and a seamless handoff to Apple's HealthKit permission sheet.</li>
+        <li><strong>Explainable recommendations:</strong> every suggestion shows the signals behind it, a suitable Pomodoro duration, and optional breathing or eye-break actions.</li>
+        <li><strong>Adaptive Smart Goals pace:</strong> Health signals, task progress, overdue steps, and the user's own state determine a small daily step limit and a suitable focus duration while success criteria and milestones stay intact.</li>
+        <li><strong>Overload-safe rescheduling:</strong> overdue goal tasks can be spread across calmer days after confirmation instead of appearing as one intimidating pile; newly generated steps are spaced according to the current pace.</li>
+        <li><strong>Kind goal notifications:</strong> optional advice is silent and passive, never arrives at night, is deduplicated, and is capped at once per 36 hours and twice per week.</li>
+        <li><strong>Mindful sessions:</strong> completed Lippi breathing practices can be saved back to Apple Health.</li>
+        <li><strong>Privacy by design:</strong> wellness data is processed on device and is never included in Ollama requests; the feature is wellness guidance, not a medical assessment.</li>
+        <li><strong>Performance-conscious:</strong> HealthKit queries run asynchronously, background delivery is bounded, and the interface uses lightweight glass surfaces without continuous redraws.</li>
+        <li><strong>Verification:</strong> HealthKit property lists, diagnostic recovery scenarios, and the complete iOS 18.5 source pass static validation and Swift type checking; physical-device launch remains intentionally manual.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Lippi теперь превращает разрешённые показатели Apple Здоровья и Apple Watch в спокойные и объяснимые рекомендации, оставляя пользователю полный контроль над каждым изменением плана.</strong></p>
+      <ul>
+        <li><strong>Нативная интеграция HealthKit:</strong> сон, шаги, активная энергия, минуты упражнений, пульс в покое, вариабельность сердечного ритма, частота дыхания, тренировки и минуты осознанности читаются через системные разрешения Apple.</li>
+        <li><strong>Личная база вместо общих оценок:</strong> свежие показатели сравниваются с собственной доступной историей пользователя, и только затем Lippi предлагает восстановительный, бережный, ровный или сфокусированный сценарий.</li>
+        <li><strong>Отдельная сводка здоровья:</strong> нативные разделы «Сводка» и «Практики» объединяют ритм дня, показатели Apple Здоровья, отметки самочувствия за семь дней, восстановление и темп «Умной цели», не увеличивая компактное нижнее меню.</li>
+        <li><strong>Объяснимая адаптация плана:</strong> Lippi заранее показывает дневной предел шагов, длительность фокуса, причины и количество просроченных действий для переноса; до подтверждения ничего не меняется, а выполненная адаптация остаётся видна вместе с датой.</li>
+        <li><strong>Поддержка данных Apple Watch:</strong> Lippi распознаёт свежие показатели с часов в общем хранилище HealthKit и фоново обновляет важные сигналы.</li>
+        <li><strong>Самодиагностика подключения:</strong> Lippi различает недоступность Apple Здоровья, системные ограничения, заблокированное устройство, отмену разрешений, отсутствие или устаревание данных Watch, сбой фонового обновления и запрет записи практик, после чего предлагает безопасное действие для восстановления.</li>
+        <li><strong>Восстановление без сброса планов:</strong> доступные для повторного запроса разрешения сразу открываются в системном окне Apple Здоровья, а уже просмотренные — на системной странице Lippi; после возвращения подключение автоматически проверяется снова.</li>
+        <li><strong>Кинематографичное первое подключение:</strong> начальная настройка Apple Watch открывается отдельной полноэкранной сценой с оригинальным визуалом часов, сдержанным движением глубины, последовательностью защищённого подключения и плавным переходом к системным разрешениям HealthKit.</li>
+        <li><strong>Объяснимые рекомендации:</strong> каждое предложение показывает основание, подходящую длительность Pomodoro и необязательные действия для дыхания или глаз.</li>
+        <li><strong>Адаптивный ритм «Умных целей»:</strong> показатели самочувствия, прогресс задач, просроченные шаги и выбранное пользователем состояние определяют небольшой дневной предел и подходящий фокус, а критерии успеха и этапы сохраняются.</li>
+        <li><strong>Перенос без перегруза:</strong> после подтверждения просроченные действия распределяются по спокойным дням вместо одной пугающей стопки; новые шаги сразу получают интервалы под текущий темп.</li>
+        <li><strong>Добрые уведомления о цели:</strong> необязательные советы приходят без звука и срочного статуса, не появляются ночью, не дублируются и ограничены одним разом в 36 часов и двумя разами в неделю.</li>
+        <li><strong>Минуты осознанности:</strong> завершённые дыхательные практики Lippi могут сохраняться обратно в Apple Здоровье.</li>
+        <li><strong>Приватность по умолчанию:</strong> показатели обрабатываются на устройстве и никогда не включаются в запросы к Ollama; это рекомендации для самочувствия, а не медицинская оценка.</li>
+        <li><strong>Без ущерба плавности:</strong> запросы HealthKit выполняются асинхронно, фоновые обновления ограничены, а интерфейс использует лёгкие стеклянные поверхности без постоянных перерисовок.</li>
+        <li><strong>Проверка:</strong> системные plist-файлы HealthKit, сценарии восстановления диагностики и весь код под iOS 18.5 прошли статическую проверку и Swift type checking; запуск на реальном устройстве намеренно оставлен ручным.</li>
+      </ul>
     </td>
   </tr>
 </table>

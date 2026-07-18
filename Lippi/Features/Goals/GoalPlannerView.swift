@@ -18,6 +18,7 @@ struct GoalPlannerView: View {
 
     @EnvironmentObject private var store: TaskStore
     @EnvironmentObject private var stats: StatsStore
+    @EnvironmentObject private var healthKit: HealthKitManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -55,6 +56,7 @@ struct GoalPlannerView: View {
     @State private var showPlanningOptions = false
     @State private var showManualDetails = false
     @State private var showRoadmapDetails = false
+    @State private var adaptiveAdjustmentDismissed = false
 
     private let engine = GoalRoadmapEngine()
     private let progressEngine = GoalProgressSummaryEngine()
@@ -112,102 +114,157 @@ struct GoalPlannerView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppBackdrop(renderMode: .force)
+            plannerScreen
+        }
+    }
 
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        if roadmap == nil {
-                            plannerModeSwitcher
-                                .lippiMotionScene(0)
+    /// Kept behind an opaque boundary so the device does not have to instantiate
+    /// the complete navigation and planner hierarchy as one deeply nested type.
+    private var plannerScreen: some View {
+        ZStack {
+            AppBackdrop(renderMode: .force)
 
-                            if plannerMode == .assistant {
-                                smartGoalChatCard
-                                    .lippiMotionScene(1)
-                            } else {
-                                manualRoadmapCard
-                                    .lippiMotionScene(1)
-                            }
-                        }
-
-                        if let roadmap {
-                            if let audit = progressAudit(for: roadmap), audit.shouldSuggestAdjustment {
-                                adaptationCard(audit)
-                                    .lippiMotionScene(2)
-                            }
-                            roadmapOverview(roadmap)
-                                .lippiMotionScene(3)
-                            milestonesCard(roadmap)
-                                .lippiMotionScene(4)
-                            roadmapDetailsToggle
-                                .lippiMotionScene(5)
-
-                            if showRoadmapDetails {
-                                GoalProgressSummaryCard(
-                                    roadmap: roadmap,
-                                    summary: progressSummary,
-                                    isSummarizing: isSummarizingProgress,
-                                    issue: progressSummaryIssue,
-                                    lang: lang,
-                                    userState: Binding(
-                                        get: { selectedUserState },
-                                        set: { selectedUserState = $0 }
-                                    ),
-                                    stateNote: $userStateNote,
-                                    weeklyEnabled: $weeklyProgressSummaryEnabled,
-                                    onGenerate: {
-                                        Task { await generateProgressSummary() }
-                                    },
-                                    onWeeklyChanged: {
-                                        refreshProgressNotifications()
-                                    }
-                                )
-                                .lippiMotionScene(6)
-
-                                if let progressSummary {
-                                    GoalProgressSummaryPage(summary: progressSummary, lang: lang)
-                                        .lippiMotionScene(7)
-                                }
-
-                                clarityCard(roadmap)
-                                    .lippiMotionScene(8)
-
-                                if !(roadmap.evidence ?? []).isEmpty {
-                                    evidenceCard(roadmap)
-                                        .lippiMotionScene(9)
-                                }
-
-                                habitsAndRisksCard(roadmap)
-                                    .lippiMotionScene(10)
-                            }
-                        }
-
-                        Color.clear.frame(height: 72)
-                    }
-                    .lippiContentColumn()
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    plannerSections
+                    Color.clear.frame(height: 72)
                 }
-                .scrollIndicators(.hidden)
-                .scrollDismissesKeyboard(.interactively)
-                .lippiScrollPerformance()
+                .lippiContentColumn()
             }
-            .navigationTitle(s("goals.nav_title"))
-            .navigationBarTitleDisplayMode(.large)
-            .clearNavBarBackgroundIfAvailable()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(s("common.close")) { dismiss() }
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                bottomActionBar
-            }
-            .onAppear {
-                restoreRoadmap()
-                restoreProgressSummary()
-                refreshProgressNotifications()
-                handleProgressDeepLinkIfNeeded()
+            .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+            .lippiScrollPerformance()
+        }
+        .navigationTitle(s("goals.nav_title"))
+        .navigationBarTitleDisplayMode(.large)
+        .clearNavBarBackgroundIfAvailable()
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(s("common.close")) { dismiss() }
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            bottomActionBar
+        }
+        .onAppear {
+            restoreRoadmap()
+            restoreProgressSummary()
+            refreshProgressNotifications()
+            handleProgressDeepLinkIfNeeded()
+        }
+    }
+
+    @ViewBuilder
+    private var plannerSections: some View {
+        if let roadmap {
+            roadmapSections(roadmap)
+        } else {
+            creationSections
+        }
+    }
+
+    @ViewBuilder
+    private var creationSections: some View {
+        AnyView(
+            plannerModeSwitcher
+                .lippiMotionScene(0)
+        )
+
+        if plannerMode == .assistant {
+            AnyView(
+                smartGoalChatCard
+                    .lippiMotionScene(1)
+            )
+        } else {
+            AnyView(
+                manualRoadmapCard
+                    .lippiMotionScene(1)
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func roadmapSections(_ roadmap: GoalRoadmap) -> some View {
+        if let audit = progressAudit(for: roadmap), audit.shouldSuggestAdjustment {
+            AnyView(
+                adaptationCard(audit)
+                    .lippiMotionScene(2)
+            )
+        }
+
+        AnyView(
+            adaptiveGoalPaceCard(
+                roadmap,
+                pace: adaptiveGoalPace(for: roadmap)
+            )
+            .lippiMotionScene(2)
+        )
+        AnyView(
+            roadmapOverview(roadmap)
+                .lippiMotionScene(3)
+        )
+        AnyView(
+            milestonesCard(roadmap)
+                .lippiMotionScene(4)
+        )
+        AnyView(
+            roadmapDetailsToggle
+                .lippiMotionScene(5)
+        )
+
+        if showRoadmapDetails {
+            roadmapDetailSections(roadmap)
+        }
+    }
+
+    @ViewBuilder
+    private func roadmapDetailSections(_ roadmap: GoalRoadmap) -> some View {
+        AnyView(
+            GoalProgressSummaryCard(
+                roadmap: roadmap,
+                summary: progressSummary,
+                isSummarizing: isSummarizingProgress,
+                issue: progressSummaryIssue,
+                lang: lang,
+                userState: Binding(
+                    get: { selectedUserState },
+                    set: { selectedUserState = $0 }
+                ),
+                stateNote: $userStateNote,
+                weeklyEnabled: $weeklyProgressSummaryEnabled,
+                onGenerate: {
+                    Task { await generateProgressSummary() }
+                },
+                onWeeklyChanged: {
+                    refreshProgressNotifications()
+                }
+            )
+            .lippiMotionScene(6)
+        )
+
+        if let progressSummary {
+            AnyView(
+                GoalProgressSummaryPage(summary: progressSummary, lang: lang)
+                    .lippiMotionScene(7)
+            )
+        }
+
+        AnyView(
+            clarityCard(roadmap)
+                .lippiMotionScene(8)
+        )
+
+        if !(roadmap.evidence ?? []).isEmpty {
+            AnyView(
+                evidenceCard(roadmap)
+                    .lippiMotionScene(9)
+            )
+        }
+
+        AnyView(
+            habitsAndRisksCard(roadmap)
+                .lippiMotionScene(10)
+        )
     }
 
     private var plannerModeSwitcher: some View {
@@ -1470,7 +1527,7 @@ struct GoalPlannerView: View {
     }
 
     private func requestBriefCard(_ brief: GoalRequestBrief) -> some View {
-        GlassCard(padding: 16, cornerRadius: 24, style: .full) {
+        return GlassCard(padding: 16, cornerRadius: 24, style: .full) {
             VStack(alignment: .leading, spacing: 14) {
                 LippiSectionHeader(
                     title: s("goals.brief.title"),
@@ -1801,6 +1858,186 @@ struct GoalPlannerView: View {
                 .buttonStyle(LippiButtonStyle(kind: .secondary))
             }
         }
+    }
+
+    private func adaptiveGoalPace(for roadmap: GoalRoadmap) -> AdaptiveGoalPace {
+        AdaptiveGoalPaceEngine.evaluate(
+            health: healthKit.isEnabled ? healthKit.recommendation : nil,
+            audit: progressAudit(for: roadmap),
+            userState: selectedUserState
+        )
+    }
+
+    private func adaptiveGoalPaceCard(
+        _ roadmap: GoalRoadmap,
+        pace: AdaptiveGoalPace
+    ) -> some View {
+        let audit = progressAudit(for: roadmap)
+        let needsConfirmation = !adaptiveAdjustmentDismissed
+            && (pace.shouldRedistributeOverdueSteps
+                || pace.level == .recovery
+                || pace.level == .light)
+
+        return GlassCard(padding: 16, cornerRadius: 24, style: .full) {
+            VStack(alignment: .leading, spacing: 14) {
+                LippiSectionHeader(
+                    title: s("adaptive.goal.title"),
+                    subtitle: s("adaptive.goal.subtitle"),
+                    icon: "scope",
+                    accent: paceTone(pace.level)
+                )
+
+                Text(s("adaptive.goal.pace.\(pace.level.rawValue).description"))
+                    .font(.footnote)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    adaptationMetric(
+                        value: pace.dailyStepLimit,
+                        title: s("adaptive.goal.metric.steps"),
+                        tone: paceTone(pace.level)
+                    )
+                    adaptationMetric(
+                        value: pace.focusMinutes,
+                        title: s("adaptive.goal.metric.focus"),
+                        tone: Color(hex: 0x64D2FF)
+                    )
+                }
+
+                VStack(alignment: .leading, spacing: 9) {
+                    ForEach(pace.reasons, id: \.self) { reason in
+                        readableItemRow(
+                            s("adaptive.goal.reason.\(reason.rawValue)"),
+                            icon: "checkmark.circle.fill",
+                            tone: paceTone(pace.level),
+                            textColor: DS.text(0.82)
+                        )
+                    }
+
+                    if let next = audit?.nextActiveTask, !next.trimmed.isEmpty {
+                        readableItemRow(
+                            L10n.fmt("adaptive.goal.next_step", lang, next),
+                            icon: "arrow.right.circle.fill",
+                            tone: DS.accent,
+                            textColor: DS.text(0.88)
+                        )
+                    }
+                }
+
+                Label(s("adaptive.goal.promise"), systemImage: "flag.checkered")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if needsConfirmation {
+                    VStack(spacing: 8) {
+                    Button {
+                        applyAdaptiveGoalPace(
+                            pace,
+                            to: roadmap,
+                            audit: audit
+                        )
+                    } label: {
+                        Label(s("adaptive.goal.apply"), systemImage: "checkmark.circle.fill")
+                            .labelStyle(TightLabelStyle())
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .primary, allowsMultiline: true))
+
+                    Button {
+                        adaptiveAdjustmentDismissed = true
+                    } label: {
+                        Text(s("adaptive.goal.not_now"))
+                            .font(.footnote.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(DS.textSecondary)
+                    .padding(.vertical, 6)
+                    }
+                }
+            }
+        }
+    }
+
+    private func paceTone(_ level: AdaptiveGoalPaceLevel) -> Color {
+        switch level {
+        case .recovery: return Color(hex: 0xAF52DE)
+        case .light: return Color(hex: 0x64D2FF)
+        case .balanced: return Color(hex: 0x30D158)
+        case .momentum: return DS.accent
+        }
+    }
+
+    private func applyAdaptiveGoalPace(
+        _ pace: AdaptiveGoalPace,
+        to roadmap: GoalRoadmap,
+        audit: GoalPlanProgressAudit?
+    ) {
+        let previousRecord = UserDefaults.standard
+            .string(forKey: AdaptiveGoalPlanRecordStore.storageKey)
+            .flatMap(AdaptiveGoalPlanRecordStore.decode)
+        let adjusted = AdaptiveGoalPlanEngine.applying(
+            to: roadmap,
+            pace: pace,
+            lang: lang,
+            replacing: previousRecord
+        )
+
+        var redistributedCount = 0
+        if pace.shouldRedistributeOverdueSteps, audit != nil {
+            redistributedCount = redistributeOverdueGoalTasks(for: roadmap, pace: pace)
+        }
+
+        self.roadmap = adjusted
+        saveRoadmap(adjusted)
+        let postAdaptationAudit = GoalPlanProgressAudit.make(roadmap: adjusted, tasks: store.tasks)
+        AdaptiveGoalPlanRecordStore.save(
+            AdaptiveGoalPlanRecord(
+                roadmapID: adjusted.id,
+                appliedAt: .now,
+                pace: pace,
+                userState: selectedUserState,
+                healthBand: healthKit.isEnabled ? healthKit.recommendation?.band : nil,
+                activeTaskCount: postAdaptationAudit?.activeTasks ?? 0,
+                completedTaskCount: postAdaptationAudit?.completedTasks ?? 0,
+                overdueTaskCount: postAdaptationAudit?.overdueTasks ?? 0,
+                redistributedTaskCount: redistributedCount,
+                firstAction: AdaptiveGoalPlanEngine.firstAction(for: pace, lang: lang),
+                habitTitle: AdaptiveGoalPlanEngine.habitTitle(lang: lang),
+                habitDetail: AdaptiveGoalPlanEngine.habitDetail(for: pace, lang: lang)
+            )
+        )
+        adaptiveAdjustmentDismissed = true
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        #endif
+    }
+
+    private func redistributeOverdueGoalTasks(
+        for roadmap: GoalRoadmap,
+        pace: AdaptiveGoalPace,
+        now: Date = .now
+    ) -> Int {
+        let calendar = Calendar.current
+        let overdue = store.tasks
+            .filter { task in
+                guard !task.isCompleted,
+                      let due = task.dueDate,
+                      due < now else { return false }
+                return GoalPlanProgressAudit.isLinked(task, to: roadmap)
+            }
+            .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+
+        for (index, item) in overdue.enumerated() {
+            var updated = item
+            let dayOffset = 1 + index * max(1, pace.spacingDays)
+            let targetDay = calendar.date(byAdding: .day, value: dayOffset, to: now) ?? now
+            updated.dueDate = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: targetDay)
+            store.update(updated)
+        }
+        return overdue.count
     }
 
     private func missedTaskRow(_ task: GoalMissedTask) -> some View {
@@ -2858,6 +3095,7 @@ struct GoalPlannerView: View {
 
     private func addFirstTasks(from roadmap: GoalRoadmap) {
         let calendar = Calendar.current
+        let pace = adaptiveGoalPace(for: roadmap)
         let tasks = roadmap.milestones
             .prefix(2)
             .flatMap { milestone in
@@ -2866,7 +3104,14 @@ struct GoalPlannerView: View {
             .prefix(4)
 
         for (index, item) in tasks.enumerated() {
-            let due = calendar.date(byAdding: .day, value: 2 + index * 2, to: .now)
+            let targetDay = calendar.date(
+                byAdding: .day,
+                value: 1 + index * max(1, pace.spacingDays),
+                to: .now
+            )
+            let due = targetDay.flatMap {
+                calendar.date(bySettingHour: 18, minute: 0, second: 0, of: $0)
+            }
             store.add(
                 TaskItem(
                     title: item.title,
@@ -2900,6 +3145,7 @@ struct GoalPlannerView: View {
         guard let data = try? JSONEncoder().encode(roadmap) else { return }
         savedRoadmap = String(decoding: data, as: UTF8.self)
         refreshProgressNotifications()
+        refreshCareNotifications(for: roadmap)
     }
 
     private func saveProgressSummary(_ summary: GoalProgressSummary) {
@@ -2922,6 +3168,16 @@ struct GoalPlannerView: View {
 
     private func refreshProgressNotifications() {
         GoalProgressNotificationScheduler.refresh(lang: lang)
+    }
+
+    private func refreshCareNotifications(for roadmap: GoalRoadmap?) {
+        GoalCareNotificationScheduler.refresh(
+            roadmap: roadmap,
+            tasks: store.tasks,
+            health: healthKit.isEnabled ? healthKit.recommendation : nil,
+            userState: selectedUserState,
+            lang: lang
+        )
     }
 
     private func handleProgressDeepLinkIfNeeded() {
@@ -3443,7 +3699,7 @@ struct GoalPlanProgressAudit: Codable, Hashable {
         """
     }
 
-    private static func isLinked(_ task: TaskItem, to roadmap: GoalRoadmap) -> Bool {
+    static func isLinked(_ task: TaskItem, to roadmap: GoalRoadmap) -> Bool {
         let note = normalized(task.notes)
         let roadmapTitle = normalized(roadmap.title)
         if !roadmapTitle.isEmpty, note.contains(roadmapTitle) {

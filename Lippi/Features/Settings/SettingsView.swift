@@ -21,12 +21,15 @@ struct SettingsView: View {
     @EnvironmentObject private var store: TaskStore
     @EnvironmentObject private var pomo: PomodoroManager
     @EnvironmentObject private var daily: DailyReminderStore
+    @EnvironmentObject private var healthKit: HealthKitManager
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage(AppTheme.storageKey) private var themeRaw: String = AppTheme.defaultTheme.rawValue
     @AppStorage(PomodoroRingtone.storageKey) private var pomodoroRingtoneRaw: String = PomodoroRingtone.defaultRingtone.rawValue
     @AppStorage(HealthVoicePreferences.isEnabledKey) private var healthVoiceEnabled: Bool = HealthVoicePreferences.defaultEnabled
     @AppStorage(HealthVoicePreferences.autoSpeakKey) private var healthVoiceAutoSpeak: Bool = HealthVoicePreferences.defaultAutoSpeak
     @AppStorage(HealthVoicePlaybackSpeed.storageKey) private var healthVoiceSpeedRaw: String = HealthVoicePlaybackSpeed.defaultSpeed.rawValue
+    @AppStorage(GoalCareNotificationScheduler.enabledKey) private var goalCareNotificationsEnabled: Bool = true
+    @AppStorage("goal.progress.userState") private var goalUserStateRaw: String = GoalUserState.calm.rawValue
     @State private var selectedScope: SettingsScope = .all
     @State private var confirmClear = false
     @StateObject private var healthVoiceAssistant = HealthVoiceAssistant()
@@ -94,6 +97,7 @@ struct SettingsView: View {
         case pomodoro
         case daily
         case ai
+        case healthKit
         case eye
         case voice
         case data
@@ -121,7 +125,7 @@ struct SettingsView: View {
         case .account: return .account
         case .focus: return .quick
         case .ai: return .ai
-        case .health: return .eye
+        case .health: return .healthKit
         case .data: return .data
         }
     }
@@ -152,6 +156,7 @@ struct SettingsView: View {
             ]
         case .health:
             return [
+                SettingsJumpItem(anchor: .healthKit, title: s("healthkit.title"), icon: "heart.text.square.fill"),
                 SettingsJumpItem(anchor: .eye, title: s("settings.eye.title"), icon: "eye.circle.fill"),
                 SettingsJumpItem(anchor: .voice, title: s("settings.voice.title"), icon: "speaker.wave.3.fill")
             ]
@@ -184,99 +189,157 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                settingsBackdrop
+            settingsScreen
+        }
+    }
 
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 16) {
-                            heroCard
-                                .id(SettingsAnchor.hero)
-                                .lippiMotionScene(0)
-                            scopeCard(proxy: proxy)
-                                .lippiMotionScene(1)
-                            if shouldShowAccountScopeCards() {
-                                accountCard
-                                    .id(SettingsAnchor.account)
-                                    .lippiMotionScene(2)
-                                languageCard
-                                    .id(SettingsAnchor.language)
-                                    .lippiMotionScene(3)
-                                themeCard
-                                    .id(SettingsAnchor.theme)
-                                    .lippiMotionScene(4)
-                            }
-                            if shouldShowFocusScopeCards() {
-                                quickActionsCard
-                                    .id(SettingsAnchor.quick)
-                                    .lippiMotionScene(2)
-                                liveActivitiesCard
-                                    .id(SettingsAnchor.live)
-                                    .lippiMotionScene(3)
-                                pomodoroCard
-                                    .id(SettingsAnchor.pomodoro)
-                                    .lippiMotionScene(4)
-                                dailyRemindersCard
-                                    .id(SettingsAnchor.daily)
-                                    .lippiMotionScene(5)
-                            }
-                            if shouldShowAIScopeCards() {
-                                OllamaSettingsCard()
-                                    .id(SettingsAnchor.ai)
-                                    .lippiMotionScene(2)
-                            }
-                            if shouldShowHealthScopeCards() {
-                                eyeGymCard
-                                    .id(SettingsAnchor.eye)
-                                    .lippiMotionScene(2)
-                                healthVoiceCard
-                                    .id(SettingsAnchor.voice)
-                                    .lippiMotionScene(3)
-                                NeuralVoiceSettingsCard()
-                                    .lippiMotionScene(4)
-                            }
-                            if shouldShowDataScopeCards() {
-                                dataCard
-                                    .id(SettingsAnchor.data)
-                                    .lippiMotionScene(2)
-                            }
-                        }
-                        .lippiContentColumn()
+    /// The settings hierarchy contains many independent cards. Keeping the
+    /// navigation shell behind its own opaque boundary avoids a device-only
+    /// Swift metadata stack overflow when the screen is first presented.
+    private var settingsScreen: some View {
+        ZStack {
+            settingsBackdrop
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        settingsSections(proxy: proxy)
                     }
-                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 88) }
-                    .lippiScrollPerformance()
-                    .onChange(of: selectedScope) { _, newScope in
-                        let target = primaryAnchor(for: newScope)
-                        DispatchQueue.main.async {
-                            withAnimation(reduceMotion ? nil : DS.motionNavigate) {
-                                proxy.scrollTo(target, anchor: .top)
-                            }
-                        }
-                    }
-                    .animation(reduceMotion ? nil : DS.motionState, value: selectedScope)
+                    .lippiContentColumn()
                 }
-                #if os(iOS)
-                .scrollIndicators(.hidden)
-                #endif
+                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 88) }
+                .lippiScrollPerformance()
+                .onChange(of: selectedScope) { _, newScope in
+                    let target = primaryAnchor(for: newScope)
+                    DispatchQueue.main.async {
+                        withAnimation(reduceMotion ? nil : DS.motionNavigate) {
+                            proxy.scrollTo(target, anchor: .top)
+                        }
+                    }
+                }
+                .animation(reduceMotion ? nil : DS.motionState, value: selectedScope)
             }
-            .navigationTitle(t(.settings_nav_title))
-            .navigationBarTitleDisplayMode(.large)
-            .clearNavBarBackgroundIfAvailable()
-            .alert(t(.settings_alert_clear_title), isPresented: $confirmClear) {
-                Button(t(.common_delete), role: .destructive) { store.clearAll() }
-                Button(t(.common_cancel), role: .cancel) { }
-            } message: {
-                Text(t(.settings_alert_clear_message))
-            }
-            .onDisappear {
-                healthVoiceAssistant.stop()
-            }
-            .onAppear {
-                refreshVoiceModels()
-            }
-            .onChange(of: langRaw) { _, _ in
-                refreshVoiceModels()
-            }
+            #if os(iOS)
+            .scrollIndicators(.hidden)
+            #endif
+        }
+        .navigationTitle(t(.settings_nav_title))
+        .navigationBarTitleDisplayMode(.large)
+        .clearNavBarBackgroundIfAvailable()
+        .alert(t(.settings_alert_clear_title), isPresented: $confirmClear) {
+            Button(t(.common_delete), role: .destructive) { store.clearAll() }
+            Button(t(.common_cancel), role: .cancel) { }
+        } message: {
+            Text(t(.settings_alert_clear_message))
+        }
+        .onDisappear {
+            healthVoiceAssistant.stop()
+        }
+        .onAppear {
+            refreshVoiceModels()
+        }
+        .onChange(of: langRaw) { _, _ in
+            refreshVoiceModels()
+        }
+    }
+
+    @ViewBuilder
+    private func settingsSections(proxy: ScrollViewProxy) -> some View {
+        AnyView(
+            heroCard
+                .id(SettingsAnchor.hero)
+                .lippiMotionScene(0)
+        )
+        AnyView(
+            scopeCard(proxy: proxy)
+                .lippiMotionScene(1)
+        )
+
+        if shouldShowAccountScopeCards() {
+            AnyView(
+                accountCard
+                    .id(SettingsAnchor.account)
+                    .lippiMotionScene(2)
+            )
+            AnyView(
+                languageCard
+                    .id(SettingsAnchor.language)
+                    .lippiMotionScene(3)
+            )
+            AnyView(
+                themeCard
+                    .id(SettingsAnchor.theme)
+                    .lippiMotionScene(4)
+            )
+        }
+
+        if shouldShowFocusScopeCards() {
+            AnyView(
+                quickActionsCard
+                    .id(SettingsAnchor.quick)
+                    .lippiMotionScene(2)
+            )
+            AnyView(
+                liveActivitiesCard
+                    .id(SettingsAnchor.live)
+                    .lippiMotionScene(3)
+            )
+            AnyView(
+                pomodoroCard
+                    .id(SettingsAnchor.pomodoro)
+                    .lippiMotionScene(4)
+            )
+            AnyView(
+                dailyRemindersCard
+                    .id(SettingsAnchor.daily)
+                    .lippiMotionScene(5)
+            )
+        }
+
+        if shouldShowAIScopeCards() {
+            AnyView(
+                OllamaSettingsCard()
+                    .id(SettingsAnchor.ai)
+                    .lippiMotionScene(2)
+            )
+        }
+
+        if shouldShowHealthScopeCards() {
+            AnyView(
+                HealthKitInsightCard(
+                    manager: healthKit,
+                    lang: lang,
+                    showsManagementActions: true
+                )
+                .id(SettingsAnchor.healthKit)
+                .lippiMotionScene(2)
+            )
+            AnyView(
+                goalCareAdviceCard
+                    .lippiMotionScene(3)
+            )
+            AnyView(
+                eyeGymCard
+                    .id(SettingsAnchor.eye)
+                    .lippiMotionScene(4)
+            )
+            AnyView(
+                healthVoiceCard
+                    .id(SettingsAnchor.voice)
+                    .lippiMotionScene(5)
+            )
+            AnyView(
+                NeuralVoiceSettingsCard()
+                    .lippiMotionScene(6)
+            )
+        }
+
+        if shouldShowDataScopeCards() {
+            AnyView(
+                dataCard
+                    .id(SettingsAnchor.data)
+                    .lippiMotionScene(2)
+            )
         }
     }
 
@@ -922,6 +985,55 @@ struct SettingsView: View {
             }
             .buttonStyle(LippiButtonStyle(kind: .primary))
         }
+    }
+
+    private var goalCareAdviceCard: some View {
+        GlassCard {
+            sectionHeader(
+                s("goalcare.settings.title"),
+                subtitle: s("goalcare.settings.subtitle"),
+                icon: "bell.badge.fill",
+                accent: Color(hex: 0x64D2FF)
+            )
+
+            toggleRow(
+                icon: "heart.fill",
+                title: s("goalcare.settings.toggle.title"),
+                subtitle: s("goalcare.settings.toggle.subtitle"),
+                isOn: $goalCareNotificationsEnabled
+            )
+
+            Label(s("goalcare.settings.policy"), systemImage: "moon.stars.fill")
+                .font(.caption)
+                .foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+        }
+        .onChange(of: goalCareNotificationsEnabled) { _, enabled in
+            if enabled {
+                refreshGoalCareAdvice()
+            } else {
+                GoalCareNotificationScheduler.cancel()
+            }
+        }
+    }
+
+    private func refreshGoalCareAdvice() {
+        let roadmap: GoalRoadmap?
+        if let raw = UserDefaults.standard.string(forKey: GoalProgressNotificationScheduler.roadmapStorageKey),
+           let data = raw.data(using: .utf8) {
+            roadmap = try? JSONDecoder().decode(GoalRoadmap.self, from: data)
+        } else {
+            roadmap = nil
+        }
+
+        GoalCareNotificationScheduler.refresh(
+            roadmap: roadmap,
+            tasks: store.tasks,
+            health: healthKit.isEnabled ? healthKit.recommendation : nil,
+            userState: GoalUserState(rawValue: goalUserStateRaw) ?? .calm,
+            lang: lang
+        )
     }
 
     private var healthVoiceCard: some View {

@@ -8,12 +8,14 @@ import UIKit
 // MARK: - Health Section (breathing & recovery)
 // =======================================================
 struct HealthView: View {
+    @Binding var showGoalPlanner: Bool
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage(HealthVoicePreferences.isEnabledKey) private var voiceEnabled: Bool = HealthVoicePreferences.defaultEnabled
     @AppStorage(HealthVoicePreferences.autoSpeakKey) private var voiceAutoSpeak: Bool = HealthVoicePreferences.defaultAutoSpeak
     @AppStorage(HealthVoicePlaybackSpeed.storageKey) private var voiceSpeedRaw: String = HealthVoicePlaybackSpeed.defaultSpeed.rawValue
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var healthKit: HealthKitManager
     @StateObject private var analytics = BreathingAnalyticsStore()
     @StateObject private var voiceAssistant = HealthVoiceAssistant()
 
@@ -28,6 +30,7 @@ struct HealthView: View {
     @State private var activeSegmentStartedAt: Date?
     @State private var accumulatedSessionDuration: TimeInterval = 0
     @State private var didAutoNarrate = false
+    @State private var selectedSection: HealthViewSection = .overview
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
@@ -53,14 +56,34 @@ struct HealthView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        heroCard
-                            .lippiMotionScene(0)
-                        coachCard
-                            .lippiMotionScene(1)
-                        analyticsCard
-                            .lippiMotionScene(2)
-                        voiceAssistantCard
-                            .lippiMotionScene(3)
+                        sectionPicker
+
+                        if selectedSection == .overview {
+                            HealthDashboardView(
+                                manager: healthKit,
+                                lang: lang,
+                                onOpenPractice: {
+                                    didAutoNarrate = true
+                                    selectedSection = .practices
+                                    useRecommendedBreathing()
+                                },
+                                onOpenEyes: {
+                                    NotificationCenter.default.post(name: .suggestEyeExercise, object: nil)
+                                },
+                                onOpenGoals: {
+                                    showGoalPlanner = true
+                                }
+                            )
+                        } else {
+                            heroCard
+                                .lippiMotionScene(0)
+                            coachCard
+                                .lippiMotionScene(1)
+                            analyticsCard
+                                .lippiMotionScene(2)
+                            voiceAssistantCard
+                                .lippiMotionScene(3)
+                        }
                         Color.clear.frame(height: 84)
                     }
                     .lippiContentColumn()
@@ -74,7 +97,9 @@ struct HealthView: View {
             .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 88) }
         }
         .onAppear {
-            tryAutoNarrationIfNeeded()
+            if selectedSection == .practices {
+                tryAutoNarrationIfNeeded()
+            }
         }
         .onDisappear {
             didAutoNarrate = false
@@ -99,8 +124,28 @@ struct HealthView: View {
                 startSession()
             }
         }
+        .onChange(of: selectedSection) { _, newSection in
+            if newSection == .practices {
+                tryAutoNarrationIfNeeded()
+            } else {
+                didAutoNarrate = false
+                voiceAssistant.stop()
+                pauseSession()
+            }
+        }
         .animation(reduceMotion ? nil : DS.motionState, value: isRunning)
         .animation(reduceMotion ? nil : DS.motionState, value: selectedPreset)
+    }
+
+    private var sectionPicker: some View {
+        Picker(s("health.hub.section.label"), selection: $selectedSection) {
+            ForEach(HealthViewSection.allCases) { section in
+                Text(s(section.titleKey))
+                    .tag(section)
+            }
+        }
+        .pickerStyle(.segmented)
+        .accessibilityLabel(Text(s("health.hub.section.label")))
     }
 
     private var heroCard: some View {
@@ -397,14 +442,20 @@ struct HealthView: View {
     }
 
     private var recommendationLines: [String] {
-        if analytics.totalSessions == 0 {
-            return [
-                s("health.voice.recommendation.first_session"),
-                s("health.voice.recommendation.short_cycle")
-            ]
+        var healthLines: [String] = []
+        if let recommendation = healthKit.recommendation,
+           recommendation.band == .recovery || recommendation.band == .light {
+            healthLines.append(s("healthkit.band.\(recommendation.band.rawValue).description"))
         }
 
-        var lines: [String] = []
+        if analytics.totalSessions == 0 {
+            return Array((healthLines + [
+                s("health.voice.recommendation.first_session"),
+                s("health.voice.recommendation.short_cycle")
+            ]).prefix(3))
+        }
+
+        var lines: [String] = healthLines
 
         if analyticsWeekMinutes < 12 {
             lines.append(s("health.voice.recommendation.weekly_minutes"))
@@ -493,12 +544,24 @@ struct HealthView: View {
         let duration = accumulatedSessionDuration
         let cycles = completedCycles
         guard duration >= 10 || cycles > 0 else { return }
+        let endedAt = Date.now
+        let mindfulStartedAt = endedAt.addingTimeInterval(-duration)
         analytics.recordSession(
             startedAt: sessionStartedAt ?? .now,
             duration: duration,
             completedCycles: cycles,
             preset: preset
         )
+        Task {
+            await healthKit.saveMindfulSession(startedAt: mindfulStartedAt, endedAt: endedAt)
+        }
+    }
+
+    private func useRecommendedBreathing() {
+        selectedPreset = .recovery
+        DispatchQueue.main.async {
+            startSession()
+        }
     }
 
     private func clearSessionTracking() {
@@ -602,6 +665,20 @@ struct HealthView: View {
         guard isRunning, let phaseStartedAt else { return base }
         let elapsed = max(0, date.timeIntervalSince(phaseStartedAt))
         return min(1, base + CGFloat(elapsed / max(activeStep.duration, 0.01)))
+    }
+}
+
+private enum HealthViewSection: String, CaseIterable, Identifiable {
+    case overview
+    case practices
+
+    var id: String { rawValue }
+
+    var titleKey: String {
+        switch self {
+        case .overview: return "health.hub.section.overview"
+        case .practices: return "health.hub.section.practices"
+        }
     }
 }
 

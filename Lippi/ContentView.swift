@@ -227,6 +227,47 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    /// Тихая подсказка: без звука, без Time Sensitive и только в Notification Center,
+    /// если приложение сейчас открыто. Подходит для необязательных советов.
+    func scheduleGentle(
+        id: String,
+        title: String,
+        body: String,
+        at date: Date,
+        replaceExisting: Bool = true,
+        userInfo: [AnyHashable: Any] = [:]
+    ) {
+        ensureAuthorized { [weak self] ok in
+            guard let self, ok else { return }
+            if replaceExisting { self.cancel(ids: [id]) }
+
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = body
+            content.sound = nil
+            content.userInfo = userInfo
+            content.threadIdentifier = "goal-care"
+            if #available(iOS 15.0, *) {
+                content.interruptionLevel = .passive
+                content.relevanceScore = 0.15
+            }
+
+            let now = Date()
+            let fireDate = date > now.addingTimeInterval(1) ? date : now.addingTimeInterval(2)
+            var components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute, .second],
+                from: fireDate
+            )
+            components.timeZone = TimeZone.current
+
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
+            self.center.add(request) { error in
+                if let error { print("🔔 gentle suggestion error:", error, "id:", id) }
+            }
+        }
+    }
+
     /// Разовая через секунды (идеально для таймеров/помодоро)
     func scheduleAfterSeconds(id: String, title: String, body: String, seconds: TimeInterval, replaceExisting: Bool = true) {
         ensureAuthorized { [weak self] ok in
@@ -320,13 +361,18 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         let isPomodoroNotification = notification.request.identifier.hasPrefix("pomodoro-")
+        let isGentleSuggestion = notification.request.identifier.hasPrefix("goal-care-")
         if isPomodoroNotification {
             PomodoroAlarmCenter.shared.start(phaseTitle: notification.request.content.title)
         }
         if #available(iOS 14.0, *) {
-            completionHandler(isPomodoroNotification ? [.banner, .list] : [.banner, .sound, .list])
+            if isGentleSuggestion {
+                completionHandler([.list])
+            } else {
+                completionHandler(isPomodoroNotification ? [.banner, .list] : [.banner, .sound, .list])
+            }
         } else {
-            completionHandler(isPomodoroNotification ? [.alert] : [.alert, .sound])
+            completionHandler(isGentleSuggestion ? [] : (isPomodoroNotification ? [.alert] : [.alert, .sound]))
         }
     }
 
@@ -2185,10 +2231,13 @@ enum AppTab: Hashable {
 struct ContentView: View {
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage(AppTheme.storageKey) private var themeRaw: String = AppTheme.defaultTheme.rawValue
+    @AppStorage("goal.progress.userState") private var goalUserStateRaw: String = GoalUserState.calm.rawValue
+    @AppStorage("assistant.launcher.isCollapsed") private var isVoiceAssistantCollapsed = false
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private var langCode: String { lang.rawValue }
     private var selectedTheme: AppTheme { AppTheme(rawValue: themeRaw) ?? AppTheme.defaultTheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var healthKit: HealthKitManager
 
     @State private var showEyes = false
     @StateObject private var store = TaskStore()
@@ -2212,7 +2261,7 @@ struct ContentView: View {
         case .tasks:    TasksView()
         case .pomodoro: PomodoroView()
         case .break:    BreakView()
-        case .health:   HealthView()
+        case .health:   HealthView(showGoalPlanner: $showGoalPlanner)
         case .eye:      EyeHealthHomeView()
         case .settings: SettingsView()
         }
@@ -2240,6 +2289,24 @@ struct ContentView: View {
         withTransaction(instant) {
             tab = newTab
         }
+    }
+
+    private func refreshGoalCareNotifications() {
+        let roadmap: GoalRoadmap?
+        if let raw = UserDefaults.standard.string(forKey: GoalProgressNotificationScheduler.roadmapStorageKey),
+           let data = raw.data(using: .utf8) {
+            roadmap = try? JSONDecoder().decode(GoalRoadmap.self, from: data)
+        } else {
+            roadmap = nil
+        }
+
+        GoalCareNotificationScheduler.refresh(
+            roadmap: roadmap,
+            tasks: store.tasks,
+            health: healthKit.recommendation,
+            userState: GoalUserState(rawValue: goalUserStateRaw) ?? .calm,
+            lang: lang
+        )
     }
 
     private func localizedTabTitle(_ tab: AppTab) -> String {
@@ -2615,12 +2682,16 @@ struct ContentView: View {
         }
         .overlay(alignment: .bottomTrailing) {
             VoiceAssistantLauncherButton(
+                isCollapsed: $isVoiceAssistantCollapsed,
                 title: L10n.tr("assistant.title", lang),
                 actionTitle: L10n.tr(
                     voiceAssistant.isListening ? "assistant.button.stop" : "assistant.button.start",
                     lang
                 ),
                 openTitle: L10n.tr("assistant.action.open", lang),
+                hideTitle: L10n.tr("assistant.launcher.hide", lang),
+                showTitle: L10n.tr("assistant.launcher.show", lang),
+                collapsedHint: L10n.tr("assistant.launcher.collapsed_hint", lang),
                 state: voiceAssistant.state,
                 onTap: {
                     if voiceAssistant.isListening {
@@ -2633,9 +2704,10 @@ struct ContentView: View {
                     showVoiceAssistant = true
                 }
             )
-            .padding(.trailing, 18)
+            .padding(.trailing, isVoiceAssistantCollapsed ? 0 : 12)
             .padding(.bottom, 98)
             .lippiMagicAppear(delay: 0.16, y: 12, scale: 0.92)
+            .animation(reduceMotion ? nil : DS.motionState, value: isVoiceAssistantCollapsed)
             .zIndex(8)
         }
         .buttonBorderShape(.capsule)
@@ -2656,6 +2728,9 @@ struct ContentView: View {
         .environmentObject(countdown)
         .environmentObject(dailyReminder)
         .environmentObject(scrollPerformance)
+        .task {
+            await healthKit.activateIfEnabled()
+        }
         .onAppear {
             NotificationManager.shared.requestAuthorization()
             NotificationManager.shared.onResponse = { response in
@@ -2664,6 +2739,7 @@ struct ContentView: View {
                 }
             }
             GoalProgressNotificationScheduler.refresh(lang: lang)
+            refreshGoalCareNotifications()
             pomo.stats = stats
             if taskCompletionObserver == nil {
                 taskCompletionObserver = NotificationCenter.default.addObserver(forName: .taskCompletionChanged, object: nil, queue: .main) { note in
@@ -2699,6 +2775,7 @@ struct ContentView: View {
             GoalPlannerView(openProgressSummaryOnAppear: openGoalProgressSummary)
                 .environmentObject(store)
                 .environmentObject(stats)
+                .environmentObject(healthKit)
                 .environment(\.lippiIsScrolling, scrollPerformance.isScrolling)
                 .environment(\.lippiScrollPerformanceCoordinator, scrollPerformance)
                 .presentationDetents([.large])
@@ -2706,6 +2783,15 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .suggestEyeExercise)) { _ in
             showEyes = true
+        }
+        .onChange(of: healthKit.recommendation) { _, _ in
+            refreshGoalCareNotifications()
+        }
+        .onChange(of: store.tasks) { _, _ in
+            refreshGoalCareNotifications()
+        }
+        .onChange(of: goalUserStateRaw) { _, _ in
+            refreshGoalCareNotifications()
         }
         .onChange(of: voiceAssistant.pendingCommand) { _, newValue in
             guard let command = newValue else { return }
@@ -3275,6 +3361,7 @@ private struct OverflowTabMenu: View {
 struct LippiSingleApp: App {
     @StateObject private var eyeStore = EyeExerciseStore()
     @StateObject private var authStore = AuthStore()
+    @StateObject private var healthKit = HealthKitManager.shared
 
     init() {
         #if os(iOS)
@@ -3305,6 +3392,7 @@ struct LippiSingleApp: App {
             AppRootView()
                 .environmentObject(eyeStore)
                 .environmentObject(authStore)
+                .environmentObject(healthKit)
         }
     }
 }

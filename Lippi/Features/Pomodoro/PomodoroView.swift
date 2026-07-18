@@ -8,6 +8,7 @@ import UIKit
 // =======================================================
 struct PomodoroView: View {
     @EnvironmentObject private var pomo: PomodoroManager
+    @EnvironmentObject private var healthKit: HealthKitManager
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -391,6 +392,10 @@ struct PomodoroView: View {
                     accent: Color(hex: 0x64D2FF)
                 )
 
+                if let recommendation = healthFocusRecommendation {
+                    healthFocusSuggestion(recommendation)
+                }
+
                 durationChoices
 
                 if showCustomDuration {
@@ -405,6 +410,62 @@ struct PomodoroView: View {
             }
         }
         .animation(reduceMotion ? nil : DS.motionState, value: showCustomDuration)
+    }
+
+    private var healthFocusRecommendation: HealthWellnessRecommendation? {
+        guard healthKit.isEnabled,
+              let recommendation = healthKit.recommendation,
+              recommendation.band == .recovery
+                || recommendation.band == .light
+                || recommendation.band == .ready else { return nil }
+        return recommendation
+    }
+
+    private func healthFocusSuggestion(_ recommendation: HealthWellnessRecommendation) -> some View {
+        HStack(alignment: .center, spacing: 11) {
+            Image(safeSystemName: "heart.text.square.fill", fallback: "heart.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color(hex: 0xFF375F))
+                .frame(width: 38, height: 38)
+                .background(Color(hex: 0xFF375F).opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(s("healthkit.pomodoro.title"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                Text(s("healthkit.band.\(recommendation.band.rawValue).description"))
+                    .font(.caption)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 4)
+
+            Button {
+                withAnimation(reduceMotion ? nil : DS.motionState) {
+                    pomo.config.focusMinutes = recommendation.suggestedFocusMinutes
+                    showCustomDuration = ![25, 50].contains(recommendation.suggestedFocusMinutes)
+                }
+                selectionHaptic()
+            } label: {
+                Text(L10n.fmt("healthkit.pomodoro.use", lang, recommendation.suggestedFocusMinutes))
+                    .font(.caption.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(DS.accent)
+            .background(DS.accent.opacity(0.12), in: Capsule())
+            .overlay(Capsule().stroke(DS.accent.opacity(0.22), lineWidth: 1))
+        }
+        .padding(11)
+        .background(DS.glassFill(0.045), in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 19, style: .continuous)
+                .stroke(DS.glassStroke(0.09), lineWidth: 1)
+        )
     }
 
     private var durationChoices: some View {
