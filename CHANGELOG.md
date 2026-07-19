@@ -15,6 +15,7 @@
     <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2019%2C%202026-0A84FF?style=for-the-badge">
     <img alt="PrismML" src="https://img.shields.io/badge/PrismML-Bonsai%204B-64D2FF?style=for-the-badge">
     <img alt="On-device" src="https://img.shields.io/badge/AI-On--device-30D158?style=for-the-badge">
+    <img alt="Local AI storage" src="https://img.shields.io/badge/Storage-~577%20MB-FF9F0A?style=for-the-badge">
     <img alt="Verified model" src="https://img.shields.io/badge/Model-SHA--256-BF5AF2?style=for-the-badge">
   </p>
   <p><strong>Complete bilingual release notes, newest first.</strong></p>
@@ -66,6 +67,7 @@
         <li><strong>Balanced mobile model:</strong> the 0.57 GB Bonsai 4B variant was selected instead of the multi-gigabyte 27B flagship to preserve useful planning quality while leaving memory and thermal headroom for the SwiftUI interface.</li>
         <li><strong>Official PrismML runtime:</strong> a slim iOS/device-and-simulator XCFramework from release <code>prism-b9570-0ad1dab</code> is linked with Metal and Accelerate; unused Apple-platform slices and debug symbols are not bundled.</li>
         <li><strong>No oversized application bundle:</strong> model weights are not committed into the app. The user explicitly downloads the pinned artifact from PrismML's Hugging Face repository in Settings.</li>
+        <li><strong>Transparent storage footprint:</strong> the physical-iPhone app receives only the approximately 4.8 MB arm64 runtime; the 573 MB model remains a separate download, for about 577 MB of total local-AI storage after installation. Final App Store size may vary after Apple's thinning and compression.</li>
         <li><strong>Calm model management:</strong> one native settings card provides download progress, pause, resume, cancellation, integrity verification, local readiness testing, and safe deletion.</li>
         <li><strong>Supply-chain protection:</strong> Lippi pins the repository revision, expected byte count, GGUF header, and SHA-256 digest before accepting the model file; incomplete or modified downloads are removed.</li>
         <li><strong>Private storage:</strong> weights live under Application Support, are excluded from iCloud backup, and can be removed without touching goals, tasks, or health data.</li>
@@ -84,6 +86,7 @@
         <li><strong>Сбалансированная мобильная модель:</strong> вместо многогигабайтной flagship-модели 27B выбрана Bonsai 4B размером около 0,57 ГБ — достаточно сильная для планирования и оставляющая память и тепловой запас интерфейсу SwiftUI.</li>
         <li><strong>Официальный runtime PrismML:</strong> облегчённый XCFramework из релиза <code>prism-b9570-0ad1dab</code> содержит только iOS device/simulator slices и подключён к Metal и Accelerate без лишних платформ и debug symbols.</li>
         <li><strong>Без огромного app bundle:</strong> веса не вшиваются в приложение и не хранятся в репозитории. Пользователь сам подтверждает загрузку закреплённого файла из репозитория PrismML на Hugging Face.</li>
+        <li><strong>Прозрачный объём:</strong> в приложение для физического iPhone входит только arm64 runtime размером около 4,8 МБ; модель 573 МБ загружается отдельно, поэтому полный дополнительный объём локального AI после установки составляет примерно 577 МБ. Итоговый размер в App Store может отличаться после thinning и сжатия Apple.</li>
         <li><strong>Спокойное управление моделью:</strong> одна нативная карточка показывает прогресс и даёт поставить загрузку на паузу, продолжить, отменить, проверить целостность, выполнить локальный тест и безопасно удалить веса.</li>
         <li><strong>Защита цепочки поставки:</strong> Lippi закрепляет ревизию репозитория, ожидаемый размер, заголовок GGUF и SHA-256; неполный или изменённый файл автоматически отклоняется и удаляется.</li>
         <li><strong>Приватное хранение:</strong> веса лежат в Application Support, исключены из резервной копии iCloud и удаляются независимо от целей, задач и показателей здоровья.</li>

@@ -15,6 +15,7 @@
   <img alt="HealthKit" src="https://img.shields.io/badge/HealthKit-Integrated-FF375F?style=flat-square">
   <img alt="Apple Watch" src="https://img.shields.io/badge/Apple%20Watch-Aware-30D158?style=flat-square">
   <img alt="PrismML Bonsai" src="https://img.shields.io/badge/Bonsai-On--device-64D2FF?style=flat-square">
+  <img alt="Local AI storage" src="https://img.shields.io/badge/Local%20AI-~577%20MB-30D158?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Ready-BF5AF2?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
@@ -83,11 +84,22 @@ Lippi объединяет планирование, фокус и восста�
 
 - Mac-провайдер Ollama заменён на **PrismML Bonsai 4B 1-bit**, работающий локально через Metal.
 - Модель загружается прямо на iPhone только после подтверждения пользователя и не увеличивает размер приложения на 573 МБ.
+- В iPhone-приложение добавляется около **4,8 МБ** runtime; модель занимает **573 МБ** отдельно, полный объём локального AI после загрузки — примерно **577 МБ**.
 - В настройках появились прогресс, пауза, продолжение, проверка целостности, локальный тест и безопасное удаление весов.
 - Умные цели и анализ прогресса используют один приватный on-device runtime; Foundation Models остаётся системным fallback.
 - Вес модели, runtime и источник закреплены по ревизии и SHA-256; сторонние лицензии включены в приложение.
 
 [Читать полную историю изменений →](CHANGELOG.md)
+
+### Размер приложения и локальной модели
+
+| Компонент | Объём на iPhone |
+|---|---:|
+| Runtime PrismML внутри приложения | ≈ 4,8 МБ |
+| Bonsai 4B Q1_0 после загрузки | 572 270 624 байта · ≈ 573 МБ |
+| Полный дополнительный объём локального AI | ≈ 577 МБ |
+
+Модель хранится отдельно в Application Support и может быть удалена из настроек без удаления приложения или пользовательских данных. Итоговый размер самого приложения в App Store может немного отличаться после оптимизации и сжатия Apple.
 
 ## Технологии
 
