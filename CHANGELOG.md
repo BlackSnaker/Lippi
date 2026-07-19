@@ -12,11 +12,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2018%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Device stability" src="https://img.shields.io/badge/Device-Stable-30D158?style=for-the-badge">
-    <img alt="HealthKit" src="https://img.shields.io/badge/HealthKit-Resilient-FF375F?style=for-the-badge">
-    <img alt="Voice Assistant" src="https://img.shields.io/badge/Assistant-Compact-BF5AF2?style=for-the-badge">
-    <img alt="Accessibility" src="https://img.shields.io/badge/Accessibility-Adaptive-FF9F0A?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2019%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="PrismML" src="https://img.shields.io/badge/PrismML-Bonsai%204B-64D2FF?style=for-the-badge">
+    <img alt="On-device" src="https://img.shields.io/badge/AI-On--device-30D158?style=for-the-badge">
+    <img alt="Verified model" src="https://img.shields.io/badge/Model-SHA--256-BF5AF2?style=for-the-badge">
   </p>
   <p><strong>Complete bilingual release notes, newest first.</strong></p>
   <p><strong>Полная двуязычная история обновлений: от новых к ранним.</strong></p>
@@ -25,32 +24,75 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Stable on iPhone</strong><br>
-      <sub>Smart Goals and Settings now open through device-safe, lazily rendered view hierarchies.</sub>
+      <strong>AI on iPhone</strong><br>
+      <sub>Bonsai 4B now powers Smart Goals locally through Metal without a Mac provider.</sub>
       <br><br>
-      <strong>Стабильно на iPhone</strong><br>
-      <sub>«Умные цели» и настройки получили безопасную для устройства ленивую иерархию экранов.</sub>
+      <strong>ИИ на iPhone</strong><br>
+      <sub>Bonsai 4B теперь локально запускает «Умные цели» через Metal без провайдера на Mac.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Resilient HealthKit</strong><br>
-      <sub>One unavailable metric no longer blocks every permitted health and Apple Watch signal.</sub>
+      <strong>Verified install</strong><br>
+      <sub>The pinned 573 MB artifact is checked by size, GGUF header, revision, and SHA-256.</sub>
       <br><br>
-      <strong>Устойчивый HealthKit</strong><br>
-      <sub>Один недоступный показатель больше не блокирует остальные разрешённые данные здоровья.</sub>
+      <strong>Проверенная установка</strong><br>
+      <sub>Закреплённый файл 573 МБ проверяется по размеру, заголовку GGUF, ревизии и SHA-256.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Calm adaptation</strong><br>
-      <sub>Health, progress, and wellbeing shape the next manageable step without changing the final goal.</sub>
+      <strong>Clear controls</strong><br>
+      <sub>Download progress, pause, resume, readiness check, and removal stay in one calm settings card.</sub>
       <br><br>
-      <strong>Бережная адаптация</strong><br>
-      <sub>Здоровье, прогресс и самочувствие определяют посильный следующий шаг, не меняя конечную цель.</sub>
+      <strong>Понятное управление</strong><br>
+      <sub>Прогресс, пауза, продолжение, проверка и удаление собраны в одной спокойной карточке.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Compact assistant</strong><br>
-      <sub>A smaller voice control can rest at the right edge while remaining one tap away.</sub>
+      <strong>Resource aware</strong><br>
+      <sub>Inference scales CPU work down for Low Power Mode and serious thermal pressure.</sub>
       <br><br>
-      <strong>Компактный помощник</strong><br>
-      <sub>Уменьшенная голосовая кнопка скрывается у правого края, сохраняя вызов в одно касание.</sub>
+      <strong>Бережно к ресурсам</strong><br>
+      <sub>Во время энергосбережения и сильного нагрева локальная генерация снижает нагрузку CPU.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 19, 2026 - PrismML intelligence running locally on iPhone
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi no longer needs a Mac-hosted Ollama provider for Smart Goals: PrismML Bonsai 4B now runs inside the iPhone app through the official iOS llama.cpp runtime and Metal backend.</strong></p>
+      <ul>
+        <li><strong>True on-device intelligence:</strong> Smart Goal roadmaps and gentle progress summaries use Bonsai 4B 1-bit directly on iPhone, keeping goal text and generated responses away from cloud AI and the former Mac inference server.</li>
+        <li><strong>Balanced mobile model:</strong> the 0.57 GB Bonsai 4B variant was selected instead of the multi-gigabyte 27B flagship to preserve useful planning quality while leaving memory and thermal headroom for the SwiftUI interface.</li>
+        <li><strong>Official PrismML runtime:</strong> a slim iOS/device-and-simulator XCFramework from release <code>prism-b9570-0ad1dab</code> is linked with Metal and Accelerate; unused Apple-platform slices and debug symbols are not bundled.</li>
+        <li><strong>No oversized application bundle:</strong> model weights are not committed into the app. The user explicitly downloads the pinned artifact from PrismML's Hugging Face repository in Settings.</li>
+        <li><strong>Calm model management:</strong> one native settings card provides download progress, pause, resume, cancellation, integrity verification, local readiness testing, and safe deletion.</li>
+        <li><strong>Supply-chain protection:</strong> Lippi pins the repository revision, expected byte count, GGUF header, and SHA-256 digest before accepting the model file; incomplete or modified downloads are removed.</li>
+        <li><strong>Private storage:</strong> weights live under Application Support, are excluded from iCloud backup, and can be removed without touching goals, tasks, or health data.</li>
+        <li><strong>Structured local output:</strong> Lippi applies Bonsai's ChatML format, disables verbose thinking output, supplies strict roadmap and progress JSON contracts, validates every result, and performs one grounded repair attempt when needed.</li>
+        <li><strong>Interface-first performance:</strong> inference is serialized away from the main actor, uses bounded context and output budgets, memory-mapped weights, Metal offload on iPhone, and fewer CPU threads under Low Power Mode or serious thermal pressure.</li>
+        <li><strong>Clean migration:</strong> the Ollama settings card, endpoint fields, warm-up script, Xcode pre-action, and Mac network path were removed. Existing stored roadmaps still decode their historical source correctly.</li>
+        <li><strong>Licensing included:</strong> the app ships the PrismML/Qwen Apache 2.0 notices and the llama.cpp MIT notice alongside the pinned runtime provenance.</li>
+        <li><strong>Verification:</strong> the new runtime compiles and links in an isolated iOS Simulator target, Swift syntax checks pass, project and plist structures are valid, and physical-device launch remains intentionally delegated to the project owner.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Lippi больше не нужен Ollama-провайдер на Mac для «Умных целей»: PrismML Bonsai 4B запускается внутри iPhone-приложения через официальный iOS runtime llama.cpp и Metal.</strong></p>
+      <ul>
+        <li><strong>Настоящий on-device интеллект:</strong> дорожные карты «Умных целей» и бережные сводки прогресса строятся Bonsai 4B 1-bit прямо на iPhone; текст целей и ответы не уходят облачному AI или прежнему серверу генерации на Mac.</li>
+        <li><strong>Сбалансированная мобильная модель:</strong> вместо многогигабайтной flagship-модели 27B выбрана Bonsai 4B размером около 0,57 ГБ — достаточно сильная для планирования и оставляющая память и тепловой запас интерфейсу SwiftUI.</li>
+        <li><strong>Официальный runtime PrismML:</strong> облегчённый XCFramework из релиза <code>prism-b9570-0ad1dab</code> содержит только iOS device/simulator slices и подключён к Metal и Accelerate без лишних платформ и debug symbols.</li>
+        <li><strong>Без огромного app bundle:</strong> веса не вшиваются в приложение и не хранятся в репозитории. Пользователь сам подтверждает загрузку закреплённого файла из репозитория PrismML на Hugging Face.</li>
+        <li><strong>Спокойное управление моделью:</strong> одна нативная карточка показывает прогресс и даёт поставить загрузку на паузу, продолжить, отменить, проверить целостность, выполнить локальный тест и безопасно удалить веса.</li>
+        <li><strong>Защита цепочки поставки:</strong> Lippi закрепляет ревизию репозитория, ожидаемый размер, заголовок GGUF и SHA-256; неполный или изменённый файл автоматически отклоняется и удаляется.</li>
+        <li><strong>Приватное хранение:</strong> веса лежат в Application Support, исключены из резервной копии iCloud и удаляются независимо от целей, задач и показателей здоровья.</li>
+        <li><strong>Структурированный локальный ответ:</strong> Lippi использует ChatML-формат Bonsai, убирает длинный thinking-вывод, передаёт строгие JSON-контракты дорожной карты и прогресса, валидирует результат и при необходимости выполняет одну заземлённую попытку исправления.</li>
+        <li><strong>Производительность в пользу интерфейса:</strong> генерация сериализована вне main actor, контекст и длина ответа ограничены, веса memory-mapped, слои выгружаются в Metal, а при энергосбережении или сильном нагреве число CPU-потоков уменьшается.</li>
+        <li><strong>Чистая миграция:</strong> удалены карточка Ollama, поля адреса, warm-up скрипт, Xcode pre-action и сетевой путь генерации через Mac. Старые сохранённые дорожные карты продолжают корректно читать исторический источник.</li>
+        <li><strong>Лицензии включены:</strong> приложение содержит уведомления Apache 2.0 для PrismML/Qwen и MIT для llama.cpp, а также происхождение закреплённого runtime.</li>
+        <li><strong>Проверка:</strong> новый runtime компилируется и линкуется в изолированной iOS Simulator-конфигурации, Swift-синтаксис прошёл проверку, project/plist структурно корректны, а финальный запуск на физическом устройстве намеренно оставлен владельцу проекта.</li>
+      </ul>
     </td>
   </tr>
 </table>

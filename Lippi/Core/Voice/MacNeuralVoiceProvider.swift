@@ -4,6 +4,7 @@ struct NeuralVoiceConfiguration: Equatable {
     static let enabledKey = "neural.voice.provider.enabled"
     static let endpointKey = "neural.voice.provider.endpoint"
     static let defaultPort = 8158
+    private static let legacyAIEndpointKey = "ollama.provider.endpoint"
 
     var isEnabled: Bool
     var endpoint: String
@@ -18,8 +19,8 @@ struct NeuralVoiceConfiguration: Equatable {
     }
 
     static var suggestedEndpoint: String {
-        let ollamaEndpoint = UserDefaults.standard.string(forKey: OllamaConfiguration.endpointKey) ?? ""
-        guard var components = URLComponents(string: ollamaEndpoint), components.host != nil else {
+        let legacyEndpoint = UserDefaults.standard.string(forKey: legacyAIEndpointKey) ?? ""
+        guard var components = URLComponents(string: legacyEndpoint), components.host != nil else {
             return ""
         }
         components.port = defaultPort

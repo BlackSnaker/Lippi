@@ -142,12 +142,12 @@ struct GoalProgressSummaryEngine {
             userState: userState,
             stateNote: stateNote
         )
-        let configuration = OllamaConfiguration.stored
+        let configuration = BonsaiConfiguration.stored
 
         if configuration.isEnabled {
             do {
-                let provider = OllamaGoalProvider()
-                try await provider.ensureReady(configuration: configuration)
+                let provider = BonsaiGoalProvider()
+                try provider.ensureReady(configuration: configuration)
                 let text = try await provider.generateProgressSummary(
                     prompt: prompt(for: roadmap, facts: facts, lang: lang),
                     configuration: configuration
@@ -156,7 +156,7 @@ struct GoalProgressSummaryEngine {
                     return (summary, nil)
                 }
                 return (localSummary(for: roadmap, facts: facts, lang: lang), L10n.tr("goals.progress.error.malformed", lang))
-            } catch let error as OllamaProviderError {
+            } catch let error as BonsaiProviderError {
                 return (localSummary(for: roadmap, facts: facts, lang: lang), error.message(lang: lang))
             } catch {
                 return (localSummary(for: roadmap, facts: facts, lang: lang), L10n.fmt("goals.progress.error.failed", lang, error.localizedDescription))

@@ -3270,12 +3270,14 @@ enum GoalPlannerMode: String, CaseIterable, Identifiable, Hashable {
 
 enum GoalRoadmapSource: String, Codable {
     case ollama
+    case bonsai
     case foundationModels
     case localPlanner
 
     var icon: String {
         switch self {
         case .ollama: return "desktopcomputer"
+        case .bonsai: return "leaf.fill"
         case .foundationModels: return "cpu.fill"
         case .localPlanner: return "sparkles"
         }
@@ -3284,6 +3286,7 @@ enum GoalRoadmapSource: String, Codable {
     func title(lang: AppLang) -> String {
         switch self {
         case .ollama: return L10n.tr("goals.source.ollama", lang)
+        case .bonsai: return L10n.tr("goals.source.bonsai", lang)
         case .foundationModels: return L10n.tr("goals.source.ai", lang)
         case .localPlanner: return L10n.tr("goals.source.local", lang)
         }
@@ -3828,7 +3831,7 @@ enum GoalPlannerEngineError: Error {
     case systemLocaleUnsupported
     case unsupportedLocale
     case translationUnavailable(String)
-    case ollamaUnavailable(String)
+    case bonsaiUnavailable(String)
     case providersUnavailable(String)
     case invalidResponse
     case generationInterrupted
@@ -3838,7 +3841,7 @@ enum GoalPlannerEngineError: Error {
         switch self {
         case .modelUnavailable, .systemLocaleUnsupported, .unsupportedLocale, .translationUnavailable, .providersUnavailable, .invalidResponse, .generationInterrupted, .generationFailed:
             return true
-        case .ollamaUnavailable:
+        case .bonsaiUnavailable:
             return false
         }
     }
@@ -3853,8 +3856,8 @@ enum GoalPlannerEngineError: Error {
             return L10n.tr("goals.error.unsupported_locale", lang)
         case .translationUnavailable(let details):
             return L10n.fmt("goals.error.translation_unavailable", lang, details)
-        case .ollamaUnavailable(let details):
-            return L10n.fmt("goals.error.ollama_required", lang, details)
+        case .bonsaiUnavailable(let details):
+            return L10n.fmt("goals.error.bonsai_required", lang, details)
         case .providersUnavailable(let details):
             return L10n.fmt("goals.error.providers", lang, details)
         case .invalidResponse:
@@ -3883,12 +3886,12 @@ struct GoalRoadmapEngine {
     ) async throws -> GoalRoadmap {
         await onStage(.research)
         let evidence = await OpenRoadmapRetriever().research(for: input)
-        let configuration = OllamaConfiguration.stored
+        let configuration = BonsaiConfiguration.stored
 
         if configuration.isEnabled {
             do {
                 await onStage(.planning)
-                let roadmap = try await generateOllamaRoadmap(
+                let roadmap = try await generateBonsaiRoadmap(
                     input: input,
                     lang: lang,
                     configuration: configuration,
@@ -3897,10 +3900,10 @@ struct GoalRoadmapEngine {
                 )
                 await onStage(.checking)
                 return roadmap
-            } catch let error as OllamaProviderError {
-                throw GoalPlannerEngineError.ollamaUnavailable(error.message(lang: lang))
+            } catch let error as BonsaiProviderError {
+                throw GoalPlannerEngineError.bonsaiUnavailable(error.message(lang: lang))
             } catch {
-                throw GoalPlannerEngineError.ollamaUnavailable(OllamaProviderError.transport.message(lang: lang))
+                throw GoalPlannerEngineError.bonsaiUnavailable(BonsaiProviderError.generationFailed.message(lang: lang))
             }
         }
 
@@ -3915,36 +3918,35 @@ struct GoalRoadmapEngine {
     }
 
     static func primaryAIStatus(lang: AppLang) -> String {
-        let configuration = OllamaConfiguration.stored
+        let configuration = BonsaiConfiguration.stored
         if configuration.isEnabled {
-            return configuration.isConfigured
-                ? L10n.tr("goals.ai.mac_ready", lang)
-                : L10n.tr("goals.ai.mac_setup", lang)
+            return BonsaiModelStorage.isInstalled
+                ? L10n.tr("goals.ai.bonsai_ready", lang)
+                : L10n.tr("goals.ai.bonsai_setup", lang)
         }
         return systemModelStatus(lang: lang)
     }
 
     static func primaryAIHeroEyebrow(lang: AppLang) -> String {
-        prefersOllama
-            ? L10n.tr("goals.hero.eyebrow.mac", lang)
+        prefersBonsai
+            ? L10n.tr("goals.hero.eyebrow.bonsai", lang)
             : L10n.tr("goals.hero.eyebrow", lang)
     }
 
     static func primaryAIHeroSubtitle(lang: AppLang) -> String {
-        prefersOllama
-            ? L10n.tr("goals.hero.subtitle.mac", lang)
+        prefersBonsai
+            ? L10n.tr("goals.hero.subtitle.bonsai", lang)
             : L10n.tr("goals.hero.subtitle", lang)
     }
 
     static func primaryAIPrivacyLabel(lang: AppLang) -> String {
-        prefersOllama
-            ? L10n.tr("goals.hero.private.mac", lang)
+        prefersBonsai
+            ? L10n.tr("goals.hero.private.bonsai", lang)
             : L10n.tr("goals.hero.private", lang)
     }
 
-    private static var prefersOllama: Bool {
-        let configuration = OllamaConfiguration.stored
-        return configuration.isEnabled && configuration.isConfigured
+    private static var prefersBonsai: Bool {
+        BonsaiConfiguration.stored.isEnabled
     }
 
     static func systemModelStatus(lang: AppLang) -> String {
@@ -3960,43 +3962,43 @@ struct GoalRoadmapEngine {
         return L10n.tr("goals.ai.unavailable", lang)
     }
 
-    private func generateOllamaRoadmap(
+    private func generateBonsaiRoadmap(
         input: GoalPlannerInput,
         lang: AppLang,
-        configuration: OllamaConfiguration,
+        configuration: BonsaiConfiguration,
         evidence: [GoalEvidenceSource],
         progressAudit: GoalPlanProgressAudit?
     ) async throws -> GoalRoadmap {
-        let provider = OllamaGoalProvider()
+        let provider = BonsaiGoalProvider()
         let brief = GoalRequestBrief.make(input: input, fallbackLang: lang)
         try await provider.ensureReady(configuration: configuration)
         let response = try await provider.generate(
-            prompt: ollamaPrompt(for: input, lang: lang, brief: brief, evidence: evidence, progressAudit: progressAudit),
+            prompt: bonsaiPrompt(for: input, lang: lang, brief: brief, evidence: evidence, progressAudit: progressAudit),
             configuration: configuration
         )
 
-        if let roadmap = qualifiedRoadmap(from: response, source: .ollama, input: input, lang: brief.responseLanguage, evidence: evidence) {
+        if let roadmap = qualifiedRoadmap(from: response, source: .bonsai, input: input, lang: brief.responseLanguage, evidence: evidence) {
             return roadmap
         }
 
         let repair = try await provider.generate(
-            prompt: ollamaRepairPrompt(
+            prompt: bonsaiRepairPrompt(
                 input: input,
                 lang: lang,
                 brief: brief,
                 evidence: evidence,
                 progressAudit: progressAudit,
-                qualityFeedback: roadmapQualityFeedback(from: response, source: .ollama, input: input, lang: brief.responseLanguage, evidence: evidence)
+                qualityFeedback: roadmapQualityFeedback(from: response, source: .bonsai, input: input, lang: brief.responseLanguage, evidence: evidence)
             ),
             configuration: configuration
         )
-        guard let roadmap = qualifiedRoadmap(from: repair, source: .ollama, input: input, lang: brief.responseLanguage, evidence: evidence) else {
-            throw OllamaProviderError.incompleteRoadmap
+        guard let roadmap = qualifiedRoadmap(from: repair, source: .bonsai, input: input, lang: brief.responseLanguage, evidence: evidence) else {
+            throw BonsaiProviderError.incompleteRoadmap
         }
         return roadmap
     }
 
-    private func ollamaPrompt(
+    private func bonsaiPrompt(
         for input: GoalPlannerInput,
         lang: AppLang,
         brief: GoalRequestBrief,
@@ -4040,7 +4042,7 @@ struct GoalRoadmapEngine {
         """
     }
 
-    private func ollamaRepairPrompt(
+    private func bonsaiRepairPrompt(
         input: GoalPlannerInput,
         lang: AppLang,
         brief: GoalRequestBrief,

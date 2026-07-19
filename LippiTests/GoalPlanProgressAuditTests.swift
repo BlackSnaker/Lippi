@@ -94,7 +94,7 @@ struct GoalPlanProgressAuditTests {
         GoalRoadmap(
             title: "MVP roadmap",
             summary: "Build a scoped first version.",
-            source: .ollama,
+            source: .bonsai,
             confidence: 0.82,
             createdAt: createdAt,
             successCriteria: [

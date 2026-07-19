@@ -43,7 +43,7 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Lippi uses the local network to reach Ollama and the neural voice provider on your Mac.</string>
+	<string>Lippi uses the local network only when you enable the optional neural voice provider on your Mac.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Lippi uses your activity, sleep, and Apple Watch wellness data to suggest gentler focus plans, breathing practices, and eye breaks.</string>
 	<key>NSHealthUpdateUsageDescription</key>

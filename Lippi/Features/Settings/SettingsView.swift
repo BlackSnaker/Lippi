@@ -152,7 +152,7 @@ struct SettingsView: View {
             return items
         case .ai:
             return [
-                SettingsJumpItem(anchor: .ai, title: s("settings.ollama.title"), icon: "desktopcomputer")
+                SettingsJumpItem(anchor: .ai, title: s("settings.bonsai.title"), icon: "cpu.fill")
             ]
         case .health:
             return [
@@ -298,7 +298,7 @@ struct SettingsView: View {
 
         if shouldShowAIScopeCards() {
             AnyView(
-                OllamaSettingsCard()
+                BonsaiSettingsCard()
                     .id(SettingsAnchor.ai)
                     .lippiMotionScene(2)
             )

@@ -68,7 +68,7 @@ struct GoalRoadmapQualityGateTests {
         GoalRoadmap(
             title: "Habit tracker MVP",
             summary: "Build and test a focused first release within the available weekly capacity.",
-            source: .ollama,
+            source: .bonsai,
             confidence: 0.78,
             successCriteria: [
                 "A reviewable MVP build contains the chosen habit loop.",

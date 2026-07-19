@@ -12,6 +12,10 @@
 		188D1A872E64A9C400EA6B1D /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A862E64A9C400EA6B1D /* WidgetKit.framework */; };
 		188D1A892E64A9C400EA6B1D /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A882E64A9C400EA6B1D /* SwiftUI.framework */; };
 		188D1A9A2E64A9C700EA6B1D /* LippiWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 188D1A842E64A9C400EA6B1D /* LippiWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		18B0A1012F01000000000001 /* llama.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18B0A1062F01000000000006 /* llama.xcframework */; };
+		18B0A1022F01000000000002 /* llama.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 18B0A1062F01000000000006 /* llama.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		18B0A1032F01000000000003 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18B0A1072F01000000000007 /* Metal.framework */; };
+		18B0A1042F01000000000004 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18B0A1082F01000000000008 /* Accelerate.framework */; };
 		18DE6F4D2E6DB52200319865 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A862E64A9C400EA6B1D /* WidgetKit.framework */; };
 		18DE6F4E2E6DB52200319865 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A882E64A9C400EA6B1D /* SwiftUI.framework */; };
 		18DE6F5F2E6DB52400319865 /* OrganizerWidgetExt.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -61,6 +65,17 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18B0A1052F01000000000005 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				18B0A1022F01000000000002 /* llama.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -71,6 +86,9 @@
 		188D1A842E64A9C400EA6B1D /* LippiWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LippiWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		188D1A862E64A9C400EA6B1D /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		188D1A882E64A9C400EA6B1D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		18B0A1062F01000000000006 /* llama.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = llama.xcframework; path = Vendor/PrismML/llama.xcframework; sourceTree = SOURCE_ROOT; };
+		18B0A1072F01000000000007 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		18B0A1082F01000000000008 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OrganizerWidgetExt.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -140,6 +158,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				18B0A1042F01000000000004 /* Accelerate.framework in Frameworks */,
+				18B0A1032F01000000000003 /* Metal.framework in Frameworks */,
+				18B0A1012F01000000000001 /* llama.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -206,6 +227,9 @@
 		188D1A852E64A9C400EA6B1D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				18B0A1062F01000000000006 /* llama.xcframework */,
+				18B0A1072F01000000000007 /* Metal.framework */,
+				18B0A1082F01000000000008 /* Accelerate.framework */,
 				18861C3D2E76E7190008D8A3 /* WidgetBridge.swift */,
 				188D1A862E64A9C400EA6B1D /* WidgetKit.framework */,
 				188D1A882E64A9C400EA6B1D /* SwiftUI.framework */,
@@ -220,9 +244,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 188D1A772E6491BC00EA6B1D /* Build configuration list for PBXNativeTarget "Lippi" */;
 			buildPhases = (
-				18A1B2D12E7A000000000001 /* Start Local AI Providers */,
+				18A1B2D12E7A000000000001 /* Start Local Voice Provider */,
 				188D1A522E6491BA00EA6B1D /* Sources */,
 				188D1A532E6491BA00EA6B1D /* Frameworks */,
+				18B0A1052F01000000000005 /* Embed Frameworks */,
 				188D1A542E6491BA00EA6B1D /* Resources */,
 				188D1A9F2E64A9C700EA6B1D /* Embed Foundation Extensions */,
 			);
@@ -423,22 +448,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		18A1B2D12E7A000000000001 /* Start Local AI Providers */ = {
+		18A1B2D12E7A000000000001 /* Start Local Voice Provider */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
-				"$(SRCROOT)/Scripts/warm-local-ollama.zsh",
 				"$(SRCROOT)/Scripts/start-local-tts.zsh",
 			);
-			name = "Start Local AI Providers";
+			name = "Start Local Voice Provider";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/zsh;
-			shellScript = "\"$SRCROOT/Scripts/warm-local-ollama.zsh\"\n\"$SRCROOT/Scripts/start-local-tts.zsh\"\n";
+			shellScript = "\"$SRCROOT/Scripts/start-local-tts.zsh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

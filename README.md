@@ -14,6 +14,7 @@
 <p>
   <img alt="HealthKit" src="https://img.shields.io/badge/HealthKit-Integrated-FF375F?style=flat-square">
   <img alt="Apple Watch" src="https://img.shields.io/badge/Apple%20Watch-Aware-30D158?style=flat-square">
+  <img alt="PrismML Bonsai" src="https://img.shields.io/badge/Bonsai-On--device-64D2FF?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Ready-BF5AF2?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
@@ -78,13 +79,13 @@ Lippi объединяет планирование, фокус и восста�
 
 ## Последнее обновление · Latest release
 
-### 18 июля 2026 — надёжность на iPhone и устойчивый HealthKit
+### 19 июля 2026 — интеллект PrismML полностью на iPhone
 
-- Исправлены device-only падения при открытии **«Умных целей»** и **настроек**.
-- Сложные SwiftUI-экраны разделены на безопасные ленивые секции без предварительной отрисовки всей страницы.
-- Отдельный недоступный показатель HealthKit больше не отменяет всю сводку здоровья.
-- Отсутствие свежих данных Apple Watch не считается ошибкой подключения Apple Здоровья.
-- Голосовой помощник уменьшен до 48 pt и может сворачиваться в доступный язычок у правого края.
+- Mac-провайдер Ollama заменён на **PrismML Bonsai 4B 1-bit**, работающий локально через Metal.
+- Модель загружается прямо на iPhone только после подтверждения пользователя и не увеличивает размер приложения на 573 МБ.
+- В настройках появились прогресс, пауза, продолжение, проверка целостности, локальный тест и безопасное удаление весов.
+- Умные цели и анализ прогресса используют один приватный on-device runtime; Foundation Models остаётся системным fallback.
+- Вес модели, runtime и источник закреплены по ревизии и SHA-256; сторонние лицензии включены в приложение.
 
 [Читать полную историю изменений →](CHANGELOG.md)
 
@@ -96,7 +97,7 @@ Lippi объединяет планирование, фокус и восста�
 | Платформа | iOS 18.5+, Swift 5 |
 | Здоровье | HealthKit, фоновые observer queries, Apple Watch source awareness |
 | Виджеты | WidgetKit, Live Activities, Dynamic Island |
-| Интеллект | Foundation Models при доступности, локальный Ollama, ручной fallback |
+| Интеллект | PrismML Bonsai 4B 1-bit на iPhone, Foundation Models fallback, ручной черновик |
 | Голос | Speech, AVFoundation, системная и локальная neural voice озвучка |
 | Качество | Swift Testing, UI Tests, device crash diagnostics |
 
@@ -105,6 +106,7 @@ Lippi объединяет планирование, фокус и восста�
 ```text
 Lippi/
 ├── Core/
+│   ├── AI/             # PrismML runtime, verified model storage and inference
 │   ├── Goals/          # adaptive planning and gentle coaching
 │   ├── Health/         # HealthKit, diagnostics, Watch and wellbeing
 │   └── Localization/   # RU, EN, DE and ES
@@ -130,7 +132,8 @@ Scripts/                # local voice provider tooling
 2. Выберите схему `Lippi` и команду разработки в Signing & Capabilities.
 3. Для реальных показателей Apple Здоровья используйте физический iPhone; интерфейс можно проверять в Simulator.
 4. Запустите приложение на iOS 18.5 или новее.
-5. Для локальной neural voice озвучки один раз выполните `./Scripts/install-local-tts.zsh` и держите Mac и iPhone в одной Wi‑Fi сети.
+5. Откройте **Настройки → ИИ → Локальный интеллект** и подтвердите загрузку Bonsai на iPhone. После проверки модель работает без Mac и облачного AI.
+6. Для необязательной локальной neural voice озвучки один раз выполните `./Scripts/install-local-tts.zsh` и держите Mac и iPhone в одной Wi‑Fi сети.
 
 ## English
 
@@ -145,7 +148,7 @@ The product is designed around four promises:
 
 ### Latest release
 
-The July 18 update resolves physical-device SwiftUI metadata stack overflows in Smart Goals and Settings, makes HealthKit reads resilient to partially unavailable metrics, treats Apple Watch data as an enhancement instead of a connection requirement, and introduces a smaller collapsible voice-assistant launcher.
+The July 19 update replaces the Mac-hosted Ollama intelligence path with PrismML Bonsai 4B 1-bit running directly on iPhone through Metal. Lippi now provides an explicit 573 MB model download, progress and pause controls, pinned artifact verification, local readiness testing, and safe model removal while keeping Foundation Models as a system fallback.
 
 [Read the complete bilingual changelog →](CHANGELOG.md)
 
