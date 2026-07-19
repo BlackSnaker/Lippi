@@ -992,6 +992,7 @@ struct LippiButtonStyle: ButtonStyle {
     var kind: Kind = .primary
     var compact: Bool = false
     var allowsMultiline: Bool = false
+    var forceSystemGlass: Bool = false
 
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1000,10 +1001,10 @@ struct LippiButtonStyle: ButtonStyle {
 
     private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
     private var scrollingEffects: Bool { isScrolling }
-    private var systemGlassEnabled: Bool { !simplifiedEffects }
+    private var systemGlassEnabled: Bool { forceSystemGlass || !simplifiedEffects }
     private var usesSystemGlass: Bool {
         if #available(iOS 26.0, *) {
-            return systemGlassEnabled && DS.systemGlassEffectsEnabled
+            return systemGlassEnabled && (forceSystemGlass || DS.systemGlassEffectsEnabled)
         }
         return false
     }
@@ -1041,7 +1042,8 @@ struct LippiButtonStyle: ButtonStyle {
                 in: Capsule(style: .continuous),
                 tint: systemGlassTint,
                 interactive: true,
-                enabled: systemGlassEnabled
+                enabled: systemGlassEnabled,
+                forceSystemGlass: forceSystemGlass
             )
             .offset(y: reduceMotion ? 0 : (pressed ? 0.7 : 0))
             .scaleEffect(reduceMotion ? 1 : (pressed ? DS.pressScale : 1))

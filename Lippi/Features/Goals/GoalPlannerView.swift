@@ -142,6 +142,15 @@ struct GoalPlannerView: View {
             ToolbarItem(placement: .cancellationAction) {
                 Button(s("common.close")) { dismiss() }
             }
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink {
+                    LippiIntelligenceView()
+                } label: {
+                    Image(safeSystemName: "info.circle", fallback: "sparkles")
+                }
+                .accessibilityLabel(s("ai.info.entry_title"))
+                .accessibilityHint(s("ai.info.entry_hint"))
+            }
         }
         .safeAreaInset(edge: .bottom) {
             bottomActionBar
@@ -3971,7 +3980,7 @@ struct GoalRoadmapEngine {
     ) async throws -> GoalRoadmap {
         let provider = BonsaiGoalProvider()
         let brief = GoalRequestBrief.make(input: input, fallbackLang: lang)
-        try await provider.ensureReady(configuration: configuration)
+        try provider.ensureReady(configuration: configuration)
         let response = try await provider.generate(
             prompt: bonsaiPrompt(for: input, lang: lang, brief: brief, evidence: evidence, progressAudit: progressAudit),
             configuration: configuration

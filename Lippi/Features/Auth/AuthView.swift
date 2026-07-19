@@ -15,12 +15,20 @@ private enum AuthMode: String, CaseIterable {
 struct AppRootView: View {
     @EnvironmentObject private var auth: AuthStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(LippiOnboarding.completedKey) private var hasCompletedOnboarding = false
 
     var body: some View {
         Group {
             if auth.isRestoring {
                 AuthLoadingView()
                     .transition(.opacity)
+            } else if !hasCompletedOnboarding {
+                LippiOnboardingView(mode: .firstActivation) {
+                    withAnimation(reduceMotion ? nil : DS.motionNavigate) {
+                        hasCompletedOnboarding = true
+                    }
+                }
+                .transition(.opacity)
             } else if auth.isAuthenticated {
                 ContentView()
                     .transition(.opacity.combined(with: .scale(scale: 0.992)))
@@ -36,6 +44,7 @@ struct AppRootView: View {
         .ignoresSafeArea()
         .animation(reduceMotion ? nil : DS.motionNavigate, value: auth.isRestoring)
         .animation(reduceMotion ? nil : DS.motionNavigate, value: auth.isAuthenticated)
+        .animation(reduceMotion ? nil : DS.motionNavigate, value: hasCompletedOnboarding)
         .task {
             auth.bootstrapIfNeeded()
         }

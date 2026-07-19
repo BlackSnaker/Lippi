@@ -21,6 +21,8 @@ struct BonsaiSettingsCard: View {
                     accent: Color(hex: 0x64D2FF)
                 )
 
+                informationLink
+
                 privacyStrip
                 providerToggle
 
@@ -54,6 +56,49 @@ struct BonsaiSettingsCard: View {
         } message: {
             Text(s("settings.bonsai.delete_message"))
         }
+    }
+
+    private var informationLink: some View {
+        NavigationLink {
+            LippiIntelligenceView()
+        } label: {
+            HStack(spacing: 12) {
+                Image(safeSystemName: "sparkles", fallback: "info.circle.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x64D2FF))
+                    .frame(width: 38, height: 38)
+                    .background(Color(hex: 0x64D2FF).opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(s("ai.info.entry_title"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DS.textPrimary)
+                    Text(s("ai.info.entry_subtitle"))
+                        .font(.caption)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(safeSystemName: "chevron.right", fallback: "arrow.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(DS.textTertiary)
+            }
+            .padding(13)
+            .background(DS.glassFill(0.09), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                tint: Color(hex: 0x64D2FF).opacity(0.07),
+                interactive: true
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color(hex: 0x64D2FF).opacity(0.16), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(s("ai.info.entry_hint"))
     }
 
     private var privacyStrip: some View {

@@ -32,6 +32,7 @@ struct SettingsView: View {
     @AppStorage("goal.progress.userState") private var goalUserStateRaw: String = GoalUserState.calm.rawValue
     @State private var selectedScope: SettingsScope = .all
     @State private var confirmClear = false
+    @State private var showsLippiOnboarding = false
     @StateObject private var healthVoiceAssistant = HealthVoiceAssistant()
     @State private var availableVoiceModels: [AVSpeechSynthesisVoice] = []
     @State private var selectedVoiceIdentifier: String = AppVoicePreferences.autoIdentifier
@@ -92,6 +93,7 @@ struct SettingsView: View {
         case account
         case language
         case theme
+        case onboarding
         case quick
         case live
         case pomodoro
@@ -138,7 +140,8 @@ struct SettingsView: View {
             return [
                 SettingsJumpItem(anchor: .account, title: t(.settings_account_title), icon: "person.crop.circle.fill"),
                 SettingsJumpItem(anchor: .language, title: t(.settings_language_title), icon: "globe"),
-                SettingsJumpItem(anchor: .theme, title: t(.settings_theme_title), icon: "swatchpalette.fill")
+                SettingsJumpItem(anchor: .theme, title: t(.settings_theme_title), icon: "swatchpalette.fill"),
+                SettingsJumpItem(anchor: .onboarding, title: s("settings.onboarding.title"), icon: "sparkles.rectangle.stack.fill")
             ]
         case .focus:
             var items: [SettingsJumpItem] = [
@@ -241,6 +244,11 @@ struct SettingsView: View {
         .onChange(of: langRaw) { _, _ in
             refreshVoiceModels()
         }
+        .fullScreenCover(isPresented: $showsLippiOnboarding) {
+            LippiOnboardingView(mode: .replay) {
+                showsLippiOnboarding = false
+            }
+        }
     }
 
     @ViewBuilder
@@ -270,6 +278,11 @@ struct SettingsView: View {
                 themeCard
                     .id(SettingsAnchor.theme)
                     .lippiMotionScene(4)
+            )
+            AnyView(
+                onboardingReplayCard
+                    .id(SettingsAnchor.onboarding)
+                    .lippiMotionScene(5)
             )
         }
 
@@ -1286,6 +1299,35 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(LippiButtonStyle(kind: .destructive))
+        }
+    }
+
+    private var onboardingReplayCard: some View {
+        GlassCard(style: .lightweight, forceSystemGlass: !DS.runtimeConstrained) {
+            sectionHeader(
+                s("settings.onboarding.title"),
+                subtitle: s("settings.onboarding.subtitle"),
+                icon: "sparkles.rectangle.stack.fill",
+                accent: Color(hex: 0x64D2FF)
+            )
+
+            Button {
+                showsLippiOnboarding = true
+                #if os(iOS)
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.55)
+                #endif
+            } label: {
+                Label(s("settings.onboarding.button"), systemImage: "play.fill")
+                    .labelStyle(TightLabelStyle())
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(
+                LippiButtonStyle(
+                    kind: .primary,
+                    forceSystemGlass: !DS.runtimeConstrained
+                )
+            )
+            .accessibilityHint(s("settings.onboarding.hint"))
         }
     }
 
