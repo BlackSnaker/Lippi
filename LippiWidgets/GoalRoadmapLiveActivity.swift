@@ -43,8 +43,7 @@ struct GoalRoadmapLiveActivityWidget: Widget {
             } compactLeading: {
                 GoalRoadmapIslandBadge(state: context.state, size: 22)
             } compactTrailing: {
-                Color.clear
-                    .frame(width: 1, height: 1)
+                GoalRoadmapElapsed(state: context.state, compact: true)
             } minimal: {
                 GoalRoadmapIslandBadge(state: context.state, size: 18)
             }

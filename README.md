@@ -81,18 +81,17 @@ Lippi объединяет планирование, фокус и восста�
 
 ## Последнее обновление · Latest release
 
-### 19 июля 2026 — знакомство с Lippi и прозрачный интеллект на iPhone
+### 20 июля 2026 — надёжные «Умные цели» Bonsai на реальном iPhone
 
-- Добавлено короткое интерактивное знакомство, которое появляется при первой активации и повторно запускается из настроек профиля.
-- Все элементы знакомства получили единый Liquid Glass, направленные переходы, горизонтальные свайпы и короткие последовательные анимации без декоративной перегрузки.
-- Выбранное самочувствие связано с существующей системой адаптации «Умных целей», а Reduce Motion, Reduce Transparency, энергосбережение и нагрев автоматически упрощают эффекты.
-- Mac-провайдер Ollama заменён на **PrismML Bonsai 4B 1-bit**, работающий локально через Metal.
-- Модель загружается прямо на iPhone только после подтверждения пользователя и не увеличивает размер приложения на 573 МБ.
-- В iPhone-приложение добавляется около **4,8 МБ** runtime; модель занимает **573 МБ** отдельно, полный объём локального AI после загрузки — примерно **577 МБ**.
-- Добавлен отдельный экран «Интеллект Lippi» с возможностями, приватностью, понятной схемой локальной работы и честными ограничениями.
-- В настройках появились прогресс, пауза, продолжение, проверка целостности, локальный тест и безопасное удаление весов.
-- Умные цели и анализ прогресса используют один приватный on-device runtime; Foundation Models остаётся системным fallback.
-- Вес модели, runtime и источник закреплены по ревизии и SHA-256; сторонние лицензии включены в приложение.
+- Полный сценарий построения дорожной карты проверен на iPhone 14: Bonsai загружает все 37 слоёв через Metal и завершает короткие, подробные и 12-недельные планы.
+- Контекст runtime уменьшен с 8K до 4K, поэтому KV-cache сократился вдвое — до 576 МиБ — без потери полного структурированного ответа.
+- Генерация завершается сразу после закрытия корневого JSON, а подготовка модели выполняется параллельно с быстрым подбором двух наиболее подходящих источников.
+- Декодер принимает реальные вариации ответа небольшой локальной модели: строки и объекты, отсутствующие необязательные поля, строковый confidence и частичные секции.
+- Недостающие безопасные части дополняются локально; при сбое исправляющего прохода сохраняется первый ответ, поэтому полезная карта больше не превращается в ошибку «модель не запустилась».
+- Проверка качества отличает плановые количества от выдуманных продуктовых или медицинских метрик и учитывает окончания русских слов.
+- Интерфейс, Live Activity и Dynamic Island показывают настоящие стадии: подготовку, планирование, проверку, исправление и завершение.
+- Новые статусы локализованы на русский, английский, немецкий и испанский.
+- Из исходника Bonsai-провайдера удалены скрытые управляющие байты, мешавшие сборке Xcode.
 
 [Читать полную историю изменений →](CHANGELOG.md)
 
@@ -167,7 +166,7 @@ The product is designed around four promises:
 
 ### Latest release
 
-The July 19 update replaces the Mac-hosted Ollama intelligence path with PrismML Bonsai 4B 1-bit running directly on iPhone through Metal. Lippi now provides an explicit 573 MB model download, progress and pause controls, pinned artifact verification, local readiness testing, and safe model removal while keeping Foundation Models as a system fallback.
+The July 20 update hardens PrismML Bonsai roadmaps on physical iPhone hardware. A smaller 4K context halves the KV cache, model preparation runs alongside bounded reference retrieval, generation stops at complete JSON, and the planner tolerates realistic schema variations without discarding a useful answer. Smart Goals and Live Activities now show the real preparation, planning, validation, repair, and finalization stages.
 
 [Read the complete bilingual changelog →](CHANGELOG.md)
 

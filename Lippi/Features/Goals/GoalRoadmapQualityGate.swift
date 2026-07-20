@@ -7,9 +7,17 @@ enum GoalRoadmapQualityGate {
         lang: AppLang,
         evidence: [GoalEvidenceSource] = []
     ) -> GoalRoadmap? {
-        let sanitized = sanitizingUnsupportedClaims(in: roadmap, input: input, lang: lang)
-        guard issues(for: sanitized, input: input, evidence: evidence).isEmpty else { return nil }
+        let normalized = normalizedForDisplay(roadmap, input: input, lang: lang)
+        guard issues(for: normalized, input: input, evidence: evidence).isEmpty else { return nil }
+        return normalized
+    }
 
+    static func normalizedForDisplay(
+        _ roadmap: GoalRoadmap,
+        input: GoalPlannerInput,
+        lang: AppLang
+    ) -> GoalRoadmap {
+        let sanitized = sanitizingUnsupportedClaims(in: roadmap, input: input, lang: lang)
         var normalized = sanitized
         normalized.milestones = sanitized.milestones.enumerated().map { index, milestone in
             var milestone = milestone
@@ -101,9 +109,13 @@ enum GoalRoadmapQualityGate {
         }
 
         let anchorTerms = meaningfulTerms(in: "\(input.goal) \(input.context)")
-        let plannedText = normalized(plannedFields.joined(separator: " "))
+        let plannedTerms = normalized(plannedFields.joined(separator: " "))
+            .split(separator: " ")
+            .map(String.init)
         if anchorTerms.count >= 2 {
-            let hits = anchorTerms.filter { plannedText.contains($0) }.count
+            let hits = anchorTerms.filter { anchor in
+                plannedTerms.contains { looselyMatches(anchor, $0) }
+            }.count
             if hits < min(2, anchorTerms.count) {
                 findings.append("Tie the roadmap back to the user's actual goal words, domain, and context instead of giving a generic plan.")
             }
@@ -262,16 +274,24 @@ enum GoalRoadmapQualityGate {
     }
 
     private static func hasUnsupportedOutcomeClaim(in text: String, input: GoalPlannerInput) -> Bool {
-        let userNumbers = Set(numbers(in: "\(input.goal) \(input.context) \(input.horizon.weeks)"))
-        if numbers(in: text).contains(where: { !userNumbers.contains($0) }) { return true }
-
         let unsupportedPhrases = [
             "paid user", "user acquisition", "acquire users", "will pay", "generate revenue", "be profitable",
             "платящ", "привлечь пользователей", "пользователи будут платить", "принесет выручку", "будет прибыльным"
         ]
         let userBrief = "\(input.goal) \(input.context)".lowercased()
-        return unsupportedPhrases.contains { phrase in
+        if unsupportedPhrases.contains(where: { phrase in
             text.localizedCaseInsensitiveContains(phrase) && !userBrief.contains(phrase)
+        }) {
+            return true
+        }
+
+        let userNumbers = Set(numbers(in: "\(input.goal) \(input.context) \(input.horizon.weeks)"))
+        let metricPattern = #"(?i)(?:[%$€₽]\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:%|percent|percentage|users?|downloads?|installs?|customers?|subscribers?|sales|revenue|profit|kg|kilograms?|lbs?|pounds?|процент(?:а|ов)?|пользовател\p{L}*|скачиван\p{L}*|установ\p{L}*|клиент\p{L}*|подписчик\p{L}*|продаж\p{L}*|выручк\p{L}*|прибы(?:ль|ли)|руб(?:лей|ля)?|доллар\p{L}*|евро|кг|килограмм\p{L}*))"#
+        guard let expression = try? NSRegularExpression(pattern: metricPattern) else { return false }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return expression.matches(in: text, range: range).contains { match in
+            guard let matchRange = Range(match.range, in: text) else { return false }
+            return numbers(in: String(text[matchRange])).contains { !userNumbers.contains($0) }
         }
     }
 
@@ -289,8 +309,19 @@ enum GoalRoadmapQualityGate {
         let terms = normalized(text)
             .split(separator: " ")
             .map(String.init)
-            .filter { $0.count >= 4 && !stopwords.contains($0) }
+            .filter { term in
+                term.count >= 4 && !stopwords.contains(where: { stopword in
+                    term == stopword || (stopword.count >= 4 && term.hasPrefix(stopword))
+                })
+            }
             .filter { seen.insert($0).inserted }
         return Array(terms.prefix(8))
+    }
+
+    private static func looselyMatches(_ lhs: String, _ rhs: String) -> Bool {
+        if lhs == rhs { return true }
+        guard lhs.count >= 5, rhs.count >= 5 else { return false }
+        let prefixLength = min(6, min(lhs.count, rhs.count) - 1)
+        return lhs.prefix(prefixLength) == rhs.prefix(prefixLength)
     }
 }

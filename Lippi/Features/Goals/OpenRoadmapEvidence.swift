@@ -133,7 +133,7 @@ enum OpenRoadmapCatalog {
             .sorted { lhs, rhs in
                 lhs.1 == rhs.1 ? lhs.0.title < rhs.0.title : lhs.1 > rhs.1
             }
-            .prefix(3)
+            .prefix(2)
             .map(\.0)
     }
 
@@ -324,7 +324,10 @@ struct OpenRoadmapRetriever {
     private func fetch(_ source: OpenRoadmapSourceDefinition) async -> GoalEvidenceSource? {
         var request = URLRequest(url: source.url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 7
+        // References improve grounding, but the local roadmap must not wait on
+        // a slow site. Requests run in parallel and have a strict shared-scale
+        // latency ceiling suitable for an interactive flow.
+        request.timeoutInterval = 1.5
         request.cachePolicy = .returnCacheDataElseLoad
         request.setValue("Lippi/1.0 roadmap research", forHTTPHeaderField: "User-Agent")
 
@@ -333,7 +336,7 @@ struct OpenRoadmapRetriever {
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode),
                   !data.isEmpty,
-                  let excerpt = extractExcerpt(from: data, hints: source.excerptHints) else {
+                  let excerpt = extractExcerpt(from: Data(data.prefix(600_000)), hints: source.excerptHints) else {
                 return nil
             }
 
@@ -379,10 +382,10 @@ struct OpenRoadmapRetriever {
         let sorted = relevant.sorted { lhs, rhs in
             lhs.score == rhs.score ? lhs.sentence.count < rhs.sentence.count : lhs.score > rhs.score
         }
-        let ranked = sorted.prefix(3).map { $0.sentence }
+        let ranked = sorted.prefix(2).map { $0.sentence }
         guard !ranked.isEmpty else { return nil }
 
-        return String(ranked.joined(separator: ". ").prefix(620)).trimmingCharacters(in: .whitespacesAndNewlines)
+        return String(ranked.joined(separator: ". ").prefix(360)).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func relevance(of sentence: String, hints: [String]) -> Int {

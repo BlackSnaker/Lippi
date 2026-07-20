@@ -35,6 +35,7 @@ struct GoalPlannerView: View {
     @State private var intensity: GoalPlanningIntensity = .balanced
     @State private var roadmap: GoalRoadmap?
     @State private var isGenerating = false
+    @State private var generationStage: GoalRoadmapActivityStage = .preparing
     @State private var isDrafting = false
     @State private var addedTasks = false
     @State private var generationIssue: String?
@@ -1211,30 +1212,29 @@ struct GoalPlannerView: View {
 
             VStack(spacing: 14) {
                 processingEmblem.scaleEffect(0.78)
-                    .lippiFloating(active: isGenerating, amplitude: 1.6, duration: 2.4)
 
                 VStack(spacing: 4) {
-                    Text(s("goals.processing.title"))
+                    Text(generationStage.title(lang: lang))
                         .font(.headline.weight(.bold))
                         .foregroundStyle(DS.textPrimary)
 
-                    Text(s("goals.processing.subtitle"))
+                    Text(generationStage.detail(lang: lang))
                         .font(.caption.weight(.medium))
                         .foregroundStyle(DS.textSecondary)
                         .multilineTextAlignment(.center)
+                        .contentTransition(.opacity)
                 }
 
-                // The visible state changes once per step, so a display-linked
-                // schedule only burns frame budget while networking is active.
-                TimelineView(.periodic(from: .now, by: 1.15)) { timeline in
-                    let activeStep = Int(timeline.date.timeIntervalSinceReferenceDate / 1.15) % processingSteps.count
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(Array(processingSteps.enumerated()), id: \.offset) { index, step in
-                            processingStepRow(step, isActive: index == activeStep, isComplete: index < activeStep)
-                        }
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(processingSteps.enumerated()), id: \.offset) { index, step in
+                        processingStepRow(
+                            step,
+                            isActive: index == activeProcessingStepIndex,
+                            isComplete: index < activeProcessingStepIndex
+                        )
                     }
                 }
+                .animation(.snappy(duration: 0.34), value: generationStage)
             }
             .padding(16)
         }
@@ -1292,9 +1292,10 @@ struct GoalPlannerView: View {
                         .controlSize(.small)
                         .tint(DS.accent)
 
-                    Text(s("goals.chat.building"))
+                    Text(generationStage.title(lang: lang))
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(DS.textSecondary)
+                        .contentTransition(.opacity)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -1360,10 +1361,23 @@ struct GoalPlannerView: View {
 
     private var processingSteps: [(title: String, icon: String)] {
         [
-            (s("goals.processing.sources"), "books.vertical.fill"),
+            (s("goals.processing.prepare"), "cpu.fill"),
             (s("goals.processing.route"), "point.topleft.down.curvedto.point.bottomright.up"),
-            (s("goals.processing.check"), "checklist.checked")
+            (s("goals.processing.check"), "checklist.checked"),
+            (
+                generationStage == .refining ? s("goals.processing.refine") : s("goals.processing.finalize"),
+                generationStage == .refining ? "wand.and.stars" : "checkmark.seal.fill"
+            )
         ]
+    }
+
+    private var activeProcessingStepIndex: Int {
+        switch generationStage {
+        case .preparing, .research: return 0
+        case .planning: return 1
+        case .checking: return 2
+        case .refining, .finalizing: return 3
+        }
     }
 
     private func processingStepRow(_ step: (title: String, icon: String), isActive: Bool, isComplete: Bool) -> some View {
@@ -2972,6 +2986,7 @@ struct GoalPlannerView: View {
     private func generateRoadmap(adaptingToProgress: Bool = false) async {
         guard canGenerate else { return }
         isGenerating = true
+        generationStage = .preparing
         addedTasks = false
         generationIssue = nil
         defer { isGenerating = false }
@@ -2984,6 +2999,7 @@ struct GoalPlannerView: View {
 
         do {
             let result = try await engine.buildAIRoadmap(input: input, lang: lang, progressAudit: auditForModel) { stage in
+                generationStage = stage
                 await updateRoadmapLiveActivity(stage)
             }
             roadmap = result
@@ -3751,6 +3767,41 @@ private struct GoalRoadmapPayload: Codable {
     var habits: [GoalSupportPayload]
     var risks: [GoalRiskPayload]
 
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case summary
+        case confidence
+        case successCriteria
+        case firstActions
+        case assumptions
+        case clarifyingQuestions
+        case milestones
+        case habits
+        case risks
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = (try? container.decode(String.self, forKey: .title)) ?? ""
+        summary = (try? container.decode(String.self, forKey: .summary)) ?? ""
+
+        if let value = try? container.decode(Double.self, forKey: .confidence) {
+            confidence = value
+        } else if let value = try? container.decode(String.self, forKey: .confidence) {
+            confidence = Double(value.replacingOccurrences(of: ",", with: "."))
+        } else {
+            confidence = nil
+        }
+
+        successCriteria = (try? container.decode(FlexibleStringList.self, forKey: .successCriteria).values) ?? []
+        firstActions = (try? container.decode(FlexibleStringList.self, forKey: .firstActions).values) ?? []
+        assumptions = (try? container.decode(FlexibleStringList.self, forKey: .assumptions).values) ?? []
+        clarifyingQuestions = (try? container.decode(FlexibleStringList.self, forKey: .clarifyingQuestions).values) ?? []
+        milestones = (try? container.decode([GoalMilestonePayload].self, forKey: .milestones)) ?? []
+        habits = (try? container.decode([GoalSupportPayload].self, forKey: .habits)) ?? []
+        risks = (try? container.decode([GoalRiskPayload].self, forKey: .risks)) ?? []
+    }
+
     func roadmap(
         source: GoalRoadmapSource,
         input: GoalPlannerInput,
@@ -3758,6 +3809,22 @@ private struct GoalRoadmapPayload: Codable {
         evidence: [GoalEvidenceSource] = []
     ) -> GoalRoadmap? {
         let profile = GoalProfile(goal: input.goal, context: input.context)
+        let expectedMilestoneCount = input.horizon.weeks == 12 ? 4 : 3
+        let fallback = GoalRoadmapEngine().buildDraftRoadmap(input: input, lang: lang)
+
+        func filledStrings(_ primary: [String], fallback fallbackValues: [String], limit: Int) -> [String] {
+            var result: [String] = []
+            var seen = Set<String>()
+            for value in primary + fallbackValues {
+                let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                let key = text.lowercased()
+                guard !text.isEmpty, seen.insert(key).inserted else { continue }
+                result.append(text)
+                if result.count == limit { break }
+            }
+            return result
+        }
+
         var seenMilestoneKeys = Set<String>()
         let uniqueMilestones = milestones.filter { item in
             let key = [
@@ -3768,38 +3835,52 @@ private struct GoalRoadmapPayload: Codable {
             ].joined(separator: "|").lowercased()
             return !key.isEmpty && seenMilestoneKeys.insert(key).inserted
         }
-        let mappedMilestones = uniqueMilestones.prefix(5).map { item in
+        // Extra otherwise-valid items are a harmless model formatting slip.
+        // Normalize them locally instead of paying for a second full inference.
+        var mappedMilestones = uniqueMilestones.prefix(expectedMilestoneCount).map { item in
             GoalMilestone(
                 title: item.title.nonEmpty(or: L10n.tr("goals.local.phase", lang)),
                 timeframe: item.timeframe.nonEmpty(or: ""),
                 target: item.target.nonEmpty(or: summary.nonEmpty(or: input.goal)),
-                tasks: item.tasks.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.prefixArray(4),
+                tasks: item.tasks.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.prefixArray(3),
                 category: profile.category
             )
         }.filter { !$0.title.isEmpty && !$0.target.isEmpty && !$0.tasks.isEmpty }
 
-        guard !mappedMilestones.isEmpty else { return nil }
+        for milestone in fallback.milestones where mappedMilestones.count < expectedMilestoneCount {
+            mappedMilestones.append(milestone)
+        }
+        mappedMilestones = Array(mappedMilestones.prefix(expectedMilestoneCount)).enumerated().map { index, milestone in
+            var milestone = milestone
+            let fallbackMilestone = fallback.milestones[min(index, fallback.milestones.count - 1)]
+            milestone.title = milestone.title.nonEmpty(or: fallbackMilestone.title)
+            milestone.target = milestone.target.nonEmpty(or: fallbackMilestone.target)
+            milestone.tasks = filledStrings(milestone.tasks, fallback: fallbackMilestone.tasks, limit: 3)
+            return milestone
+        }
 
-        let cleanCriteria = successCriteria.cleanLines(limit: 4)
-        let cleanActions = firstActions.cleanLines(limit: 4)
+        let cleanCriteria = filledStrings(successCriteria.cleanLines(limit: 2), fallback: fallback.successCriteria, limit: 2)
+        let cleanActions = filledStrings(firstActions.cleanLines(limit: 2), fallback: fallback.firstActions, limit: 2)
         let cleanAssumptions = assumptions.cleanLines(limit: 3)
         let cleanQuestions = GoalGuidanceQuestionBuilder.ensuringUsefulQuestions(
             clarifyingQuestions.cleanLines(limit: 3),
             input: input,
             lang: lang
         )
-        let cleanHabits = habits.prefix(4).map { GoalHabit(title: $0.title, detail: $0.detail) }
+        var cleanHabits = habits.prefix(2).map { GoalHabit(title: $0.title, detail: $0.detail) }
             .filter { !$0.title.trimmed.isEmpty && !$0.detail.trimmed.isEmpty }
-        let cleanRisks = risks.prefix(3).map { GoalRisk(title: $0.title, mitigation: $0.mitigation) }
+        if cleanHabits.isEmpty {
+            cleanHabits = Array(fallback.habits.prefix(2))
+        }
+        var cleanRisks = risks.prefix(2).map { GoalRisk(title: $0.title, mitigation: $0.mitigation) }
             .filter { !$0.title.trimmed.isEmpty && !$0.mitigation.trimmed.isEmpty }
-
-        guard !cleanCriteria.isEmpty, !cleanActions.isEmpty, !cleanHabits.isEmpty, !cleanRisks.isEmpty else {
-            return nil
+        if cleanRisks.isEmpty {
+            cleanRisks = Array(fallback.risks.prefix(2))
         }
 
         return GoalRoadmap(
-            title: title.nonEmpty(or: input.goal),
-            summary: summary.nonEmpty(or: L10n.fmt("goals.local.summary", lang, input.goal, input.horizon.weeks, input.intensity.title(lang: lang).lowercased())),
+            title: title.nonEmpty(or: fallback.title),
+            summary: summary.nonEmpty(or: fallback.summary),
             source: source,
             confidence: min(max(confidence ?? 0.78, 0.45), 0.96),
             successCriteria: cleanCriteria,
@@ -3814,22 +3895,124 @@ private struct GoalRoadmapPayload: Codable {
     }
 }
 
+private struct FlexibleStringList: Decodable {
+    let values: [String]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let list = try? container.decode([String].self) {
+            values = list
+            return
+        }
+        if let value = try? container.decode(String.self) {
+            values = [value]
+            return
+        }
+        values = []
+    }
+}
+
 private struct GoalMilestonePayload: Codable {
     var title: String
     var timeframe: String
     var target: String
     var tasks: [String]
     var category: String
+
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case timeframe
+        case target
+        case tasks
+        case category
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = (try? container.decode(String.self, forKey: .title)) ?? ""
+        timeframe = (try? container.decode(String.self, forKey: .timeframe)) ?? ""
+        target = (try? container.decode(String.self, forKey: .target)) ?? ""
+        tasks = (try? container.decode(FlexibleStringList.self, forKey: .tasks).values) ?? []
+        category = (try? container.decode(String.self, forKey: .category)) ?? "other"
+    }
 }
 
 private struct GoalSupportPayload: Codable {
     var title: String
     var detail: String
+
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case detail
+    }
+
+    init(from decoder: Decoder) throws {
+        if let container = try? decoder.singleValueContainer(),
+           let value = try? container.decode(String.self) {
+            let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Habit text is empty")
+            }
+            title = Self.shortTitle(from: text)
+            detail = text
+            return
+        }
+
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedTitle = try container.decodeIfPresent(String.self, forKey: .title)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let decodedDetail = try container.decodeIfPresent(String.self, forKey: .detail)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let fallback = decodedDetail.nonEmpty(or: decodedTitle)
+        title = decodedTitle.nonEmpty(or: Self.shortTitle(from: fallback))
+        detail = decodedDetail.nonEmpty(or: decodedTitle)
+    }
+
+    private static func shortTitle(from text: String) -> String {
+        text.split(whereSeparator: { $0.isWhitespace })
+            .prefix(6)
+            .joined(separator: " ")
+            .trimmingCharacters(in: .punctuationCharacters)
+    }
 }
 
 private struct GoalRiskPayload: Codable {
     var title: String
     var mitigation: String
+
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case mitigation
+    }
+
+    init(from decoder: Decoder) throws {
+        if let container = try? decoder.singleValueContainer(),
+           let value = try? container.decode(String.self) {
+            let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Risk text is empty")
+            }
+            title = Self.shortTitle(from: text)
+            mitigation = text
+            return
+        }
+
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedTitle = try container.decodeIfPresent(String.self, forKey: .title)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let decodedMitigation = try container.decodeIfPresent(String.self, forKey: .mitigation)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let fallback = decodedMitigation.nonEmpty(or: decodedTitle)
+        title = decodedTitle.nonEmpty(or: Self.shortTitle(from: fallback))
+        mitigation = decodedMitigation.nonEmpty(or: decodedTitle)
+    }
+
+    private static func shortTitle(from text: String) -> String {
+        text.split(whereSeparator: { $0.isWhitespace })
+            .prefix(6)
+            .joined(separator: " ")
+            .trimmingCharacters(in: .punctuationCharacters)
+    }
 }
 
 // =======================================================
@@ -3893,21 +4076,24 @@ struct GoalRoadmapEngine {
         progressAudit: GoalPlanProgressAudit? = nil,
         onStage: @escaping (GoalRoadmapActivityStage) async -> Void = { _ in }
     ) async throws -> GoalRoadmap {
-        await onStage(.research)
-        let evidence = await OpenRoadmapRetriever().research(for: input)
         let configuration = BonsaiConfiguration.stored
 
         if configuration.isEnabled {
             do {
-                await onStage(.planning)
+                await onStage(.preparing)
+                let provider = BonsaiGoalProvider()
+                async let evidenceTask = OpenRoadmapRetriever().research(for: input)
+                async let preparationTask: Void = provider.prepare(configuration: configuration)
+                let (evidence, _) = try await (evidenceTask, preparationTask)
+
                 let roadmap = try await generateBonsaiRoadmap(
                     input: input,
                     lang: lang,
                     configuration: configuration,
                     evidence: evidence,
-                    progressAudit: progressAudit
+                    progressAudit: progressAudit,
+                    onStage: onStage
                 )
-                await onStage(.checking)
                 return roadmap
             } catch let error as BonsaiProviderError {
                 throw GoalPlannerEngineError.bonsaiUnavailable(error.message(lang: lang))
@@ -3917,9 +4103,16 @@ struct GoalRoadmapEngine {
         }
 
         do {
-            await onStage(.planning)
-            let roadmap = try await generateFoundationModelsRoadmap(input: input, lang: lang, evidence: evidence, progressAudit: progressAudit)
-            await onStage(.checking)
+            await onStage(.research)
+            let evidence = await OpenRoadmapRetriever().research(for: input)
+            await onStage(.preparing)
+            let roadmap = try await generateFoundationModelsRoadmap(
+                input: input,
+                lang: lang,
+                evidence: evidence,
+                progressAudit: progressAudit,
+                onStage: onStage
+            )
             return roadmap
         } catch let error as GoalPlannerEngineError {
             throw error
@@ -3976,105 +4169,156 @@ struct GoalRoadmapEngine {
         lang: AppLang,
         configuration: BonsaiConfiguration,
         evidence: [GoalEvidenceSource],
-        progressAudit: GoalPlanProgressAudit?
+        progressAudit: GoalPlanProgressAudit?,
+        onStage: @escaping (GoalRoadmapActivityStage) async -> Void
     ) async throws -> GoalRoadmap {
         let provider = BonsaiGoalProvider()
         let brief = GoalRequestBrief.make(input: input, fallbackLang: lang)
+        let tokenBudget: Int32 = input.horizon.weeks == 12 ? 1_400 : 1_150
         try provider.ensureReady(configuration: configuration)
-        let response = try await provider.generate(
-            prompt: bonsaiPrompt(for: input, lang: lang, brief: brief, evidence: evidence, progressAudit: progressAudit),
-            configuration: configuration
-        )
+        await onStage(.planning)
+        let response: String
+        do {
+            response = try await provider.generate(
+                prompt: bonsaiPrompt(for: input, brief: brief, evidence: evidence, progressAudit: progressAudit),
+                configuration: configuration,
+                maximumOutputTokens: tokenBudget
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as BonsaiProviderError {
+            switch error {
+            case .disabled, .modelMissing, .runtimeUnavailable, .modelLoadFailed:
+                throw error
+            case .promptTooLong, .generationFailed, .malformedResponse, .incompleteRoadmap:
+                await onStage(.finalizing)
+                return buildDraftRoadmap(input: input, lang: brief.responseLanguage, progressAudit: progressAudit)
+            }
+        }
 
-        if let roadmap = qualifiedRoadmap(from: response, source: .bonsai, input: input, lang: brief.responseLanguage, evidence: evidence) {
+        await onStage(.checking)
+        let initialCandidate = decodedRoadmap(
+            from: response,
+            source: .bonsai,
+            input: input,
+            lang: brief.responseLanguage,
+            evidence: evidence
+        )
+        if let initialCandidate,
+           let roadmap = GoalRoadmapQualityGate.validated(
+               initialCandidate,
+               input: input,
+               lang: brief.responseLanguage,
+               evidence: evidence
+           ) {
+            await onStage(.finalizing)
             return roadmap
         }
 
-        let repair = try await provider.generate(
-            prompt: bonsaiRepairPrompt(
-                input: input,
-                lang: lang,
-                brief: brief,
-                evidence: evidence,
-                progressAudit: progressAudit,
-                qualityFeedback: roadmapQualityFeedback(from: response, source: .bonsai, input: input, lang: brief.responseLanguage, evidence: evidence)
-            ),
-            configuration: configuration
-        )
-        guard let roadmap = qualifiedRoadmap(from: repair, source: .bonsai, input: input, lang: brief.responseLanguage, evidence: evidence) else {
-            throw BonsaiProviderError.incompleteRoadmap
+        await onStage(.refining)
+        let repair: String
+        do {
+            repair = try await provider.generate(
+                prompt: bonsaiRepairPrompt(
+                    input: input,
+                    brief: brief,
+                    evidence: evidence,
+                    progressAudit: progressAudit,
+                    qualityFeedback: roadmapQualityFeedback(from: response, source: .bonsai, input: input, lang: brief.responseLanguage, evidence: evidence)
+                ),
+                configuration: configuration,
+                maximumOutputTokens: tokenBudget
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            await onStage(.finalizing)
+            if let initialCandidate {
+                return GoalRoadmapQualityGate.normalizedForDisplay(
+                    initialCandidate,
+                    input: input,
+                    lang: brief.responseLanguage
+                )
+            }
+            return buildDraftRoadmap(input: input, lang: brief.responseLanguage, progressAudit: progressAudit)
         }
-        return roadmap
+        await onStage(.finalizing)
+        let repairCandidate = decodedRoadmap(
+            from: repair,
+            source: .bonsai,
+            input: input,
+            lang: brief.responseLanguage,
+            evidence: evidence
+        )
+        if let repairCandidate,
+           let roadmap = GoalRoadmapQualityGate.validated(
+               repairCandidate,
+               input: input,
+               lang: brief.responseLanguage,
+               evidence: evidence
+           ) {
+            return roadmap
+        }
+        if let bestCandidate = repairCandidate ?? initialCandidate {
+            return GoalRoadmapQualityGate.normalizedForDisplay(
+                bestCandidate,
+                input: input,
+                lang: brief.responseLanguage
+            )
+        }
+        return buildDraftRoadmap(input: input, lang: brief.responseLanguage, progressAudit: progressAudit)
     }
 
     private func bonsaiPrompt(
         for input: GoalPlannerInput,
-        lang: AppLang,
         brief: GoalRequestBrief,
         evidence: [GoalEvidenceSource],
         progressAudit: GoalPlanProgressAudit?
     ) -> String {
         """
-        You are Lippi's grounded roadmap planner. Return JSON only and follow the schema attached by the app.
+        Build Lippi's grounded roadmap from this request. Return only the JSON schema attached by the app.
 
-        Known user goal: \(input.goal)
-        Known user context: \(input.context.isEmpty ? L10n.tr("goals.ai.no_context", lang) : input.context)
-        Horizon: \(input.horizon.weeks) weeks. Pace: \(input.intensity.rawValue). Output language: \(brief.outputLanguageName).
+        Horizon: \(input.horizon.weeks) weeks. Pace: \(input.intensity.rawValue). Output: \(brief.outputLanguageName).
         Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
 
         \(brief.promptSection())
         \(OpenRoadmapCatalog.profile(for: input).promptSection())
 
-        Progress audit from the previous Lippi plan:
+        Previous Lippi progress:
         \(progressAuditPromptSection(progressAudit))
 
-        Relevant open reference excerpts. Use them only when they help; do not claim they support anything beyond their text:
+        Optional references (never extend their claims):
         \(evidencePromptSection(evidence))
 
-        Planning contract:
-        - Build the smallest realistic route from the known facts. Preserve stated time, money, dates, constraints, and domain.
-        - First decide what must be learned, built, measured, or reviewed in this domain. Do not skip discovery when context is thin.
-        - Use the structured request as the canonical interpretation. If the raw text and structured request conflict, ask a clarifying question instead of inventing.
-        - All human-readable JSON string values must be in \(brief.outputLanguageName), matching the user's request language. Keep product names and technical acronyms as written.
-        - Make each milestone a different reviewable outcome in its fixed slot. Give every milestone two or three distinct tasks.
-        - Each task must start with a clear action and name an artifact, decision, test, or deliverable. Never write vague tasks such as "make progress", "work on the project", or "do research" without a focus.
-        - Use reference excerpts as orientation, not as a license to add unsupported facts. When a source is relevant, translate its concept into a concrete user-facing step.
-        - Prefer official/specialist sources over broad roadmaps when they conflict. If the sources do not cover the user's domain, say so through assumptions/questions.
-        - Return exactly two success criteria and two first actions. A success criterion is either a user-supplied metric or an observable deliverable.
-        - Return two or three clarifyingQuestions. They must be guiding questions that help refine the roadmap and future Lippi support, not generic placeholders.
-        - Unknown information belongs in assumptions or clarifying questions. Do not turn unknown facts into claims.
-        - If the progress audit lists missed or overdue Lippi tasks, adapt the roadmap instead of restarting blindly: preserve the goal, reduce the next 48-hour load, split the skipped items into smaller actions, reschedule the closest milestone, and keep the tone supportive.
-        - Do not invent why the user skipped tasks. Treat missed task titles and due dates only as task facts, then ask a clarifying question if the cause matters.
-        - For a business goal, plan discovery or validation work, not imagined users, downloads, demand, revenue, conversion, or profit. Do not invent any metric, deadline, resource, prerequisite, feedback, or outcome.
-        - Keep health, legal, and financial steps non-diagnostic and non-guaranteed. Use reference material as high-level guidance only.
-        - Allowed categories: work, study, health, rest, home, other.
+        Rules:
+        - Use the structured request as truth; preserve its facts, quantities, dates, constraints, language, names, and domain. Unknowns become assumptions or questions.
+        - Use exactly \(input.horizon.weeks == 12 ? 4 : 3) distinct milestones in the fixed slots. Each needs a reviewable target and 2-3 different action-plus-output tasks.
+        - Return exactly 2 observable success criteria, exactly 2 actions for the next 24-48 hours, 2-3 specific clarifying questions, 1-2 habits, and 1-2 risks.
+        - If progress shows missed work, keep the goal but reduce and split the nearest load; never invent the reason.
+        - Do not invent metrics, people, demand, money, feedback, resources, outcomes, or guarantees. Health/legal/financial steps stay non-diagnostic.
+        - Categories: work, study, health, rest, home, other.
         """
     }
 
     private func bonsaiRepairPrompt(
         input: GoalPlannerInput,
-        lang: AppLang,
         brief: GoalRequestBrief,
         evidence: [GoalEvidenceSource],
         progressAudit: GoalPlanProgressAudit?,
         qualityFeedback: String
     ) -> String {
         """
-        Build a fresh replacement in JSON only using the app schema. Do not copy unsupported claims from an earlier answer.
-        Goal: \(input.goal)
-        Context: \(input.context.isEmpty ? L10n.tr("goals.ai.no_context", lang) : input.context)
-        Horizon: \(input.horizon.weeks) weeks. Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
-        Output language: \(brief.outputLanguageName).
+        Rebuild the rejected roadmap as the app's JSON object. Fix every quality-audit item without inventing facts.
+        Horizon: \(input.horizon.weeks) weeks. Output: \(brief.outputLanguageName).
+        Fixed slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
         \(brief.promptSection())
         \(OpenRoadmapCatalog.profile(for: input).promptSection())
-        Progress audit:
+        Previous progress:
         \(progressAuditPromptSection(progressAudit))
-        Quality audit to fix: \(qualityFeedback)
-        Reference excerpts:
+        Required fixes: \(qualityFeedback)
+        Optional references:
         \(evidencePromptSection(evidence))
-        The earlier answer was rejected. Replan from the user brief, the fixed slots, the progress audit, and the quality audit above.
-        Use source excerpts only as grounded orientation. Convert source concepts into concrete actions; never invent facts that are not in the user brief or excerpts.
-        Return two or three useful clarifyingQuestions in \(brief.outputLanguageName) so the user can refine the roadmap and Lippi can adjust support later.
+        Use exactly \(input.horizon.weeks == 12 ? 4 : 3) distinct milestones with 2-3 action-plus-output tasks each. Return exactly 2 observable success criteria, exactly 2 first actions, 2-3 specific clarifyingQuestions, 1-2 habits, and 1-2 risks. Keep all readable values in \(brief.outputLanguageName).
         """
     }
 
@@ -4131,7 +4375,8 @@ struct GoalRoadmapEngine {
         input: GoalPlannerInput,
         lang: AppLang,
         evidence: [GoalEvidenceSource],
-        progressAudit: GoalPlanProgressAudit?
+        progressAudit: GoalPlanProgressAudit?,
+        onStage: @escaping (GoalRoadmapActivityStage) async -> Void
     ) async throws -> GoalRoadmap {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
@@ -4147,10 +4392,12 @@ struct GoalRoadmapEngine {
             )
 
             do {
+                await onStage(.planning)
                 let response = try await session.respond(
                     to: prompt(for: foundationInput, original: input, brief: brief, evidence: evidence, progressAudit: progressAudit),
                     options: GenerationOptions(temperature: 0.18, maximumResponseTokens: 2600)
                 )
+                await onStage(.checking)
                 if let roadmap = qualifiedRoadmap(
                     from: response.content,
                     source: .foundationModels,
@@ -4158,6 +4405,7 @@ struct GoalRoadmapEngine {
                     lang: brief.responseLanguage,
                     evidence: evidence
                 ) {
+                    await onStage(.finalizing)
                     return annotateLanguageBridge(
                         roadmap,
                         lang: brief.responseLanguage,
@@ -4166,6 +4414,7 @@ struct GoalRoadmapEngine {
                     )
                 }
 
+                await onStage(.refining)
                 let repair = try await session.respond(
                     to: repairPrompt(
                         original: response.content,
@@ -4184,6 +4433,7 @@ struct GoalRoadmapEngine {
                     ),
                     options: GenerationOptions(temperature: 0.05, maximumResponseTokens: 2200)
                 )
+                await onStage(.finalizing)
                 guard let roadmap = qualifiedRoadmap(
                     from: repair.content,
                     source: .foundationModels,

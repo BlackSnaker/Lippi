@@ -12,11 +12,11 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2019%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Interactive onboarding" src="https://img.shields.io/badge/Welcome-Interactive-64D2FF?style=for-the-badge">
-    <img alt="Liquid Glass" src="https://img.shields.io/badge/Design-Liquid%20Glass-BF5AF2?style=for-the-badge">
-    <img alt="Apple-style motion" src="https://img.shields.io/badge/Motion-Apple--style-30D158?style=for-the-badge">
-    <img alt="On-device intelligence" src="https://img.shields.io/badge/AI-On--device-FF9F0A?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2020%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="On-device intelligence" src="https://img.shields.io/badge/Bonsai-Device%20tested-64D2FF?style=for-the-badge">
+    <img alt="Reliable roadmaps" src="https://img.shields.io/badge/Roadmaps-Resilient-30D158?style=for-the-badge">
+    <img alt="Lower memory" src="https://img.shields.io/badge/Memory-4K%20context-BF5AF2?style=for-the-badge">
+    <img alt="Live progress" src="https://img.shields.io/badge/Progress-Live-FF9F0A?style=for-the-badge">
   </p>
   <p><strong>Complete bilingual release notes, newest first.</strong></p>
   <p><strong>Полная двуязычная история обновлений: от новых к ранним.</strong></p>
@@ -25,32 +25,73 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Meet Lippi</strong><br>
-      <sub>A short first-run tour introduces planning, focus, care, and privacy without overload.</sub>
+      <strong>Reliable Bonsai</strong><br>
+      <sub>Real-device inference, flexible decoding, and safe local completion keep Smart Goals moving.</sub>
       <br><br>
-      <strong>Знакомство с Lippi</strong><br>
-      <sub>Короткий первый сценарий знакомит с планами, фокусом, заботой и приватностью без перегруза.</sub>
+      <strong>Надёжный Bonsai</strong><br>
+      <sub>Проверка на устройстве, гибкий декодер и безопасное дополнение ответа сохраняют рабочий сценарий.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Liquid Glass</strong><br>
-      <sub>Navigation, choices, progress, cards, and actions share one native glass language.</sub>
+      <strong>Lower memory</strong><br>
+      <sub>A compact 4K context halves the KV cache while preserving complete roadmap output.</sub>
       <br><br>
-      <strong>Liquid Glass</strong><br>
-      <sub>Навигация, выбор, прогресс, карточки и действия собраны в единую нативную стеклянную систему.</sub>
+      <strong>Меньше памяти</strong><br>
+      <sub>Компактный контекст 4K вдвое уменьшает KV-cache и сохраняет полный ответ дорожной карты.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Purposeful motion</strong><br>
-      <sub>Directional paging, horizontal swipes, staged reveals, and symbol transitions remain brief.</sub>
+      <strong>Honest progress</strong><br>
+      <sub>The app and Dynamic Island now show preparation, planning, checking, repair, and finalization.</sub>
       <br><br>
-      <strong>Осмысленное движение</strong><br>
-      <sub>Направленные переходы, свайпы, последовательное появление и смена символов остаются короткими.</sub>
+      <strong>Честный прогресс</strong><br>
+      <sub>Приложение и Dynamic Island показывают подготовку, планирование, проверку, исправление и завершение.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Replay anytime</strong><br>
-      <sub>The complete welcome can be reopened from Profile settings without resetting app data.</sub>
+      <strong>Faster path</strong><br>
+      <sub>Model preparation and focused reference retrieval run together, then generation stops at complete JSON.</sub>
       <br><br>
-      <strong>Повтор в любой момент</strong><br>
-      <sub>Знакомство повторно открывается из настроек профиля без сброса приложения и данных.</sub>
+      <strong>Быстрее к результату</strong><br>
+      <sub>Модель и материалы готовятся параллельно, а генерация завершается сразу после полного JSON.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 20, 2026 - Reliable Bonsai roadmaps, verified on iPhone
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Smart Goals now treat Bonsai as a real mobile runtime rather than a perfect JSON service: inference uses less memory, progress reflects the actual pipeline, and small response variations no longer discard an otherwise useful roadmap.</strong></p>
+      <ul>
+        <li><strong>Verified on physical hardware:</strong> the complete Smart Goals pipeline was built, signed, installed, and exercised on an iPhone 14 with Apple A15 GPU. Bonsai loaded all 37 model layers through Metal and completed short, sparse, detailed, and 12-week roadmap scenarios.</li>
+        <li><strong>Lower inference memory:</strong> the runtime context was reduced from 8K to 4K, cutting the KV cache in half to 576 MiB while preserving enough room for the compact planner prompt and a complete structured response.</li>
+        <li><strong>Less wasted generation:</strong> a string-aware JSON tracker stops decoding as soon as the root object closes. Tighter sampling and horizon-specific output budgets keep the 4B model focused on the schema instead of trailing prose.</li>
+        <li><strong>Parallel preparation:</strong> cold model loading now runs alongside reference retrieval. Research is limited to the two strongest matches, a 1.5-second request timeout, bounded input data, and concise excerpts so external pages cannot dominate an on-device interaction.</li>
+        <li><strong>Resilient structured output:</strong> roadmap decoding accepts arrays or single strings, string or numeric confidence, string or object habits and risks, missing optional fields, and partial milestone objects. Missing safe sections are completed locally instead of rejecting the whole answer.</li>
+        <li><strong>Useful answer preservation:</strong> if a repair pass fails, Lippi keeps and normalizes the first Bonsai result. If neither model response can be decoded, the existing grounded local planner supplies a safe roadmap rather than showing a misleading “model did not start” failure.</li>
+        <li><strong>Fairer quality checks:</strong> planned counts such as test scenarios are no longer confused with invented revenue, audience, download, conversion, or health metrics. Goal anchoring now tolerates common word endings, which prevents false rejection of Russian-language plans.</li>
+        <li><strong>Truthful live progress:</strong> Smart Goals and Live Activities now expose preparation, research, planning, checking, refining, and finalization. Dynamic Island also shows elapsed time in the compact trailing region.</li>
+        <li><strong>Localized status copy:</strong> every new processing stage and explanation is available in Russian, English, German, and Spanish.</li>
+        <li><strong>Source integrity restored:</strong> hidden control bytes that caused Xcode’s “Invalid character in source file” diagnostic were removed from the Bonsai provider.</li>
+        <li><strong>Verification:</strong> signed physical-device builds passed a focused roadmap test, a context-free short goal with a repair pass, and a detailed 12-week goal. The final clean build was reinstalled and launched successfully after diagnostic hooks were removed.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>«Умные цели» теперь работают с Bonsai как с настоящей мобильной моделью, а не как с идеальным JSON-сервисом: инференс требует меньше памяти, прогресс отражает реальные этапы, а небольшие вариации ответа больше не уничтожают полезную дорожную карту.</strong></p>
+      <ul>
+        <li><strong>Проверено на физическом устройстве:</strong> полный сценарий «Умных целей» собран, подписан, установлен и протестирован на iPhone 14 с GPU Apple A15. Bonsai загрузил все 37 слоёв через Metal и завершил короткие, неполные, подробные и 12-недельные сценарии.</li>
+        <li><strong>Меньше памяти для инференса:</strong> контекст runtime уменьшен с 8K до 4K, поэтому KV-cache сократился вдвое — до 576 МиБ; компактному промпту планировщика и полному структурированному ответу этого достаточно.</li>
+        <li><strong>Без лишней генерации:</strong> JSON-трекер с учётом строк завершает декодирование сразу после закрытия корневого объекта. Более сфокусированный sampling и отдельные бюджеты для разных горизонтов удерживают модель 4B внутри схемы.</li>
+        <li><strong>Параллельная подготовка:</strong> холодная загрузка модели выполняется одновременно с подбором материалов. Исследование ограничено двумя лучшими источниками, тайм-аутом 1,5 секунды, лимитом входных данных и короткими выдержками.</li>
+        <li><strong>Устойчивый структурированный ответ:</strong> декодер принимает массив или одну строку, строковый или числовой confidence, привычки и риски в виде строк или объектов, отсутствующие необязательные поля и частичные этапы. Безопасные недостающие секции дополняются локально.</li>
+        <li><strong>Сохранение полезного результата:</strong> если исправляющий проход не удался, Lippi нормализует первый ответ Bonsai. Если оба ответа невозможно разобрать, существующий локальный планировщик создаёт безопасную карту вместо вводящего в заблуждение сообщения «модель не запустилась».</li>
+        <li><strong>Справедливая проверка качества:</strong> плановые количества вроде числа тестовых сценариев больше не считаются выдуманной выручкой, аудиторией, скачиваниями, конверсией или показателями здоровья. Привязка к цели учитывает распространённые окончания слов и не отбрасывает русские планы из-за морфологии.</li>
+        <li><strong>Честный живой прогресс:</strong> «Умные цели» и Live Activity показывают подготовку, исследование, планирование, проверку, исправление и завершение. В компактной области Dynamic Island также отображается прошедшее время.</li>
+        <li><strong>Локализованные статусы:</strong> новые этапы и пояснения добавлены на русском, английском, немецком и испанском.</li>
+        <li><strong>Восстановлена целостность исходника:</strong> из Bonsai-провайдера удалены скрытые управляющие байты, вызывавшие ошибку Xcode “Invalid character in source file”.</li>
+        <li><strong>Проверка:</strong> подписанная сборка на реальном устройстве прошла сфокусированный тест дорожной карты, короткую цель без контекста с исправляющим проходом и подробную цель на 12 недель. После удаления диагностики чистая сборка повторно установлена и успешно запущена.</li>
+      </ul>
     </td>
   </tr>
 </table>

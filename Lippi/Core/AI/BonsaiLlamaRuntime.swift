@@ -17,6 +17,7 @@ enum BonsaiRuntimeError: Error, Equatable {
 
 struct BonsaiGenerationOptions: Sendable {
     var maximumOutputTokens: Int32
+    var stopsAtCompleteJSONObject = true
 }
 
 actor BonsaiInferenceEngine {
@@ -40,19 +41,28 @@ actor BonsaiInferenceEngine {
         idleUnloadTask = nil
         defer { scheduleIdleUnload() }
 
-        let modelURL = BonsaiModelStorage.modelURL
-        if loadedContext == nil || loadedModelURL != modelURL {
-            loadedContext = nil
-            loadedContext = try BonsaiLlamaContext(modelURL: modelURL)
-            loadedModelURL = modelURL
-        }
-        guard let loadedContext else { throw BonsaiRuntimeError.contextCreationFailed }
+        let loadedContext = try loadContextIfNeeded()
 
         let prompt = BonsaiPromptTemplate.chat(system: systemPrompt, user: userPrompt)
         let response = try loadedContext.generate(prompt: prompt, options: options)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !response.isEmpty else { throw BonsaiRuntimeError.emptyResponse }
         return response
+        #else
+        throw BonsaiRuntimeError.runtimeUnavailable
+        #endif
+    }
+
+    /// Loads the model without spending tokens. Roadmap research can run in
+    /// parallel with this cold-start work, so neither step blocks the other.
+    func prepare() throws {
+        guard BonsaiModelStorage.isInstalled else { throw BonsaiRuntimeError.modelMissing }
+
+        #if canImport(llama)
+        idleUnloadTask?.cancel()
+        idleUnloadTask = nil
+        _ = try loadContextIfNeeded()
+        scheduleIdleUnload()
         #else
         throw BonsaiRuntimeError.runtimeUnavailable
         #endif
@@ -68,6 +78,17 @@ actor BonsaiInferenceEngine {
     }
 
     #if canImport(llama)
+    private func loadContextIfNeeded() throws -> BonsaiLlamaContext {
+        let modelURL = BonsaiModelStorage.modelURL
+        if loadedContext == nil || loadedModelURL != modelURL {
+            loadedContext = nil
+            loadedContext = try BonsaiLlamaContext(modelURL: modelURL)
+            loadedModelURL = modelURL
+        }
+        guard let loadedContext else { throw BonsaiRuntimeError.contextCreationFailed }
+        return loadedContext
+    }
+
     private func scheduleIdleUnload() {
         idleUnloadTask?.cancel()
         idleUnloadTask = Task { [weak self] in
@@ -118,7 +139,10 @@ private func bonsaiBatchAdd(
 }
 
 private final class BonsaiLlamaContext {
-    private static let contextSize: UInt32 = 8_192
+    // The planner prompt is deliberately compact. A 4K context leaves enough
+    // space for a complete roadmap while halving the KV-cache of the previous
+    // 8K setup on memory-constrained iPhones.
+    private static let contextSize: UInt32 = 4_096
     private static let batchSize: UInt32 = 512
 
     private let model: OpaquePointer
@@ -175,9 +199,9 @@ private final class BonsaiLlamaContext {
             llama_backend_free()
             throw BonsaiRuntimeError.contextCreationFailed
         }
-        llama_sampler_chain_add(sampler, llama_sampler_init_top_k(20))
-        llama_sampler_chain_add(sampler, llama_sampler_init_top_p(0.85, 1))
-        llama_sampler_chain_add(sampler, llama_sampler_init_temp(0.5))
+        llama_sampler_chain_add(sampler, llama_sampler_init_top_k(12))
+        llama_sampler_chain_add(sampler, llama_sampler_init_top_p(0.82, 1))
+        llama_sampler_chain_add(sampler, llama_sampler_init_temp(0.3))
         llama_sampler_chain_add(sampler, llama_sampler_init_dist(0xB05A1))
 
         self.model = model
@@ -209,6 +233,7 @@ private final class BonsaiLlamaContext {
         try evaluatePrompt(promptTokens)
         var currentPosition = Int32(promptTokens.count)
         var result = ""
+        var jsonTracker = BonsaiJSONObjectTracker()
 
         for _ in 0..<options.maximumOutputTokens {
             if Task.isCancelled { throw CancellationError() }
@@ -216,7 +241,15 @@ private final class BonsaiLlamaContext {
             let token = llama_sampler_sample(sampler, context, -1)
             if llama_vocab_is_eog(vocab, token) { break }
             llama_sampler_accept(sampler, token)
-            result += piece(for: token)
+            let tokenPiece = piece(for: token)
+            result.append(contentsOf: tokenPiece)
+
+            // Structured Lippi requests need one root JSON object. Stop on its
+            // closing brace instead of letting the model generate trailing
+            // prose or whitespace for hundreds of additional tokens.
+            if options.stopsAtCompleteJSONObject, jsonTracker.consume(tokenPiece) {
+                break
+            }
 
             bonsaiBatchClear(&batch)
             bonsaiBatchAdd(&batch, token: token, position: currentPosition, logits: true)
@@ -227,7 +260,7 @@ private final class BonsaiLlamaContext {
         }
 
         if !pendingUTF8.isEmpty {
-            result += String(decoding: pendingUTF8.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+            result.append(contentsOf: String(decoding: pendingUTF8.map { UInt8(bitPattern: $0) }, as: UTF8.self))
             pendingUTF8.removeAll(keepingCapacity: true)
         }
 
@@ -306,6 +339,50 @@ private final class BonsaiLlamaContext {
             pendingUTF8.removeAll(keepingCapacity: true)
             return value
         }
+    }
+}
+
+private struct BonsaiJSONObjectTracker {
+    private var hasStarted = false
+    private var depth = 0
+    private var isInsideString = false
+    private var isEscaping = false
+
+    mutating func consume(_ piece: String) -> Bool {
+        for scalar in piece.unicodeScalars {
+            let value = scalar.value
+
+            if !hasStarted {
+                guard value == 123 else { continue } // {
+                hasStarted = true
+                depth = 1
+                continue
+            }
+
+            if isInsideString {
+                if isEscaping {
+                    isEscaping = false
+                } else if value == 92 { // \\
+                    isEscaping = true
+                } else if value == 34 { // "
+                    isInsideString = false
+                }
+                continue
+            }
+
+            switch value {
+            case 34: // "
+                isInsideString = true
+            case 123: // {
+                depth += 1
+            case 125: // }
+                depth -= 1
+                if depth == 0 { return true }
+            default:
+                break
+            }
+        }
+        return false
     }
 }
 #endif

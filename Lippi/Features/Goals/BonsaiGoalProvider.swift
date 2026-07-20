@@ -41,7 +41,24 @@ struct BonsaiGoalProvider {
         #endif
     }
 
-    func generate(prompt: String, configuration: BonsaiConfiguration) async throws -> String {
+    func prepare(configuration: BonsaiConfiguration) async throws {
+        try ensureReady(configuration: configuration)
+        do {
+            try await engine.prepare()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as BonsaiRuntimeError {
+            throw providerError(for: error)
+        } catch {
+            throw BonsaiProviderError.generationFailed
+        }
+    }
+
+    func generate(
+        prompt: String,
+        configuration: BonsaiConfiguration,
+        maximumOutputTokens: Int32 = 1_200
+    ) async throws -> String {
         try ensureReady(configuration: configuration)
         let request = """
         \(prompt)
@@ -53,7 +70,7 @@ struct BonsaiGoalProvider {
         return try await run(
             systemPrompt: BonsaiSystemPrompt.roadmap,
             userPrompt: request,
-            maximumOutputTokens: 1_700
+            maximumOutputTokens: maximumOutputTokens
         )
     }
 
@@ -99,34 +116,34 @@ struct BonsaiGoalProvider {
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as BonsaiRuntimeError {
-            switch error {
-            case .runtimeUnavailable:
-                throw BonsaiProviderError.runtimeUnavailable
-            case .modelMissing:
-                throw BonsaiProviderError.modelMissing
-            case .modelLoadFailed, .contextCreationFailed:
-                throw BonsaiProviderError.modelLoadFailed
-            case .promptTooLong:
-                throw BonsaiProviderError.promptTooLong
-            case .emptyResponse, .tokenizationFailed, .evaluationFailed:
-                throw BonsaiProviderError.generationFailed
-            }
+            throw providerError(for: error)
         } catch {
             throw BonsaiProviderError.generationFailed
+        }
+    }
+
+    private func providerError(for error: BonsaiRuntimeError) -> BonsaiProviderError {
+        switch error {
+        case .runtimeUnavailable:
+            return .runtimeUnavailable
+        case .modelMissing:
+            return .modelMissing
+        case .modelLoadFailed, .contextCreationFailed:
+            return .modelLoadFailed
+        case .promptTooLong:
+            return .promptTooLong
+        case .emptyResponse, .tokenizationFailed, .evaluationFailed:
+            return .generationFailed
         }
     }
 }
 
 private enum BonsaiSystemPrompt {
     static let roadmap = """
-    You are Lippi's private on-device goal-roadmap planner. Turn the user's stated goal and constraints into a practical route, never a promise of success.
-    Treat only the user brief and supplied excerpts as facts. Put unknown details into assumptions or concrete clarifying questions.
-    Match the real domain work: discovery, learning, building, validation, recovery, review, or habit formation.
-    Use excerpts only within their evidence boundary. Prefer official or specialist material when references conflict.
-    Write every human-readable JSON value in the user's request language. Preserve names, brands, acronyms, quantities, dates, and explicit constraints.
-    If task facts show delay or overload, preserve the goal, reduce the nearest workload, split skipped steps, and avoid blame or invented explanations.
-    Never invent users, demand, feedback, revenue, health outcomes, legal outcomes, resources, deadlines, or personal circumstances.
-    Return valid JSON matching the requested contract and nothing else.
+    You are Lippi's private on-device roadmap planner. Build a small, practical route from the user's facts and constraints, never a promise.
+    Unknown details belong in assumptions or specific questions. Match the real domain work and use supplied excerpts only within their stated boundary.
+    Preserve the user's language, names, quantities, dates, and constraints. If progress shows overload, keep the goal but reduce and split the nearest work without blame.
+    Never invent people, demand, feedback, money, health or legal outcomes, resources, deadlines, or personal circumstances. Return the requested JSON object only.
     """
 
     static let progressSummary = """

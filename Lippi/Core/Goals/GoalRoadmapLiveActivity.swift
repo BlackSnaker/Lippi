@@ -1,31 +1,54 @@
 import Foundation
 
-enum GoalRoadmapActivityStage: String, Sendable {
+enum GoalRoadmapActivityStage: String, Sendable, Equatable {
+    case preparing
     case research
     case planning
     case checking
+    case refining
+    case finalizing
 
     var progress: Double {
         switch self {
-        case .research: return 0.20
-        case .planning: return 0.62
-        case .checking: return 0.88
+        case .preparing: return 0.10
+        case .research: return 0.22
+        case .planning: return 0.52
+        case .checking: return 0.76
+        case .refining: return 0.86
+        case .finalizing: return 0.95
         }
     }
 
     var symbol: String {
         switch self {
+        case .preparing: return "cpu.fill"
         case .research: return "books.vertical.fill"
         case .planning: return "point.topleft.down.curvedto.point.bottomright.up"
         case .checking: return "checklist.checked"
+        case .refining: return "wand.and.stars"
+        case .finalizing: return "checkmark.seal.fill"
         }
     }
 
     func title(lang: AppLang) -> String {
         switch self {
+        case .preparing: return L10n.tr("goals.island.preparing", lang)
         case .research: return L10n.tr("goals.island.research", lang)
         case .planning: return L10n.tr("goals.island.planning", lang)
         case .checking: return L10n.tr("goals.island.checking", lang)
+        case .refining: return L10n.tr("goals.island.refining", lang)
+        case .finalizing: return L10n.tr("goals.island.finalizing", lang)
+        }
+    }
+
+    func detail(lang: AppLang) -> String {
+        switch self {
+        case .preparing: return L10n.tr("goals.processing.detail.preparing", lang)
+        case .research: return L10n.tr("goals.processing.detail.research", lang)
+        case .planning: return L10n.tr("goals.processing.detail.planning", lang)
+        case .checking: return L10n.tr("goals.processing.detail.checking", lang)
+        case .refining: return L10n.tr("goals.processing.detail.refining", lang)
+        case .finalizing: return L10n.tr("goals.processing.detail.finalizing", lang)
         }
     }
 }
@@ -85,16 +108,17 @@ enum GoalRoadmapLiveActivityManager {
 
         let now = Date()
         let attributes = GoalRoadmapActivityAttributes(requestID: UUID())
+        let initialStage = GoalRoadmapActivityStage.preparing
         let state = GoalRoadmapActivityAttributes.ContentState(
             goalTitle: displayGoalTitle(goalTitle),
-            stageTitle: GoalRoadmapActivityStage.research.title(lang: lang),
-            stageSymbol: GoalRoadmapActivityStage.research.symbol,
+            stageTitle: initialStage.title(lang: lang),
+            stageSymbol: initialStage.symbol,
             style: "active",
-            progress: GoalRoadmapActivityStage.research.progress,
+            progress: initialStage.progress,
             startedAt: now,
             isTerminal: false
         )
-        let content = ActivityContent(state: state, staleDate: now.addingTimeInterval(150))
+        let content = ActivityContent(state: state, staleDate: now.addingTimeInterval(600))
         _ = try? Activity<GoalRoadmapActivityAttributes>.request(
             attributes: attributes,
             content: content,
@@ -110,7 +134,7 @@ enum GoalRoadmapLiveActivityManager {
             state.style = "active"
             state.progress = stage.progress
             state.isTerminal = false
-            await activity.update(ActivityContent(state: state, staleDate: Date().addingTimeInterval(150)))
+            await activity.update(ActivityContent(state: state, staleDate: Date().addingTimeInterval(600)))
         }
     }
 
