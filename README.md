@@ -15,8 +15,11 @@
   <img alt="HealthKit" src="https://img.shields.io/badge/HealthKit-Integrated-FF375F?style=flat-square">
   <img alt="Apple Watch" src="https://img.shields.io/badge/Apple%20Watch-Aware-30D158?style=flat-square">
   <img alt="PrismML Bonsai" src="https://img.shields.io/badge/Bonsai-On--device-64D2FF?style=flat-square">
+  <img alt="Personal roadmaps" src="https://img.shields.io/badge/Roadmaps-Personalized-BF5AF2?style=flat-square">
+  <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=flat-square">
   <img alt="Local AI storage" src="https://img.shields.io/badge/Local%20AI-~577%20MB-30D158?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Ready-BF5AF2?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-67%20passing-30D158?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
@@ -35,8 +38,8 @@ Lippi объединяет планирование, фокус и восста�
   <tr>
     <td width="50%" valign="top">
       <strong>🎯 Умные цели</strong><br>
-      Объяснимая дорожная карта и небольшие следующие шаги.<br>
-      <sub>Goal roadmaps that stay manageable.</sub>
+      Персональная дорожная карта из пожеланий, ресурсов и ограничений.<br>
+      <sub>Grounded routes shaped by the user's real context.</sub>
     </td>
     <td width="50%" valign="top">
       <strong>⏱️ Фокус</strong><br>
@@ -47,8 +50,8 @@ Lippi объединяет планирование, фокус и восста�
   <tr>
     <td width="50%" valign="top">
       <strong>❤️ Здоровье</strong><br>
-      HealthKit, Apple Watch, дыхание и разминка глаз.<br>
-      <sub>Wellness signals with user control.</sub>
+      HealthKit, уместное подключение Apple Watch, дыхание и разминка глаз.<br>
+      <sub>Contextual wellness signals with user control.</sub>
     </td>
     <td width="50%" valign="top">
       <strong>✨ Помощник</strong><br>
@@ -63,12 +66,12 @@ Lippi объединяет планирование, фокус и восста�
 | Раздел | Что получает пользователь |
 |---|---|
 | **Сегодня** | Спокойный обзор дня, главный фокус, прогресс и быстрый переход к нужному действию. |
-| **Умные цели** | Диалоговое планирование, измеримые этапы, адаптивный ритм и перенос просроченных шагов только после подтверждения. |
+| **Умные цели** | Пожелания, исходная точка, ресурсы и явные ограничения превращаются в предметную дорожную карту с объяснимой последовательностью, измеримыми этапами и адаптивным ритмом. |
 | **Задачи и Pomodoro** | Контекстные действия, гибкие фокус-сессии, надёжные пауза и продолжение, статистика без визуального шума. |
-| **Здоровье** | Разрешённые показатели HealthKit, сигналы Apple Watch, личная база, отметки самочувствия и объяснимые рекомендации. |
+| **Здоровье** | Разрешённые показатели HealthKit, системное обнаружение сопряжённых Apple Watch, личная база, отметки самочувствия и объяснимые рекомендации. |
 | **Восстановление** | Дыхательные практики, упражнения для глаз и мягкие сценарии перерыва, которые не превращаются в новые обязательства. |
 | **Голосовой помощник** | Управление функциями голосом, компактная кнопка у правого края и отдельные действия VoiceOver. |
-| **Знакомство с Lippi** | Четыре интерактивных шага первого запуска, осмысленный выбор темпа и повторный запуск из настроек. |
+| **Знакомство с Lippi** | Четыре интерактивных шага, осмысленный выбор темпа и видимая автоматическая подготовка локальной модели уже при первом запуске. |
 | **Виджеты** | Быстрый взгляд на задачи, таймер и важные действия с домашнего экрана и экрана блокировки. |
 
 ## Принципы продукта
@@ -81,17 +84,37 @@ Lippi объединяет планирование, фокус и восста�
 
 ## Последнее обновление · Latest release
 
-### 20 июля 2026 — надёжные «Умные цели» Bonsai на реальном iPhone
+### 21 июля 2026 — Lippi понимает контекст и готовится сама
 
-- Полный сценарий построения дорожной карты проверен на iPhone 14: Bonsai загружает все 37 слоёв через Metal и завершает короткие, подробные и 12-недельные планы.
-- Контекст runtime уменьшен с 8K до 4K, поэтому KV-cache сократился вдвое — до 576 МиБ — без потери полного структурированного ответа.
-- Генерация завершается сразу после закрытия корневого JSON, а подготовка модели выполняется параллельно с быстрым подбором двух наиболее подходящих источников.
-- Декодер принимает реальные вариации ответа небольшой локальной модели: строки и объекты, отсутствующие необязательные поля, строковый confidence и частичные секции.
-- Недостающие безопасные части дополняются локально; при сбое исправляющего прохода сохраняется первый ответ, поэтому полезная карта больше не превращается в ошибку «модель не запустилась».
-- Проверка качества отличает плановые количества от выдуманных продуктовых или медицинских метрик и учитывает окончания русских слов.
-- Интерфейс, Live Activity и Dynamic Island показывают настоящие стадии: подготовку, планирование, проверку, исправление и завершение.
-- Новые статусы локализованы на русский, английский, немецкий и испанский.
-- Из исходника Bonsai-провайдера удалены скрытые управляющие байты, мешавшие сборке Xcode.
+Lippi стала увереннее не за счёт более громких обещаний, а за счёт более точного контекста, предметной логики и устойчивого локального исполнения.
+
+<table>
+  <tr>
+    <td width="33%" align="center" valign="top">
+      <strong>🧭 Личный маршрут</strong><br><br>
+      Пожелания, опыт, ресурсы, сроки и явные «не хочу» теперь меняют саму последовательность этапов.<br><br>
+      <sub>Context becomes route decisions.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>🌱 Bonsai готовится сама</strong><br><br>
+      Модель автоматически начинает загружаться при первом запуске, а onboarding показывает живой статус.<br><br>
+      <sub>Local intelligence starts preparing immediately.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>⌚ Apple Watch вовремя</strong><br><br>
+      После обнаружения сопряжённых часов Lippi один раз предлагает приватную синхронизацию через Apple Здоровье.<br><br>
+      <sub>A contextual offer, never a nag.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Предметные дорожные карты.** Продукт, бизнес, карьера, разработка, дизайн, языки, обучение, творчество и здоровье получили собственную логику этапов и полезные контрольные точки.
+- **Видимая персонализация.** Отдельный блок объясняет, почему маршрут подходит именно этому запросу и какое решение стоит принять после первого результата.
+- **Устойчивый Bonsai.** Оборванный JSON безопасно восстанавливается, полезные секции сохраняются, а отсутствующие части аккуратно дополняются локально вместо общей ошибки генерации.
+- **Честное качество.** Lippi отсекает общие советы, повторы, выдуманные показатели, названия и неподтверждённые обещания; уверенность ответа ограничивается реально известным контекстом.
+- **Автоматический первый запуск.** Закреплённая модель загружается только один раз, проходит проверку SHA-256 и не появляется заново после осознанного удаления пользователем.
+- **Бережная работа с часами.** WatchConnectivity отслеживает системное состояние Apple Watch, предложение появляется только после знакомства и входа, а ответ «Не сейчас» запоминается.
+- **Проверено.** Настоящая GGUF-модель прошла production-сценарий в iOS Simulator; успешны все **67 тестов** и подписанная generic iOS Debug-сборка.
 
 [Читать полную историю изменений →](CHANGELOG.md)
 
@@ -113,7 +136,7 @@ Lippi объединяет планирование, фокус и восста�
 |---|---|
 | Интерфейс | SwiftUI, собственная дизайн-система, адаптивный Liquid Glass |
 | Платформа | iOS 18.5+, Swift 5 |
-| Здоровье | HealthKit, фоновые observer queries, Apple Watch source awareness |
+| Здоровье | HealthKit, WatchConnectivity, фоновые observer queries, Apple Watch source awareness |
 | Виджеты | WidgetKit, Live Activities, Dynamic Island |
 | Интеллект | PrismML Bonsai 4B 1-bit на iPhone, Foundation Models fallback, ручной черновик |
 | Голос | Speech, AVFoundation, системная и локальная neural voice озвучка |
@@ -150,7 +173,7 @@ Scripts/                # local voice provider tooling
 2. Выберите схему `Lippi` и команду разработки в Signing & Capabilities.
 3. Для реальных показателей Apple Здоровья используйте физический iPhone; интерфейс можно проверять в Simulator.
 4. Запустите приложение на iOS 18.5 или новее.
-5. Откройте **Настройки → ИИ → Локальный интеллект** и подтвердите загрузку Bonsai на iPhone. После проверки модель работает без Mac и облачного AI.
+5. При первом запуске загрузка Bonsai начнётся автоматически и будет видна в onboarding. Если сеть или свободное место потребуют внимания, продолжите её через **Настройки → ИИ → Локальный интеллект**. После проверки модель работает без Mac и облачного AI.
 6. Для необязательной локальной neural voice озвучки один раз выполните `./Scripts/install-local-tts.zsh` и держите Mac и iPhone в одной Wi‑Fi сети.
 
 ## English
@@ -166,7 +189,9 @@ The product is designed around four promises:
 
 ### Latest release
 
-The July 20 update hardens PrismML Bonsai roadmaps on physical iPhone hardware. A smaller 4K context halves the KV cache, model preparation runs alongside bounded reference retrieval, generation stops at complete JSON, and the planner tolerates realistic schema variations without discarding a useful answer. Smart Goals and Live Activities now show the real preparation, planning, validation, repair, and finalization stages.
+The July 21 update makes Lippi more personal and more self-sufficient. Smart Goals now turn preferences, starting points, resources, constraints, and explicit non-goals into domain-specific route decisions, then explain why that sequence fits. Truncated Bonsai JSON is recovered safely, unsupported claims are removed, and a grounded local fallback preserves a useful plan when generation is incomplete.
+
+The pinned Bonsai model now begins downloading automatically on first launch with live onboarding status. WatchConnectivity monitors the system relationship with a paired Apple Watch and, after onboarding and sign-in, offers private Apple Health synchronization once without nagging. The release is covered by **67 passing tests** and a successful signed generic iOS build.
 
 [Read the complete bilingual changelog →](CHANGELOG.md)
 
