@@ -53,6 +53,18 @@ struct BonsaiConfiguration: Equatable, Sendable {
     }
 }
 
+enum BonsaiAutomaticDownloadPolicy {
+    static let startedKey = "bonsai.model.automaticDownloadStarted.v1"
+
+    static func shouldStart(
+        isEnabled: Bool,
+        isInstalled: Bool,
+        hasStartedAutomatically: Bool
+    ) -> Bool {
+        isEnabled && !isInstalled && !hasStartedAutomatically
+    }
+}
+
 enum BonsaiModelStoreError: Error, Equatable {
     case insufficientStorage
     case network
@@ -221,6 +233,30 @@ final class BonsaiModelStore: ObservableObject {
     }
 
     var isReady: Bool { state == .ready && BonsaiModelStorage.isInstalled }
+
+    /// Starts the sizeable one-time download as soon as Lippi is first opened.
+    /// The persisted marker prevents a later manual deletion from being undone
+    /// by another automatic download on the next launch.
+    func startAutomaticDownloadIfNeeded(defaults: UserDefaults = .standard) {
+        let configuration = BonsaiConfiguration.stored
+        let hasStarted = defaults.bool(forKey: BonsaiAutomaticDownloadPolicy.startedKey)
+        let isInstalled = BonsaiModelStorage.isInstalled
+
+        if isInstalled {
+            defaults.set(true, forKey: BonsaiAutomaticDownloadPolicy.startedKey)
+            refresh()
+            return
+        }
+
+        guard BonsaiAutomaticDownloadPolicy.shouldStart(
+            isEnabled: configuration.isEnabled,
+            isInstalled: isInstalled,
+            hasStartedAutomatically: hasStarted
+        ) else { return }
+
+        defaults.set(true, forKey: BonsaiAutomaticDownloadPolicy.startedKey)
+        startOrResumeDownload()
+    }
 
     func refresh() {
         guard downloadTask == nil else { return }

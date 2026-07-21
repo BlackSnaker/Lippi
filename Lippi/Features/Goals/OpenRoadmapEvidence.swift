@@ -31,6 +31,9 @@ enum GoalEvidenceDomain: String, Codable, Hashable, Sendable {
     case product
     case design
     case language
+    case learning
+    case career
+    case creative
     case health
     case business
     case general
@@ -41,6 +44,9 @@ struct GoalDomainProfile: Hashable, Sendable {
     let intent: String
     let sourceNeed: String
     let planningWarning: String
+    let routeLogic: String
+    let personalizationFocus: String
+    let usefulAngles: String
 
     func promptSection() -> String {
         """
@@ -49,6 +55,9 @@ struct GoalDomainProfile: Hashable, Sendable {
         - likely intent: \(intent)
         - source need: \(sourceNeed)
         - planning warning: \(planningWarning)
+        - route logic: \(routeLogic)
+        - personalize around: \(personalizationFocus)
+        - useful non-obvious angles: \(usefulAngles)
         """
     }
 }
@@ -57,12 +66,26 @@ enum OpenRoadmapCatalog {
     static func profile(for input: GoalPlannerInput) -> GoalDomainProfile {
         let text = "\(input.goal) \(input.context)".foldedForMatching
 
+        if text.containsAny(["работ", "job", "career", "карьер", "собесед", "interview", "резюме", "resume", "cv", "портфолио", "portfolio", "повышен", "promotion", "фриланс", "freelance"]) {
+            return GoalDomainProfile(
+                domain: .career,
+                intent: "move toward a concrete role, opportunity, portfolio, or professional transition",
+                sourceNeed: "prefer role-specific skill evidence, portfolio, interview practice, and realistic job-search references",
+                planningWarning: "do not promise hiring, salary, promotion, clients, or response rates",
+                routeLogic: "target role and evidence gap -> proof-of-skill artifact -> feedback and interview practice -> focused applications or conversations -> review",
+                personalizationFocus: "the user's existing experience, desired role, preferred work format, available network, portfolio gaps, and conditions they do not want",
+                usefulAngles: "a proof artifact stronger than another course, a positioning choice, a feedback loop, and a criterion for narrowing the search"
+            )
+        }
         if text.containsAny(["mvp", "стартап", "startup", "запуст", "launch", "продукт", "product"]) {
             return GoalDomainProfile(
                 domain: .product,
                 intent: "turn an idea into a validated product or launch plan",
                 sourceNeed: "prefer product discovery, MVP validation, market learning, and business planning references",
-                planningWarning: "do not invent demand, users, revenue, traction, conversion, or market proof"
+                planningWarning: "do not invent demand, users, revenue, traction, conversion, or market proof",
+                routeLogic: "problem evidence -> narrow promise and scope -> working prototype -> observed validation -> explicit continue, change, or stop decision",
+                personalizationFocus: "the user's problem hypothesis, preferred audience, available build time, budget, launch boundary, and features they explicitly value or reject",
+                usefulAngles: "the cheapest useful validation, a deliberate non-goal list, one scope tradeoff, and the evidence needed before expanding"
             )
         }
         if text.containsAny(["бизнес", "business", "бизнес план", "business plan", "малый бизнес", "small business", "продаж", "sales", "маркетинг", "marketing", "рынок", "market", "клиент", "customer"]) {
@@ -70,7 +93,10 @@ enum OpenRoadmapCatalog {
                 domain: .business,
                 intent: "make a business idea operational, validated, and measurable without inventing demand",
                 sourceNeed: "prefer official business planning, market learning, operations, and validation references",
-                planningWarning: "separate assumptions from facts; plan discovery and validation before sales or revenue claims"
+                planningWarning: "separate assumptions from facts; plan discovery and validation before sales or revenue claims",
+                routeLogic: "assumption map -> customer/problem learning -> small offer or channel experiment -> operating checklist -> evidence-based decision",
+                personalizationFocus: "the user's skills, budget, preferred sales style, ethical boundaries, audience access, and tolerance for operational complexity",
+                usefulAngles: "a low-cost test, one uncomfortable assumption to verify, a stop-loss boundary, and the simplest repeatable operating loop"
             )
         }
         if text.containsAny(["ios", "iphone", "swift", "xcode", "frontend", "backend", "python", "api", "docker", "devops", "код", "программ"]) {
@@ -78,7 +104,10 @@ enum OpenRoadmapCatalog {
                 domain: .software,
                 intent: "build technical skill or ship a software artifact",
                 sourceNeed: "prefer official documentation, developer roadmaps, and implementation-oriented references",
-                planningWarning: "separate learning, building, testing, and shipping; do not promise app-store, user, or revenue outcomes"
+                planningWarning: "separate learning, building, testing, and shipping; do not promise app-store, user, or revenue outcomes",
+                routeLogic: "scope and technical unknowns -> smallest vertical slice -> core implementation -> reliability and device testing -> release or handoff checklist",
+                personalizationFocus: "the user's current stack, experience, platform, preferred project, weekly capacity, quality bar, and technologies they want or do not want",
+                usefulAngles: "the riskiest technical assumption, a vertical slice, a deliberate architecture boundary, and observable completion checks"
             )
         }
         if text.containsAny(["ui", "ux", "дизайн", "figma", "прототип", "interface", "интерфейс"]) {
@@ -86,7 +115,10 @@ enum OpenRoadmapCatalog {
                 domain: .design,
                 intent: "improve a design skill or create a usable design artifact",
                 sourceNeed: "prefer UX research, accessibility, prototype, and design-system references",
-                planningWarning: "make every milestone produce an artifact: research notes, prototype, test result, or design decision"
+                planningWarning: "make every milestone produce an artifact: research notes, prototype, test result, or design decision",
+                routeLogic: "user and constraint framing -> flows and information structure -> prototype -> accessibility and usability evidence -> documented design decisions",
+                personalizationFocus: "the desired visual feeling, audience, platform, references the user likes, accessibility needs, and styles or patterns they reject",
+                usefulAngles: "one design principle to protect, a critical flow, a testable prototype question, and a reusable decision or component"
             )
         }
         if text.containsAny(["англий", "english", "язык", "language", "a1", "a2", "b1", "b2", "cefr", "ielts", "toefl"]) {
@@ -94,7 +126,32 @@ enum OpenRoadmapCatalog {
                 domain: .language,
                 intent: "reach a language level or improve language ability",
                 sourceNeed: "prefer CEFR and study-practice references",
-                planningWarning: "plan observable language practice and checks; do not guarantee a certified level without assessment"
+                planningWarning: "plan observable language practice and checks; do not guarantee a certified level without assessment",
+                routeLogic: "current baseline -> high-frequency input -> guided output -> real communication practice -> observable reassessment",
+                personalizationFocus: "the situations the user wants the language for, preferred content, current level, disliked study formats, available cadence, and confidence barriers they stated",
+                usefulAngles: "a personally interesting content loop, retrieval rather than passive review, a real-world output artifact, and a lightweight reassessment"
+            )
+        }
+        if text.containsAny(["книг", "роман", "рассказ", "write", "writing", "писат", "музык", "music", "рисов", "illustr", "фото", "photo", "видео", "video", "контент", "content", "подкаст", "podcast", "творч", "creative"]) {
+            return GoalDomainProfile(
+                domain: .creative,
+                intent: "finish a distinctive creative work or build a sustainable creative practice",
+                sourceNeed: "prefer craft practice, iterative creation, critique, and publishing workflow references",
+                planningWarning: "protect the user's voice; do not invent an audience, reception, sales, or creative identity",
+                routeLogic: "creative intention and constraints -> small studies or outline -> complete rough version -> focused revision -> share or archive deliberately",
+                personalizationFocus: "the feeling, theme, medium, references, audience if stated, desired cadence, and creative conventions the user wants to embrace or avoid",
+                usefulAngles: "a constraint that strengthens the work, a small experiment, a definition of done, and a feedback question that protects the user's voice"
+            )
+        }
+        if text.containsAny(["изуч", "научиться", "научить", "learn", "study", "курс", "course", "экзамен", "exam", "сертифик", "certif", "математ", "истор", "science", "wissen"]) {
+            return GoalDomainProfile(
+                domain: .learning,
+                intent: "build usable knowledge or prepare for an assessment through evidence-producing practice",
+                sourceNeed: "prefer authoritative curricula, deliberate practice, retrieval, and project-based learning references",
+                planningWarning: "do not equate consuming material with mastery or promise an exam result",
+                routeLogic: "baseline and knowledge map -> focused learning blocks -> retrieval or applied practice -> feedback on weak areas -> final demonstration",
+                personalizationFocus: "the user's prior knowledge, purpose, preferred learning medium, available time, assessment format, and topics they find motivating",
+                usefulAngles: "a demonstration artifact, a spaced retrieval loop, a misconception check, and a rule for choosing what not to study yet"
             )
         }
         if text.containsAny(["похуд", "вес", "weight", "fitness", "фитнес", "спорт", "бег", "run", "трениров", "exercise", "сон", "здоров"]) {
@@ -102,7 +159,10 @@ enum OpenRoadmapCatalog {
                 domain: .health,
                 intent: "improve health, fitness, weight, recovery, or routine",
                 sourceNeed: "prefer public-health references and safety-first habit guidance",
-                planningWarning: "do not diagnose, prescribe, or guarantee health outcomes; keep steps gentle and measurable"
+                planningWarning: "do not diagnose, prescribe, or guarantee health outcomes; keep steps gentle and measurable",
+                routeLogic: "safe baseline -> smallest sustainable routine -> environment and recovery support -> adherence review -> cautious adjustment",
+                personalizationFocus: "the user's current routine, energy, enjoyable activities, available environment, pace preference, and stated limitations or warning signs",
+                usefulAngles: "an enjoyable minimum version, a friction-reduction change, a consistency signal, and a clear point for professional advice when appropriate"
             )
         }
 
@@ -110,7 +170,10 @@ enum OpenRoadmapCatalog {
             domain: .general,
             intent: "make the goal concrete and turn it into a sustainable route",
             sourceNeed: "prefer broadly applicable planning references and the user's own context",
-            planningWarning: "avoid generic productivity advice; ask clarifying questions when facts are missing"
+            planningWarning: "avoid generic productivity advice; ask clarifying questions when facts are missing",
+            routeLogic: "desired change and current state -> smallest visible result -> repeatable working rhythm -> review and adjustment -> completion or next decision",
+            personalizationFocus: "the user's own definition of a good result, preferred pace, available support, constraints, interests, and explicit non-goals",
+            usefulAngles: "the smallest meaningful proof, one tradeoff, an easy-to-miss dependency, and a review question that changes the next step"
         )
     }
 
@@ -119,7 +182,7 @@ enum OpenRoadmapCatalog {
         let text = "\(input.goal) \(input.context)".foldedForMatching
         let scored = sources.compactMap { source -> (OpenRoadmapSourceDefinition, Int)? in
             let score = source.triggers.reduce(into: 0) { partialResult, trigger in
-                if text.contains(trigger) {
+                if text.containsAny([trigger]) {
                     partialResult += trigger.count > 5 ? 4 : 2
                 }
             }
@@ -405,6 +468,9 @@ private extension String {
     }
 
     func containsAny(_ needles: [String]) -> Bool {
-        needles.contains { contains($0) }
+        let tokens = split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        return needles.contains { needle in
+            needle.count <= 3 ? tokens.contains(needle) : contains(needle)
+        }
     }
 }

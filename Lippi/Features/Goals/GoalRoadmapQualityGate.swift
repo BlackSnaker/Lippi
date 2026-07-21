@@ -56,6 +56,27 @@ enum GoalRoadmapQualityGate {
             findings.append("Return exactly two first actions that can start within 24-48 hours.")
         }
 
+        let insights = roadmap.personalizedInsights ?? []
+        if insights.count != 2 {
+            findings.append("Return exactly two personalized insights: one route-fit explanation and one useful tradeoff, decision, or checkpoint.")
+        } else {
+            let normalizedInsights = insights.map(normalized)
+            if Set(normalizedInsights).count != normalizedInsights.count || insights.contains(where: { normalized($0).count < 18 }) {
+                findings.append("Make both personalized insights distinct and specific rather than short generic restatements.")
+            }
+
+            let contextTerms = meaningfulTerms(in: input.context)
+            if !contextTerms.isEmpty {
+                let insightTerms = normalized(insights.joined(separator: " ")).split(separator: " ").map(String.init)
+                let reflectsContext = contextTerms.contains { anchor in
+                    insightTerms.contains { looselyMatches(anchor, $0) }
+                }
+                if !reflectsContext {
+                    findings.append("Make the route-fit insight explicitly reflect a stated preference, starting resource, constraint, or non-goal from the user's context.")
+                }
+            }
+        }
+
         let normalizedTitles = roadmap.milestones.map { normalized($0.title) }
         if Set(normalizedTitles).count != normalizedTitles.count {
             findings.append("Give every milestone a distinct purpose and title.")
@@ -97,6 +118,7 @@ enum GoalRoadmapQualityGate {
 
         let plannedFields = [
             roadmap.summary,
+            (roadmap.personalizedInsights ?? []).joined(separator: " "),
             roadmap.successCriteria.joined(separator: " "),
             roadmap.firstActions.joined(separator: " "),
             roadmap.milestones.map(\.target).joined(separator: " "),
@@ -151,6 +173,31 @@ enum GoalRoadmapQualityGate {
         var sanitized = roadmap
         let goal = String(input.goal.prefix(90))
 
+        func cleanExamples(_ text: String) -> String {
+            removingGeneratedExamples(from: text)
+        }
+
+        sanitized.title = cleanExamples(sanitized.title)
+        sanitized.summary = cleanExamples(sanitized.summary)
+        sanitized.successCriteria = sanitized.successCriteria.map(cleanExamples)
+        sanitized.firstActions = sanitized.firstActions.map(cleanExamples)
+        sanitized.assumptions = sanitized.assumptions.map(cleanExamples)
+        sanitized.personalizedInsights = sanitized.personalizedInsights?.map(cleanExamples)
+        sanitized.clarifyingQuestions = sanitized.clarifyingQuestions?.map(cleanExamples)
+        sanitized.milestones = sanitized.milestones.map { milestone in
+            var milestone = milestone
+            milestone.title = cleanExamples(milestone.title)
+            milestone.target = cleanExamples(milestone.target)
+            milestone.tasks = milestone.tasks.map(cleanExamples)
+            return milestone
+        }
+        sanitized.habits = sanitized.habits.map {
+            GoalHabit(title: cleanExamples($0.title), detail: cleanExamples($0.detail))
+        }
+        sanitized.risks = sanitized.risks.map {
+            GoalRisk(title: cleanExamples($0.title), mitigation: cleanExamples($0.mitigation))
+        }
+
         if hasUnsupportedOutcomeClaim(in: sanitized.summary, input: input) {
             sanitized.summary = L10n.fmt("goals.quality.safe_summary", lang, goal, input.horizon.weeks)
         }
@@ -173,6 +220,13 @@ enum GoalRoadmapQualityGate {
             hasUnsupportedOutcomeClaim(in: item, input: input)
                 ? L10n.tr("goals.quality.safe_assumption", lang)
                 : item
+        }
+
+        sanitized.personalizedInsights = sanitized.personalizedInsights?.enumerated().map { index, item in
+            guard hasUnsupportedOutcomeClaim(in: item, input: input) else { return item }
+            return index == 0
+                ? L10n.fmt("goals.insights.local_fit", lang, String(input.goal.prefix(140)))
+                : L10n.tr("goals.insights.local_decision", lang)
         }
 
         sanitized.milestones = sanitized.milestones.enumerated().map { index, milestone in
@@ -276,7 +330,9 @@ enum GoalRoadmapQualityGate {
     private static func hasUnsupportedOutcomeClaim(in text: String, input: GoalPlannerInput) -> Bool {
         let unsupportedPhrases = [
             "paid user", "user acquisition", "acquire users", "will pay", "generate revenue", "be profitable",
-            "платящ", "привлечь пользователей", "пользователи будут платить", "принесет выручку", "будет прибыльным"
+            "attract attention", "ensures validation", "guarantees validation", "will motivate", "will engage",
+            "платящ", "привлечь пользователей", "пользователи будут платить", "принесет выручку", "будет прибыльным",
+            "привлекает внимание", "обеспечивает быструю валидацию", "гарантирует валидацию", "будет мотивировать", "вовлечет"
         ]
         let userBrief = "\(input.goal) \(input.context)".lowercased()
         if unsupportedPhrases.contains(where: { phrase in
@@ -297,6 +353,14 @@ enum GoalRoadmapQualityGate {
 
     private static func numbers(in text: String) -> [String] {
         text.split(whereSeparator: { !$0.isNumber }).map(String.init)
+    }
+
+    private static func removingGeneratedExamples(from text: String) -> String {
+        let pattern = #"(?iu)\s*\((?:например|for\s+example|e\.g\.|zum\s+beispiel|por\s+ejemplo)[^)]*\)"#
+        guard let expression = try? NSRegularExpression(pattern: pattern) else { return text }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return expression.stringByReplacingMatches(in: text, range: range, withTemplate: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func meaningfulTerms(in text: String) -> [String] {

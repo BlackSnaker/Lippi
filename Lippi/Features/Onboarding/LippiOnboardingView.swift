@@ -41,6 +41,7 @@ struct LippiOnboardingView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage("goal.progress.userState") private var userStateRaw: String = GoalUserState.calm.rawValue
+    @ObservedObject private var modelStore = BonsaiModelStore.shared
 
     @State private var step = 0
     @State private var selectedFeature: LippiOnboardingFeature = .plan
@@ -414,12 +415,49 @@ struct LippiOnboardingView: View {
 
             LippiGlassEffectGroup(spacing: 10) {
                 VStack(spacing: 10) {
-                    trustRow(icon: "iphone", text: s("onboarding.ready.local"), tone: Color(hex: 0x0A84FF))
+                    trustRow(icon: modelStatusIcon, text: modelStatusText, tone: modelStatusTone)
                     trustRow(icon: "slider.horizontal.3", text: s("onboarding.ready.control"), tone: Color(hex: 0x64D2FF))
                     trustRow(icon: "heart.fill", text: s("onboarding.ready.kind"), tone: Color(hex: 0x30D158))
                 }
             }
             .lippiMotionScene(2, y: 7)
+        }
+    }
+
+    private var modelStatusText: String {
+        switch modelStore.state {
+        case .ready:
+            return s("onboarding.ready.model.ready")
+        case .downloading:
+            return L10n.fmt(
+                "onboarding.ready.model.downloading",
+                lang,
+                Int((modelStore.progress * 100).rounded())
+            )
+        case .verifying:
+            return s("onboarding.ready.model.verifying")
+        case .failed:
+            return s("onboarding.ready.model.attention")
+        case .missing, .paused:
+            return s("onboarding.ready.model.preparing")
+        }
+    }
+
+    private var modelStatusIcon: String {
+        switch modelStore.state {
+        case .ready: return "checkmark.circle.fill"
+        case .downloading: return "arrow.down.circle.fill"
+        case .verifying: return "checkmark.shield.fill"
+        case .failed: return "exclamationmark.triangle.fill"
+        case .missing, .paused: return "sparkles"
+        }
+    }
+
+    private var modelStatusTone: Color {
+        switch modelStore.state {
+        case .ready: return Color(hex: 0x30D158)
+        case .failed: return Color(hex: 0xFF9F0A)
+        default: return Color(hex: 0x0A84FF)
         }
     }
 

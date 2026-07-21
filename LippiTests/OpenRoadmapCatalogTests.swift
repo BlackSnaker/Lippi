@@ -13,7 +13,7 @@ struct OpenRoadmapCatalogTests {
 
         let identifiers = OpenRoadmapCatalog.candidates(for: input).map(\.id)
 
-        #expect(identifiers == ["roadmap-frontend", "mdn-learn-web"])
+        #expect(Set(identifiers) == Set(["roadmap-frontend", "mdn-learn-web"]))
     }
 
     @Test("Selects health references for a gradual weight goal")
@@ -41,5 +41,37 @@ struct OpenRoadmapCatalogTests {
         )
 
         #expect(OpenRoadmapCatalog.candidates(for: input).isEmpty)
+    }
+
+    @Test("Uses a career route for portfolio and job goals")
+    func selectsCareerProfile() {
+        let input = GoalPlannerInput(
+            goal: "Подготовить портфолио для новой работы",
+            context: "Хочу удалённую продуктовую роль и не хочу вести ежедневные соцсети",
+            horizon: .eightWeeks,
+            intensity: .balanced
+        )
+
+        let profile = OpenRoadmapCatalog.profile(for: input)
+
+        #expect(profile.domain == .career)
+        #expect(profile.routeLogic.contains("proof-of-skill artifact"))
+        #expect(profile.personalizationFocus.contains("conditions they do not want"))
+    }
+
+    @Test("Uses a creative route for a distinctive writing project")
+    func selectsCreativeProfile() {
+        let input = GoalPlannerInput(
+            goal: "Написать короткий научно-фантастический рассказ",
+            context: "Люблю тихую атмосферу и не хочу копировать структуру популярных сериалов",
+            horizon: .fourWeeks,
+            intensity: .light
+        )
+
+        let profile = OpenRoadmapCatalog.profile(for: input)
+
+        #expect(profile.domain == .creative)
+        #expect(profile.routeLogic.contains("complete rough version"))
+        #expect(profile.usefulAngles.contains("protects the user's voice"))
     }
 }

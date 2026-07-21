@@ -12,9 +12,12 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2020%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2021%2C%202026-0A84FF?style=for-the-badge">
     <img alt="On-device intelligence" src="https://img.shields.io/badge/Bonsai-Device%20tested-64D2FF?style=for-the-badge">
-    <img alt="Reliable roadmaps" src="https://img.shields.io/badge/Roadmaps-Resilient-30D158?style=for-the-badge">
+    <img alt="Personalized roadmaps" src="https://img.shields.io/badge/Roadmaps-Personalized-30D158?style=for-the-badge">
+    <img alt="JSON recovery" src="https://img.shields.io/badge/JSON-Recovery-FF9F0A?style=for-the-badge">
+    <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=for-the-badge">
+    <img alt="Apple Watch discovery" src="https://img.shields.io/badge/Watch-Discovery-FF375F?style=for-the-badge">
     <img alt="Lower memory" src="https://img.shields.io/badge/Memory-4K%20context-BF5AF2?style=for-the-badge">
     <img alt="Live progress" src="https://img.shields.io/badge/Progress-Live-FF9F0A?style=for-the-badge">
   </p>
@@ -51,6 +54,49 @@
       <br><br>
       <strong>Быстрее к результату</strong><br>
       <sub>Модель и материалы готовятся параллельно, а генерация завершается сразу после полного JSON.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 21, 2026 - Personal roadmaps, automatic Bonsai setup, and Apple Watch awareness
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi now builds personal, resilient roadmaps from the user's real context, prepares Bonsai automatically on first launch, and offers private Apple Watch synchronization at the right moment.</strong></p>
+      <ul>
+        <li><strong>Richer request brief:</strong> Lippi separately captures known facts, preferences, available experience or resources, hard constraints, avoidances, quantities, dates, and a bounded copy of the user's own note.</li>
+        <li><strong>Domain playbooks:</strong> product, business, career, software, design, language, learning, creative, health, and general goals now have distinct route logic, personalization priorities, warnings, and useful non-obvious angles.</li>
+        <li><strong>Visible personalization:</strong> every AI roadmap carries two dedicated insights: why the sequence fits this user's context and which tradeoff, decision, or checkpoint deserves attention. They appear in a localized “Why this route fits” block.</li>
+        <li><strong>Denser mobile contract:</strong> Bonsai is asked for two concise tasks per milestone, one habit, one risk, and two focused questions. Output budgets were recalibrated for Russian JSON while keeping the 4K context boundary.</li>
+        <li><strong>Truncated JSON recovery:</strong> if generation reaches its token limit after producing useful sections, Lippi closes the root object at a safe structural point, decodes the available content, and completes only missing sections locally.</li>
+        <li><strong>Stronger quality and safety:</strong> generic insights, repeated or vague tasks, invented performance claims, unsupported engagement promises, and made-up named examples are rejected or sanitized. Confidence is capped from the amount of context actually supplied.</li>
+        <li><strong>Useful fallback by domain:</strong> local completion now produces exactly three milestones for 4/8-week routes and four for 12 weeks, with product, career, creative, and language artifacts instead of generic study activity.</li>
+        <li><strong>Better classification:</strong> career intent wins over incidental “product” wording, creative writing is no longer mistaken for learning because of “science-fiction,” and short keywords match whole tokens to prevent accidental health references.</li>
+        <li><strong>Automatic first-run intelligence:</strong> the pinned Bonsai model begins downloading as soon as Lippi is opened for the first time. Onboarding shows live progress, verification, readiness, or a recoverable error without blocking the rest of the app. The one-time policy respects a later manual deletion.</li>
+        <li><strong>Contextual Apple Watch offer:</strong> WatchConnectivity monitors the iPhone's paired/reachable Watch state. After onboarding and sign-in, Lippi offers the existing private Apple Health sync once, skips the prompt when health insights are already enabled, and remembers “Not now” instead of nagging.</li>
+        <li><strong>Real-model verification:</strong> the pinned 546 MiB Bonsai GGUF completed the full production pipeline in an iOS Simulator CPU stress test. The accepted result remained sourced from Bonsai and explicitly used Swift, four weekly hours, science fiction, podcasts, and the user's no-streak/no-social-network boundary.</li>
+        <li><strong>Regression coverage:</strong> all 67 tests pass, including new request-brief, domain, personalization, sanitization, fallback, truncated-JSON, automatic-download, and Watch-offer policy cases. A signed generic iOS Debug build also succeeds. The physical iPhone was offline for this update, so installation was not repeated.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Lippi теперь строит персональные устойчивые дорожные карты из реального контекста пользователя, автоматически готовит Bonsai при первом запуске и вовремя предлагает приватную синхронизацию Apple Watch.</strong></p>
+      <ul>
+        <li><strong>Более точный разбор запроса:</strong> Lippi отдельно сохраняет известные факты, пожелания, опыт и доступные ресурсы, жёсткие ограничения, то, чего пользователь хочет избежать, числа, даты и ограниченную копию исходной заметки.</li>
+        <li><strong>Доменные сценарии:</strong> продукт, бизнес, карьера, разработка, дизайн, языки, обучение, творчество, здоровье и общие цели получили собственную логику этапов, фокус персонализации, предупреждения и полезные неочевидные ракурсы.</li>
+        <li><strong>Персонализация видна:</strong> каждая AI-карта содержит два отдельных вывода — почему последовательность подходит этому пользователю и на какой компромисс, решение или контрольную точку стоит обратить внимание. Они показываются в локализованном блоке «Почему этот маршрут подходит».</li>
+        <li><strong>Плотный мобильный контракт:</strong> Bonsai возвращает по две короткие задачи на этап, одну привычку, один риск и два точных вопроса. Бюджеты ответа откалиброваны для русского JSON без выхода за контекст 4K.</li>
+        <li><strong>Восстановление оборванного JSON:</strong> если генерация дошла до лимита после полезных секций, Lippi безопасно закрывает корневой объект на структурной границе, разбирает доступное содержимое и локально дополняет только отсутствующие части.</li>
+        <li><strong>Строже качество и безопасность:</strong> общие выводы, повторы, расплывчатые действия, выдуманные показатели, неподтверждённые обещания вовлечения и придуманные названия примеров отклоняются или очищаются. Confidence ограничен объёмом реально переданного контекста.</li>
+        <li><strong>Содержательный fallback по домену:</strong> локальное дополнение создаёт ровно три этапа для горизонта 4/8 недель и четыре для 12 недель, используя продуктовые, карьерные, творческие и языковые артефакты вместо общих учебных действий.</li>
+        <li><strong>Точнее классификация:</strong> карьерное намерение имеет приоритет над случайным словом «продукт», научная фантастика больше не считается обучением из-за части слова «науч», а короткие ключи совпадают только с целыми токенами и не подтягивают случайные материалы о здоровье.</li>
+        <li><strong>Автоматический интеллект с первого запуска:</strong> закреплённая модель Bonsai начинает загружаться сразу после первого открытия Lippi. Onboarding показывает живой прогресс, проверку, готовность или исправимую ошибку, не блокируя остальные возможности. Одноразовая политика уважает последующее ручное удаление модели.</li>
+        <li><strong>Уместное предложение Apple Watch:</strong> WatchConnectivity отслеживает системное состояние сопряжённых и доступных часов. После onboarding и входа Lippi один раз предлагает существующую приватную синхронизацию через Apple Здоровье, не показывает её при уже включённых данных и запоминает ответ «Не сейчас».</li>
+        <li><strong>Проверка настоящей моделью:</strong> закреплённый GGUF Bonsai размером 546 МиБ завершил полный production-сценарий в стресс-тесте iOS Simulator на CPU. Принятый результат сохранил источник Bonsai и явно использовал Swift, четыре часа в неделю, научную фантастику, подкасты и запрет пользователя на стрики и социальную сеть.</li>
+        <li><strong>Регрессионная проверка:</strong> прошли все 67 тестов, включая новые сценарии разбора запроса, доменов, персонализации, очистки, fallback, оборванного JSON, автозагрузки и политики предложения часов. Подписанная generic iOS Debug-сборка также успешна. Физический iPhone во время обновления был офлайн, поэтому повторная установка не выполнялась.</li>
+      </ul>
     </td>
   </tr>
 </table>

@@ -14,8 +14,20 @@ private enum AuthMode: String, CaseIterable {
 
 struct AppRootView: View {
     @EnvironmentObject private var auth: AuthStore
+    @EnvironmentObject private var healthKit: HealthKitManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(LippiOnboarding.completedKey) private var hasCompletedOnboarding = false
+    @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
+    @AppStorage(AppleWatchSyncOfferPolicy.respondedKey) private var hasRespondedToWatchSyncOffer = false
+    @AppStorage(HealthKitManager.pairingOnboardingCompletedKey) private var hasCompletedPairingOnboarding = false
+    @StateObject private var modelStore = BonsaiModelStore.shared
+    @StateObject private var watchDiscovery = AppleWatchDiscovery.shared
+    @State private var showsWatchSyncOffer = false
+    @State private var showsWatchPairing = false
+
+    private var lang: AppLang { L10n.lang(from: langRaw) }
+    private func s(_ key: String) -> String { L10n.tr(key, lang) }
 
     var body: some View {
         Group {
@@ -47,7 +59,57 @@ struct AppRootView: View {
         .animation(reduceMotion ? nil : DS.motionNavigate, value: hasCompletedOnboarding)
         .task {
             auth.bootstrapIfNeeded()
+            modelStore.startAutomaticDownloadIfNeeded()
+            watchDiscovery.activate()
+            evaluateWatchSyncOffer()
         }
+        .onChange(of: auth.isAuthenticated) { _, _ in
+            evaluateWatchSyncOffer()
+        }
+        .onChange(of: hasCompletedOnboarding) { _, _ in
+            evaluateWatchSyncOffer()
+        }
+        .onChange(of: watchDiscovery.availability) { _, _ in
+            evaluateWatchSyncOffer()
+        }
+        .onChange(of: healthKit.isEnabled) { _, _ in
+            evaluateWatchSyncOffer()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            watchDiscovery.activate()
+            evaluateWatchSyncOffer()
+        }
+        .alert(s("watch.sync.offer.title"), isPresented: $showsWatchSyncOffer) {
+            Button(s("watch.sync.offer.connect")) {
+                hasRespondedToWatchSyncOffer = true
+                DispatchQueue.main.async {
+                    showsWatchPairing = true
+                }
+            }
+            Button(s("watch.sync.offer.later"), role: .cancel) {
+                hasRespondedToWatchSyncOffer = true
+            }
+        } message: {
+            Text(s("watch.sync.offer.message"))
+        }
+        .fullScreenCover(isPresented: $showsWatchPairing) {
+            AppleWatchPairingView(
+                manager: healthKit,
+                hasCompletedOnboarding: $hasCompletedPairingOnboarding
+            )
+        }
+    }
+
+    private func evaluateWatchSyncOffer() {
+        let shouldOffer = AppleWatchSyncOfferPolicy.shouldOffer(
+            availability: watchDiscovery.availability,
+            hasCompletedOnboarding: hasCompletedOnboarding,
+            isAuthenticated: auth.isAuthenticated,
+            healthInsightsEnabled: healthKit.isEnabled,
+            hasResponded: hasRespondedToWatchSyncOffer
+        )
+        showsWatchSyncOffer = shouldOffer
     }
 }
 

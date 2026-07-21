@@ -65,13 +65,13 @@ enum RussianGoalTranslator {
         if source.containsAnyGoalToken(["работ", "занят", "офис", "смен"]) {
             points.append("Constraint: the plan must fit around work commitments.")
         }
-        if source.containsAnyGoalToken(["семь", "ребен", "дет", "родител"]) {
+        if source.containsAnyGoalToken(["семь", "ребен", "детей", "детьми", "родител"]) {
             points.append("Constraint: the plan must fit around family commitments.")
         }
         if source.containsAnyGoalToken(["бюджет", "деньг", "дешев", "расход"]) {
             points.append("Constraint: keep the plan budget-aware.")
         }
-        if source.containsAnyGoalToken(["здоров", "травм", "бол", "врач"]) {
+        if subject == "weight" || source.containsAnyGoalToken(["здоров", "травм", "бол", "врач"]) {
             points.append("Safety: keep health-related steps gradual and avoid medical claims.")
         }
         if !context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

@@ -83,6 +83,45 @@ struct GoalRequestBriefTests {
         #expect(roadmap.clarifyingQuestions?.first?.localizedCaseInsensitiveContains("already done") == true)
     }
 
+    @Test("Separates preferences, starting point, and explicit non-goals")
+    func extractsPersonalizationSignals() {
+        let input = GoalPlannerInput(
+            goal: "Подготовить портфолио для новой работы",
+            context: "Уже 3 года работаю дизайнером. Мне важно сохранить спокойный темп и показать мобильные проекты. Не хочу вести ежедневные соцсети.",
+            horizon: .eightWeeks,
+            intensity: .balanced
+        )
+
+        let brief = GoalRequestBrief.make(input: input, fallbackLang: .en)
+        let section = brief.promptSection()
+
+        #expect(brief.startingPoint.contains { $0.localizedCaseInsensitiveContains("3 года") })
+        #expect(brief.preferences.contains { $0.localizedCaseInsensitiveContains("мобильные проекты") })
+        #expect(brief.avoidances.contains { $0.localizedCaseInsensitiveContains("соцсети") })
+        #expect(section.contains("desired experience and priorities"))
+        #expect(section.contains("explicit avoidances and non-goals"))
+    }
+
+    @Test("Product fallback stays domain-specific and uses the selected horizon")
+    func productFallbackIsDomainSpecific() {
+        let input = GoalPlannerInput(
+            goal: "Launch an iOS speaking practice app",
+            context: "Solo Swift developer with four hours weekly. I want calm practice without streak pressure.",
+            horizon: .eightWeeks,
+            intensity: .light
+        )
+
+        let roadmap = GoalRoadmapEngine().buildDraftRoadmap(input: input, lang: .en)
+        let tasks = roadmap.milestones.flatMap(\.tasks).joined(separator: " ")
+
+        #expect(roadmap.milestones.count == 3)
+        #expect(roadmap.milestones.allSatisfy { $0.tasks.count == 2 })
+        #expect(roadmap.firstActions.count == 2)
+        #expect(tasks.localizedCaseInsensitiveContains("prototype"))
+        #expect(tasks.localizedCaseInsensitiveContains("acceptance checklist"))
+        #expect(roadmap.personalizedInsights?.first?.localizedCaseInsensitiveContains("calm practice") == true)
+    }
+
     private func containsCyrillic(_ text: String) -> Bool {
         text.unicodeScalars.contains { scalar in
             (0x0400...0x04FF).contains(Int(scalar.value))

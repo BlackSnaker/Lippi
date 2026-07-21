@@ -261,7 +261,7 @@ enum AppVoiceCommandParser {
 
     private static func isPausePomodoro(_ text: String) -> Bool {
         let pomodoroWords = ["помодоро", "pomodoro", "focus", "фокус"]
-        let pauseWords = ["пауза", "поставь на паузу", "pause", "pausa", "anhalten", "unterbrechen"]
+        let pauseWords = ["пауз", "поставь на паузу", "pause", "pausa", "anhalten", "unterbrechen"]
         return containsAny(text, keywords: pomodoroWords) && containsAny(text, keywords: pauseWords)
     }
 
@@ -908,7 +908,7 @@ private final class AppEmbeddedAIInterpreter {
         let openWords = ["откро", "перейд", "покаж", "open", "show", "go", "offne", "abre"]
         let pomodoroWords = ["помодоро", "pomodoro", "focus", "фокус"]
         let startWords = ["запуст", "начн", "старт", "start", "run", "iniciar", "starte"]
-        let pauseWords = ["пауза", "pause", "pausa", "anhalten"]
+        let pauseWords = ["пауз", "pause", "pausa", "anhalten"]
         let resumeWords = ["продолж", "возобнов", "resume", "continue", "fortsetzen", "reanudar"]
         let stopWords = ["стоп", "останов", "stop", "cancel", "stopp", "detener", "parar"]
         let shortBreakWords = ["коротк", "short", "klein", "corto"]

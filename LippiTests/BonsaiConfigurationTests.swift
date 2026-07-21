@@ -39,6 +39,30 @@ struct BonsaiConfigurationTests {
         #expect(defaults.bool(forKey: BonsaiConfiguration.migrationKey))
     }
 
+    @Test("Starts the automatic model download only once when the model is missing")
+    func automaticDownloadPolicy() {
+        #expect(BonsaiAutomaticDownloadPolicy.shouldStart(
+            isEnabled: true,
+            isInstalled: false,
+            hasStartedAutomatically: false
+        ))
+        #expect(!BonsaiAutomaticDownloadPolicy.shouldStart(
+            isEnabled: true,
+            isInstalled: true,
+            hasStartedAutomatically: false
+        ))
+        #expect(!BonsaiAutomaticDownloadPolicy.shouldStart(
+            isEnabled: true,
+            isInstalled: false,
+            hasStartedAutomatically: true
+        ))
+        #expect(!BonsaiAutomaticDownloadPolicy.shouldStart(
+            isEnabled: false,
+            isInstalled: false,
+            hasStartedAutomatically: false
+        ))
+    }
+
     private func restore(_ value: Any?, key: String, defaults: UserDefaults) {
         if let value {
             defaults.set(value, forKey: key)

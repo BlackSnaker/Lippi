@@ -64,6 +64,40 @@ struct GoalRoadmapQualityGateTests {
         #expect(GoalRoadmapQualityGate.validated(roadmap, input: input, lang: .en) == nil)
     }
 
+    @Test("Rejects roadmap without context-specific insights")
+    func rejectsGenericPersonalizedInsights() {
+        let input = GoalPlannerInput(
+            goal: "Launch an iOS habit tracker MVP",
+            context: "Solo Swift developer with 8 hours per week and a $300 budget",
+            horizon: .eightWeeks,
+            intensity: .balanced
+        )
+        var roadmap = sampleRoadmap()
+        roadmap.personalizedInsights = ["This is a good route.", "Keep making progress."]
+
+        #expect(GoalRoadmapQualityGate.validated(roadmap, input: input, lang: .en) == nil)
+    }
+
+    @Test("Removes invented named examples and unsupported engagement claims")
+    func sanitizesGeneratedExamplesAndClaims() throws {
+        let input = GoalPlannerInput(
+            goal: "Launch an iOS habit tracker MVP",
+            context: "Solo Swift developer with 8 hours per week and a $300 budget",
+            horizon: .eightWeeks,
+            intensity: .balanced
+        )
+        var roadmap = sampleRoadmap()
+        roadmap.milestones[0].tasks[0] = "Write a review note after a podcast (for example, 'Made Up Show')."
+        roadmap.personalizedInsights?[1] = "This interaction attracts attention and ensures validation."
+
+        let normalized = GoalRoadmapQualityGate.normalizedForDisplay(roadmap, input: input, lang: .en)
+        let secondInsight = try #require(normalized.personalizedInsights?[1])
+
+        #expect(!normalized.milestones[0].tasks[0].contains("Made Up Show"))
+        #expect(!secondInsight.localizedCaseInsensitiveContains("attracts attention"))
+        #expect(secondInsight.localizedCaseInsensitiveContains("decision"))
+    }
+
     private func sampleRoadmap() -> GoalRoadmap {
         GoalRoadmap(
             title: "Habit tracker MVP",
@@ -79,6 +113,10 @@ struct GoalRoadmapQualityGateTests {
                 "Create a SwiftUI project and a habit data model."
             ],
             assumptions: ["The preferred pricing approach still needs confirmation."],
+            personalizedInsights: [
+                "Because you are a solo Swift developer with eight hours per week, a narrow vertical slice protects both build time and test quality.",
+                "Treat the first physical-device test as a scope gate: keep the core habit loop and defer features that do not improve it."
+            ],
             clarifyingQuestions: [
                 "Which habit loop is most important for the first release?",
                 "How many hours per week can you spend on testing the first build?"
