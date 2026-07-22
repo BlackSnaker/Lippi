@@ -494,6 +494,9 @@ enum L10n {
         "bonsai.error.model_missing": "Модель Bonsai ещё не загружена на iPhone.",
         "bonsai.error.runtime": "Локальный runtime PrismML не подключён к этой сборке.",
         "bonsai.error.load": "iPhone не смог загрузить модель в память. Освободи память и попробуй ещё раз.",
+        "bonsai.error.low_power": "Режим энергосбережения включён, поэтому Lippi завершила план локально без тяжёлой генерации.",
+        "bonsai.error.thermal": "iPhone нагрелся, поэтому Lippi остановила модель и безопасно завершила план локально.",
+        "bonsai.error.time_limit": "Lippi остановила тяжёлую генерацию по безопасному лимиту времени и завершила план локально.",
         "bonsai.error.context": "Контекст цели слишком большой для локальной модели. Сократи описание или количество источников.",
         "bonsai.error.generation": "Bonsai не завершил локальную генерацию. Попробуй ещё раз после небольшой паузы.",
         "bonsai.error.malformed": "Bonsai ответил не по ожидаемой структуре. Попробуй проверку ещё раз.",
@@ -1866,6 +1869,9 @@ enum L10n {
         "bonsai.error.model_missing": "The Bonsai model has not been downloaded to this iPhone yet.",
         "bonsai.error.runtime": "The PrismML local runtime is not linked in this build.",
         "bonsai.error.load": "iPhone could not load the model into memory. Free memory and try again.",
+        "bonsai.error.low_power": "Low Power Mode is enabled, so Lippi completed the plan locally without heavy generation.",
+        "bonsai.error.thermal": "iPhone became warm, so Lippi stopped the model and safely completed the plan locally.",
+        "bonsai.error.time_limit": "Lippi stopped heavy generation at its safe time limit and completed the plan locally.",
         "bonsai.error.context": "The goal context is too large for the local model. Shorten the description or reference set.",
         "bonsai.error.generation": "Bonsai did not finish local generation. Wait a moment and try again.",
         "bonsai.error.malformed": "Bonsai returned an unexpected structure. Run the check again.",
@@ -2916,6 +2922,9 @@ enum L10n {
         "healthkit.diagnostics.attention.subtitle": "Lippi found a specific stage that can be restored without resetting plans or pairing the Watch again."
     ]
     private static let extraLooseDE: [String: String] = [
+        "bonsai.error.low_power": "Der Stromsparmodus ist aktiv. Lippi hat den Plan deshalb lokal ohne aufwendige Generierung vervollständigt.",
+        "bonsai.error.thermal": "Das iPhone wurde warm. Lippi hat das Modell gestoppt und den Plan sicher lokal vervollständigt.",
+        "bonsai.error.time_limit": "Lippi hat die rechenintensive Generierung am sicheren Zeitlimit gestoppt und den Plan lokal vervollständigt.",
         "goals.insights.title": "Warum dieser Weg passt",
         "goals.insights.local_fit": "Der Weg knüpft an deinen Wunsch oder Ausgangspunkt „%@“ an und konzentriert die Etappen auf überprüfbare Ergebnisse.",
         "goals.insights.local_decision": "Entscheide nach dem ersten Ergebnis ausdrücklich, was du beibehältst, änderst oder ausschließt, bevor du den Weg erweiterst.",
@@ -3110,6 +3119,9 @@ enum L10n {
         "assistant.response.metrics_streak": "Produktive Serie: %d Tage."
     ]
     private static let extraLooseES: [String: String] = [
+        "bonsai.error.low_power": "El modo de bajo consumo está activo, así que Lippi completó el plan localmente sin una generación intensiva.",
+        "bonsai.error.thermal": "El iPhone se calentó, así que Lippi detuvo el modelo y completó el plan localmente de forma segura.",
+        "bonsai.error.time_limit": "Lippi detuvo la generación intensiva al alcanzar el límite seguro de tiempo y completó el plan localmente.",
         "goals.insights.title": "Por qué encaja esta ruta",
         "goals.insights.local_fit": "La ruta parte de tu preferencia o punto inicial «%@» y centra las etapas en resultados comprobables.",
         "goals.insights.local_decision": "Después del primer resultado, decide de forma explícita qué conservar, cambiar o excluir antes de ampliar la ruta.",

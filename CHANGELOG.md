@@ -12,8 +12,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2021%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2022%2C%202026-0A84FF?style=for-the-badge">
     <img alt="On-device intelligence" src="https://img.shields.io/badge/Bonsai-Device%20tested-64D2FF?style=for-the-badge">
+    <img alt="Thermal protection" src="https://img.shields.io/badge/Thermal-Guarded-FF375F?style=for-the-badge">
+    <img alt="Bounded decoding" src="https://img.shields.io/badge/Decode-80s%20cap-FF9F0A?style=for-the-badge">
     <img alt="Personalized roadmaps" src="https://img.shields.io/badge/Roadmaps-Personalized-30D158?style=for-the-badge">
     <img alt="JSON recovery" src="https://img.shields.io/badge/JSON-Recovery-FF9F0A?style=for-the-badge">
     <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=for-the-badge">
@@ -28,32 +30,67 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Reliable Bonsai</strong><br>
-      <sub>Real-device inference, flexible decoding, and safe local completion keep Smart Goals moving.</sub>
+      <strong>Bounded inference</strong><br>
+      <sub>Heavy roadmap decoding stops after 80 seconds instead of running for several minutes.</sub>
       <br><br>
-      <strong>Надёжный Bonsai</strong><br>
-      <sub>Проверка на устройстве, гибкий декодер и безопасное дополнение ответа сохраняют рабочий сценарий.</sub>
+      <strong>Ограниченный инференс</strong><br>
+      <sub>Тяжёлая генерация карты останавливается через 80 секунд и больше не длится несколько минут.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Lower memory</strong><br>
-      <sub>A compact 4K context halves the KV cache while preserving complete roadmap output.</sub>
+      <strong>Lean model core</strong><br>
+      <sub>Bonsai generates route intelligence; deterministic app logic completes support fields.</sub>
       <br><br>
-      <strong>Меньше памяти</strong><br>
-      <sub>Компактный контекст 4K вдвое уменьшает KV-cache и сохраняет полный ответ дорожной карты.</sub>
+      <strong>Компактное ядро</strong><br>
+      <sub>Bonsai создаёт смысл маршрута, а служебные поля достраиваются детерминированно.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Honest progress</strong><br>
-      <sub>The app and Dynamic Island now show preparation, planning, checking, repair, and finalization.</sub>
+      <strong>Thermal aware</strong><br>
+      <sub>Low Power Mode and iOS thermal state reduce or prevent expensive local generation.</sub>
       <br><br>
-      <strong>Честный прогресс</strong><br>
-      <sub>Приложение и Dynamic Island показывают подготовку, планирование, проверку, исправление и завершение.</sub>
+      <strong>Контроль нагрева</strong><br>
+      <sub>Энергосбережение и thermal state iOS сокращают или отменяют тяжёлую локальную генерацию.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Faster path</strong><br>
-      <sub>Model preparation and focused reference retrieval run together, then generation stops at complete JSON.</sub>
+      <strong>Useful partial output</strong><br>
+      <sub>Early insights and milestones survive a safety stop; local completion finishes the roadmap.</sub>
       <br><br>
-      <strong>Быстрее к результату</strong><br>
-      <sub>Модель и материалы готовятся параллельно, а генерация завершается сразу после полного JSON.</sub>
+      <strong>Полезный частичный ответ</strong><br>
+      <sub>Готовые выводы и этапы сохраняются, а дорожная карта завершается локально.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 22, 2026 - Cooler, bounded on-device generation
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Local intelligence now has a strict compute envelope: Lippi preserves the useful part of Bonsai's answer and stops sustained inference before a roadmap can keep the iPhone hot for several minutes.</strong></p>
+      <ul>
+        <li><strong>One model pass:</strong> a rejected first answer no longer triggers another full roadmap generation. Sanitization, normalization, and domain-aware local completion repair the result without doubling GPU work.</li>
+        <li><strong>Roughly half the token budget:</strong> roadmap limits fall from 1,300/1,500 tokens to 640 for 4/8 weeks and 760 for 12 weeks. Bonsai now produces the high-value core — title, summary, personalized insights, and milestones — while Lippi derives criteria, first actions, questions, habit, and risk locally.</li>
+        <li><strong>Hard wall-clock boundary:</strong> prompt evaluation and token decoding stop after 80 seconds. When iOS reports a <code>fair</code> thermal state, the envelope contracts to 45 seconds and 75% of the token budget.</li>
+        <li><strong>Immediate thermal protection:</strong> heavy inference does not start in Low Power Mode or at <code>serious</code>/<code>critical</code> thermal states. If temperature rises during generation, the loop checks every eight tokens and stops promptly.</li>
+        <li><strong>Useful work survives:</strong> after at least 24 generated tokens and the start of a JSON object, a safety stop returns the partial response. The string-aware JSON recovery closes it safely, and the existing grounded planner fills only what is missing.</li>
+        <li><strong>Resources released:</strong> a context stopped by time, temperature, or Low Power Mode is unloaded immediately instead of remaining resident for the normal reuse window.</li>
+        <li><strong>Progress summaries are bounded too:</strong> their output budget is reduced to 480 tokens with a 45-second limit, flexible decoding, and the same partial-JSON recovery.</li>
+        <li><strong>Localized and tested:</strong> safety explanations are available in Russian, English, German, and Spanish. Four new policy tests cover budgets, low-power and thermal blocking, time limits, and partial-output preservation; all 71 tests and the signed generic iOS build pass.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Локальный интеллект получил строгий вычислительный контур: Lippi сохраняет полезную часть ответа Bonsai и прекращает длительный инференс раньше, чем построение карты сможет нагревать iPhone несколько минут подряд.</strong></p>
+      <ul>
+        <li><strong>Один проход модели:</strong> отклонённый первый ответ больше не запускает повторную полную генерацию. Очистка, нормализация и предметное локальное дополнение исправляют результат без удвоения нагрузки на GPU.</li>
+        <li><strong>Почти вдвое меньше токенов:</strong> лимиты дорожной карты снижены с 1300/1500 до 640 для 4/8 недель и 760 для 12 недель. Bonsai создаёт самое ценное ядро — название, резюме, персональные выводы и этапы, — а критерии, первые действия, вопросы, привычка и риск выводятся локально.</li>
+        <li><strong>Жёсткая граница времени:</strong> обработка промпта и декодирование прекращаются через 80 секунд. При thermal state <code>fair</code> контур сокращается до 45 секунд и 75% токенов.</li>
+        <li><strong>Немедленная защита от нагрева:</strong> тяжёлый инференс не начинается в режиме энергосбережения и при состояниях <code>serious</code>/<code>critical</code>. Во время генерации температура проверяется каждые восемь токенов.</li>
+        <li><strong>Полезная работа сохраняется:</strong> если создано хотя бы 24 токена и начался JSON-объект, защитная остановка возвращает частичный ответ. Строковый recovery безопасно закрывает JSON, а локальный планировщик дополняет только отсутствующее.</li>
+        <li><strong>Ресурсы освобождаются:</strong> контекст, остановленный по времени, температуре или энергосбережению, выгружается сразу и не ждёт обычного окна повторного использования.</li>
+        <li><strong>Анализ прогресса тоже ограничен:</strong> его бюджет снижен до 480 токенов с лимитом 45 секунд, гибким декодированием и тем же восстановлением частичного JSON.</li>
+        <li><strong>Локализовано и протестировано:</strong> пояснения защиты доступны на русском, английском, немецком и испанском. Четыре новых теста проверяют бюджеты, энергосбережение, thermal-блокировку, лимиты времени и сохранение частичного ответа; проходят все 71 тест и подписанная generic iOS-сборка.</li>
+      </ul>
     </td>
   </tr>
 </table>

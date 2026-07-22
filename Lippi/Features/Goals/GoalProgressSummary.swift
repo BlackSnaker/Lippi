@@ -224,8 +224,7 @@ struct GoalProgressSummaryEngine {
     }
 
     private func parseSummary(_ text: String, lang: AppLang) -> GoalProgressSummary? {
-        guard let start = text.firstIndex(of: "{"), let end = text.lastIndex(of: "}"), start <= end else { return nil }
-        let json = String(text[start...end])
+        guard let json = GoalJSONRecovery.rootObject(in: text) else { return nil }
         guard let data = json.data(using: .utf8),
               let payload = try? JSONDecoder().decode(GoalProgressSummaryPayload.self, from: data) else {
             return nil
@@ -739,6 +738,51 @@ private struct GoalProgressSummaryPayload: Decodable {
     var stateCare: [String]
     var checkInQuestion: String
     var confidence: Double
+
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case summary
+        case progressScore
+        case forecastLabel
+        case forecast
+        case wins
+        case supportiveSignals
+        case risks
+        case nextSteps
+        case stateCare
+        case checkInQuestion
+        case confidence
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = (try? container.decode(String.self, forKey: .title)) ?? ""
+        summary = (try? container.decode(String.self, forKey: .summary)) ?? ""
+        progressScore = Self.number(in: container, forKey: .progressScore)
+        forecastLabel = (try? container.decode(String.self, forKey: .forecastLabel)) ?? ""
+        forecast = (try? container.decode(String.self, forKey: .forecast)) ?? ""
+        wins = (try? container.decode([String].self, forKey: .wins)) ?? []
+        supportiveSignals = (try? container.decode([String].self, forKey: .supportiveSignals)) ?? []
+        risks = (try? container.decode([String].self, forKey: .risks)) ?? []
+        nextSteps = (try? container.decode([String].self, forKey: .nextSteps)) ?? []
+        stateCare = (try? container.decode([String].self, forKey: .stateCare)) ?? []
+        checkInQuestion = (try? container.decode(String.self, forKey: .checkInQuestion)) ?? ""
+        confidence = Self.number(in: container, forKey: .confidence)
+    }
+
+    private static func number(
+        in container: KeyedDecodingContainer<CodingKeys>,
+        forKey key: CodingKeys
+    ) -> Double {
+        if let value = try? container.decode(Double.self, forKey: key) {
+            return min(max(value, 0), 1)
+        }
+        if let value = try? container.decode(String.self, forKey: key),
+           let number = Double(value.replacingOccurrences(of: ",", with: ".")) {
+            return min(max(number, 0), 1)
+        }
+        return 0
+    }
 }
 
 private extension String {

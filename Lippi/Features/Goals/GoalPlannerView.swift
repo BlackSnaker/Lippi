@@ -3936,9 +3936,23 @@ private struct GoalRoadmapPayload: Codable {
             return milestone
         }
 
-        let cleanCriteria = filledStrings(successCriteria.cleanLines(limit: 2), fallback: fallback.successCriteria, limit: 2)
-        let cleanActions = filledStrings(firstActions.cleanLines(limit: 2), fallback: fallback.firstActions, limit: 2)
-        let cleanAssumptions = assumptions.cleanLines(limit: 2)
+        let milestoneCriteria = mappedMilestones.suffix(2).map(\.target)
+        let milestoneFirstActions = mappedMilestones.first?.tasks ?? []
+        let cleanCriteria = filledStrings(
+            successCriteria.cleanLines(limit: 2),
+            fallback: milestoneCriteria + fallback.successCriteria,
+            limit: 2
+        )
+        let cleanActions = filledStrings(
+            firstActions.cleanLines(limit: 2),
+            fallback: milestoneFirstActions + fallback.firstActions,
+            limit: 2
+        )
+        let cleanAssumptions = filledStrings(
+            assumptions.cleanLines(limit: 2),
+            fallback: fallback.assumptions,
+            limit: 2
+        )
         let cleanInsights = filledStrings(
             personalizedInsights.cleanLines(limit: 2),
             fallback: fallback.personalizedInsights ?? [],
@@ -4270,7 +4284,18 @@ struct GoalRoadmapEngine {
                 )
                 return roadmap
             } catch let error as BonsaiProviderError {
-                throw GoalPlannerEngineError.bonsaiUnavailable(error.message(lang: lang))
+                switch error {
+                case .lowPowerMode, .thermalLimitReached, .timeLimitReached:
+                    await onStage(.finalizing)
+                    return safetyDraftRoadmap(
+                        input: input,
+                        lang: lang,
+                        progressAudit: progressAudit,
+                        error: error
+                    )
+                default:
+                    throw GoalPlannerEngineError.bonsaiUnavailable(error.message(lang: lang))
+                }
             } catch {
                 throw GoalPlannerEngineError.bonsaiUnavailable(BonsaiProviderError.generationFailed.message(lang: lang))
             }
@@ -4348,7 +4373,7 @@ struct GoalRoadmapEngine {
     ) async throws -> GoalRoadmap {
         let provider = BonsaiGoalProvider()
         let brief = GoalRequestBrief.make(input: input, fallbackLang: lang)
-        let tokenBudget: Int32 = input.horizon.weeks == 12 ? 1_500 : 1_300
+        let tokenBudget = BonsaiGenerationSafetyPolicy.roadmapOutputTokenBudget(forWeeks: input.horizon.weeks)
         try provider.ensureReady(configuration: configuration)
         await onStage(.planning)
         let response: String
@@ -4364,6 +4389,14 @@ struct GoalRoadmapEngine {
             switch error {
             case .disabled, .modelMissing, .runtimeUnavailable, .modelLoadFailed:
                 throw error
+            case .lowPowerMode, .thermalLimitReached, .timeLimitReached:
+                await onStage(.finalizing)
+                return safetyDraftRoadmap(
+                    input: input,
+                    lang: brief.responseLanguage,
+                    progressAudit: progressAudit,
+                    error: error
+                )
             case .promptTooLong, .generationFailed, .malformedResponse, .incompleteRoadmap:
                 await onStage(.finalizing)
                 return buildDraftRoadmap(input: input, lang: brief.responseLanguage, progressAudit: progressAudit)
@@ -4389,53 +4422,10 @@ struct GoalRoadmapEngine {
             return roadmap
         }
 
-        await onStage(.refining)
-        let repair: String
-        do {
-            repair = try await provider.generate(
-                prompt: bonsaiRepairPrompt(
-                    input: input,
-                    brief: brief,
-                    evidence: evidence,
-                    progressAudit: progressAudit,
-                    qualityFeedback: roadmapQualityFeedback(from: response, source: .bonsai, input: input, lang: brief.responseLanguage, evidence: evidence)
-                ),
-                configuration: configuration,
-                maximumOutputTokens: tokenBudget
-            )
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            await onStage(.finalizing)
-            if let initialCandidate {
-                return GoalRoadmapQualityGate.normalizedForDisplay(
-                    initialCandidate,
-                    input: input,
-                    lang: brief.responseLanguage
-                )
-            }
-            return buildDraftRoadmap(input: input, lang: brief.responseLanguage, progressAudit: progressAudit)
-        }
         await onStage(.finalizing)
-        let repairCandidate = decodedRoadmap(
-            from: repair,
-            source: .bonsai,
-            input: input,
-            lang: brief.responseLanguage,
-            evidence: evidence
-        )
-        if let repairCandidate,
-           let roadmap = GoalRoadmapQualityGate.validated(
-               repairCandidate,
-               input: input,
-               lang: brief.responseLanguage,
-               evidence: evidence
-           ) {
-            return roadmap
-        }
-        if let bestCandidate = repairCandidate ?? initialCandidate {
+        if let initialCandidate {
             return GoalRoadmapQualityGate.normalizedForDisplay(
-                bestCandidate,
+                initialCandidate,
                 input: input,
                 lang: brief.responseLanguage
             )
@@ -4467,36 +4457,14 @@ struct GoalRoadmapEngine {
         Rules:
         - Use the structured request as truth; preserve its facts, quantities, dates, constraints, language, names, and domain. Unknowns become assumptions or questions.
         - Make a confident recommendation about sequence, not outcomes. Distinguish user facts, planner recommendations, and assumptions.
-        - Use every relevant stated preference, starting resource, constraint, or non-goal in at least one route decision, task, habit, risk response, or personalized insight.
+        - Use every relevant stated preference, starting resource, constraint, or non-goal in a route decision, task, or personalized insight.
         - Use exactly \(input.horizon.weeks == 12 ? 4 : 3) distinct milestones in the fixed slots. Each milestone must unlock the next and needs a reviewable domain-specific target plus exactly 2 different action-plus-output tasks.
-        - Return exactly 2 observable success criteria, exactly 2 actions for the next 24-48 hours, exactly 2 personalizedInsights, exactly 2 specific clarifying questions, exactly 1 habit, and exactly 1 risk. Keep every string concise.
+        - Return only the compact core schema attached by the app: title, one-sentence summary, confidence, exactly 2 personalizedInsights, and milestones. Lippi completes support fields locally. Keep every string under 16 words.
         - personalizedInsights[0] explains why this route fits the user's stated preferences, resources, constraints, or non-goals. personalizedInsights[1] gives a useful non-obvious tradeoff, decision, or checkpoint. Do not restate the goal generically.
         - Do not invent named books, podcasts, courses, apps, brands, people, or communities. Use a specific name only when it appears in the user request or supplied references. Describe product choices as hypotheses to test, not as things that will attract, motivate, validate, or work.
         - If progress shows missed work, keep the goal but reduce and split the nearest load; never invent the reason.
         - Do not invent metrics, people, demand, money, feedback, resources, outcomes, or guarantees. Health/legal/financial steps stay non-diagnostic.
         - Categories: work, study, health, rest, home, other.
-        """
-    }
-
-    private func bonsaiRepairPrompt(
-        input: GoalPlannerInput,
-        brief: GoalRequestBrief,
-        evidence: [GoalEvidenceSource],
-        progressAudit: GoalPlanProgressAudit?,
-        qualityFeedback: String
-    ) -> String {
-        """
-        Rebuild the rejected roadmap as the app's JSON object. Fix every quality-audit item without inventing facts.
-        Horizon: \(input.horizon.weeks) weeks. Output: \(brief.outputLanguageName).
-        Fixed slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
-        \(brief.promptSection())
-        \(OpenRoadmapCatalog.profile(for: input).promptSection())
-        Previous progress:
-        \(progressAuditPromptSection(progressAudit))
-        Required fixes: \(qualityFeedback)
-        Optional references:
-        \(evidencePromptSection(evidence))
-        Use exactly \(input.horizon.weeks == 12 ? 4 : 3) distinct, sequential milestones with exactly 2 concise domain-specific action-plus-output tasks each. Return exactly 2 observable success criteria, exactly 2 first actions, exactly 2 personalizedInsights, exactly 2 specific clarifyingQuestions, exactly 1 habit, and exactly 1 risk. The first insight must explain fit from the user's stated context; the second must surface a non-obvious tradeoff, decision, or checkpoint. Keep all readable values in \(brief.outputLanguageName).
         """
     }
 
@@ -4853,6 +4821,19 @@ struct GoalRoadmapEngine {
 
     private func progressAuditPromptSection(_ audit: GoalPlanProgressAudit?) -> String {
         audit?.promptSection() ?? "No previous Lippi task progress is available for this goal."
+    }
+
+    private func safetyDraftRoadmap(
+        input: GoalPlannerInput,
+        lang: AppLang,
+        progressAudit: GoalPlanProgressAudit?,
+        error: BonsaiProviderError
+    ) -> GoalRoadmap {
+        let outputLang = input.responseLanguage(fallback: lang)
+        var draft = buildDraftRoadmap(input: input, lang: outputLang, progressAudit: progressAudit)
+        let note = error.message(lang: outputLang)
+        draft.assumptions = ([note] + draft.assumptions.filter { $0 != note }).prefixArray(2)
+        return draft
     }
 
     private func annotateLanguageBridge(_ roadmap: GoalRoadmap, lang: AppLang, translatedInput: Bool, semanticBridge: Bool) -> GoalRoadmap {

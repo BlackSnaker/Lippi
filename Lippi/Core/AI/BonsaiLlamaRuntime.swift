@@ -9,15 +9,84 @@ enum BonsaiRuntimeError: Error, Equatable {
     case modelMissing
     case modelLoadFailed
     case contextCreationFailed
+    case lowPowerMode
+    case thermalLimitReached
+    case timeLimitReached
     case promptTooLong
     case tokenizationFailed
     case evaluationFailed
     case emptyResponse
 }
 
+enum BonsaiDeviceThermalLevel: Int, Equatable, Sendable {
+    case nominal
+    case fair
+    case serious
+    case critical
+}
+
+enum BonsaiGenerationSafetyStopReason: Equatable, Sendable {
+    case lowPowerMode
+    case thermal
+    case timeLimit
+}
+
+enum BonsaiGenerationSafetyPolicy {
+    static let roadmapMaximumDuration: TimeInterval = 80
+    static let progressMaximumDuration: TimeInterval = 45
+    static let minimumUsefulPartialTokens = 24
+
+    static func roadmapOutputTokenBudget(forWeeks weeks: Int) -> Int32 {
+        weeks == 12 ? 760 : 640
+    }
+
+    static func effectiveOutputTokenLimit(requested: Int32, thermalLevel: BonsaiDeviceThermalLevel) -> Int32 {
+        guard thermalLevel == .fair else { return requested }
+        return max(128, Int32((Double(requested) * 0.75).rounded(.down)))
+    }
+
+    static func stopReason(
+        thermalLevel: BonsaiDeviceThermalLevel,
+        isLowPowerModeEnabled: Bool,
+        elapsed: TimeInterval,
+        maximumDuration: TimeInterval
+    ) -> BonsaiGenerationSafetyStopReason? {
+        if isLowPowerModeEnabled { return .lowPowerMode }
+        if thermalLevel == .serious || thermalLevel == .critical { return .thermal }
+        let effectiveDuration = thermalLevel == .fair ? min(maximumDuration, 45) : maximumDuration
+        return elapsed >= effectiveDuration ? .timeLimit : nil
+    }
+
+    static func canReturnPartial(_ text: String, generatedTokens: Int) -> Bool {
+        generatedTokens >= minimumUsefulPartialTokens && text.contains("{")
+    }
+}
+
 struct BonsaiGenerationOptions: Sendable {
     var maximumOutputTokens: Int32
+    var maximumDuration: TimeInterval = BonsaiGenerationSafetyPolicy.roadmapMaximumDuration
     var stopsAtCompleteJSONObject = true
+}
+
+private extension ProcessInfo {
+    var bonsaiThermalLevel: BonsaiDeviceThermalLevel {
+        switch thermalState {
+        case .nominal: return .nominal
+        case .fair: return .fair
+        case .serious: return .serious
+        case .critical: return .critical
+        @unknown default: return .fair
+        }
+    }
+
+    var bonsaiSafetyStopReason: BonsaiGenerationSafetyStopReason? {
+        BonsaiGenerationSafetyPolicy.stopReason(
+            thermalLevel: bonsaiThermalLevel,
+            isLowPowerModeEnabled: isLowPowerModeEnabled,
+            elapsed: 0,
+            maximumDuration: .greatestFiniteMagnitude
+        )
+    }
 }
 
 actor BonsaiInferenceEngine {
@@ -35,19 +104,32 @@ actor BonsaiInferenceEngine {
         options: BonsaiGenerationOptions
     ) throws -> String {
         guard BonsaiModelStorage.isInstalled else { throw BonsaiRuntimeError.modelMissing }
+        try Self.ensureDeviceCanStartGeneration()
 
         #if canImport(llama)
         idleUnloadTask?.cancel()
         idleUnloadTask = nil
-        defer { scheduleIdleUnload() }
-
         let loadedContext = try loadContextIfNeeded()
+        do {
+            let prompt = BonsaiPromptTemplate.chat(system: systemPrompt, user: userPrompt)
+            let output = try loadedContext.generate(prompt: prompt, options: options)
+            let response = output.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !response.isEmpty else { throw BonsaiRuntimeError.emptyResponse }
 
-        let prompt = BonsaiPromptTemplate.chat(system: systemPrompt, user: userPrompt)
-        let response = try loadedContext.generate(prompt: prompt, options: options)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !response.isEmpty else { throw BonsaiRuntimeError.emptyResponse }
-        return response
+            if output.stoppedForSafety {
+                releaseLoadedContext()
+            } else {
+                scheduleIdleUnload()
+            }
+            return response
+        } catch {
+            if Self.isSafetyError(error) {
+                releaseLoadedContext()
+            } else {
+                scheduleIdleUnload()
+            }
+            throw error
+        }
         #else
         throw BonsaiRuntimeError.runtimeUnavailable
         #endif
@@ -57,6 +139,7 @@ actor BonsaiInferenceEngine {
     /// parallel with this cold-start work, so neither step blocks the other.
     func prepare() throws {
         guard BonsaiModelStorage.isInstalled else { throw BonsaiRuntimeError.modelMissing }
+        try Self.ensureDeviceCanStartGeneration()
 
         #if canImport(llama)
         idleUnloadTask?.cancel()
@@ -72,9 +155,26 @@ actor BonsaiInferenceEngine {
         #if canImport(llama)
         idleUnloadTask?.cancel()
         idleUnloadTask = nil
-        loadedContext = nil
-        loadedModelURL = nil
+        releaseLoadedContext()
         #endif
+    }
+
+    private static func ensureDeviceCanStartGeneration() throws {
+        switch ProcessInfo.processInfo.bonsaiSafetyStopReason {
+        case .lowPowerMode:
+            throw BonsaiRuntimeError.lowPowerMode
+        case .thermal:
+            throw BonsaiRuntimeError.thermalLimitReached
+        case .timeLimit, .none:
+            return
+        }
+    }
+
+    private static func isSafetyError(_ error: Error) -> Bool {
+        guard let runtimeError = error as? BonsaiRuntimeError else { return false }
+        return runtimeError == .lowPowerMode
+            || runtimeError == .thermalLimitReached
+            || runtimeError == .timeLimitReached
     }
 
     #if canImport(llama)
@@ -87,6 +187,11 @@ actor BonsaiInferenceEngine {
         }
         guard let loadedContext else { throw BonsaiRuntimeError.contextCreationFailed }
         return loadedContext
+    }
+
+    private func releaseLoadedContext() {
+        loadedContext = nil
+        loadedModelURL = nil
     }
 
     private func scheduleIdleUnload() {
@@ -138,6 +243,14 @@ private func bonsaiBatchAdd(
     batch.n_tokens += 1
 }
 
+private struct BonsaiGeneratedText {
+    var text: String
+    var generatedTokens: Int
+    var stopReason: BonsaiGenerationSafetyStopReason?
+
+    var stoppedForSafety: Bool { stopReason != nil }
+}
+
 private final class BonsaiLlamaContext {
     // The planner prompt is deliberately compact. A 4K context leaves enough
     // space for a complete roadmap while halving the KV-cache of the previous
@@ -170,13 +283,7 @@ private final class BonsaiLlamaContext {
         }
 
         let processInfo = ProcessInfo.processInfo
-        let isThermallyConstrained: Bool
-        switch processInfo.thermalState {
-        case .serious, .critical:
-            isThermallyConstrained = true
-        default:
-            isThermallyConstrained = false
-        }
+        let isThermallyConstrained = processInfo.bonsaiThermalLevel != .nominal
         let preferredThreads = (processInfo.isLowPowerModeEnabled || isThermallyConstrained) ? 2 : 4
         let threads = Int32(max(2, min(preferredThreads, processInfo.processorCount - 2)))
         var contextParameters = llama_context_default_params()
@@ -219,9 +326,15 @@ private final class BonsaiLlamaContext {
         llama_backend_free()
     }
 
-    func generate(prompt: String, options: BonsaiGenerationOptions) throws -> String {
+    func generate(prompt: String, options: BonsaiGenerationOptions) throws -> BonsaiGeneratedText {
+        let startedAt = Date()
+        let initialThermalLevel = ProcessInfo.processInfo.bonsaiThermalLevel
+        let effectiveOutputTokens = BonsaiGenerationSafetyPolicy.effectiveOutputTokenLimit(
+            requested: options.maximumOutputTokens,
+            thermalLevel: initialThermalLevel
+        )
         let promptTokens = try tokenize(prompt)
-        let availablePromptTokens = Int(Self.contextSize) - Int(options.maximumOutputTokens) - 8
+        let availablePromptTokens = Int(Self.contextSize) - Int(effectiveOutputTokens) - 8
         guard promptTokens.count <= availablePromptTokens else {
             throw BonsaiRuntimeError.promptTooLong
         }
@@ -230,19 +343,37 @@ private final class BonsaiLlamaContext {
         llama_sampler_reset(sampler)
         pendingUTF8.removeAll(keepingCapacity: true)
 
-        try evaluatePrompt(promptTokens)
+        try evaluatePrompt(
+            promptTokens,
+            startedAt: startedAt,
+            maximumDuration: options.maximumDuration
+        )
         var currentPosition = Int32(promptTokens.count)
         var result = ""
         var jsonTracker = BonsaiJSONObjectTracker()
+        var generatedTokens = 0
+        var safetyStopReason: BonsaiGenerationSafetyStopReason?
 
-        for _ in 0..<options.maximumOutputTokens {
+        for tokenIndex in 0..<effectiveOutputTokens {
             if Task.isCancelled { throw CancellationError() }
+            if tokenIndex.isMultiple(of: 8),
+               let stopReason = currentSafetyStopReason(
+                   startedAt: startedAt,
+                   maximumDuration: options.maximumDuration
+               ) {
+                guard BonsaiGenerationSafetyPolicy.canReturnPartial(result, generatedTokens: generatedTokens) else {
+                    throw runtimeError(for: stopReason)
+                }
+                safetyStopReason = stopReason
+                break
+            }
 
             let token = llama_sampler_sample(sampler, context, -1)
             if llama_vocab_is_eog(vocab, token) { break }
             llama_sampler_accept(sampler, token)
             let tokenPiece = piece(for: token)
             result.append(contentsOf: tokenPiece)
+            generatedTokens += 1
 
             // Structured Lippi requests need one root JSON object. Stop on its
             // closing brace instead of letting the model generate trailing
@@ -268,12 +399,26 @@ private final class BonsaiLlamaContext {
             .replacingOccurrences(of: "<|im_end|>", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { throw BonsaiRuntimeError.emptyResponse }
-        return cleaned
+        return BonsaiGeneratedText(
+            text: cleaned,
+            generatedTokens: generatedTokens,
+            stopReason: safetyStopReason
+        )
     }
 
-    private func evaluatePrompt(_ tokens: [llama_token]) throws {
+    private func evaluatePrompt(
+        _ tokens: [llama_token],
+        startedAt: Date,
+        maximumDuration: TimeInterval
+    ) throws {
         var offset = 0
         while offset < tokens.count {
+            if let stopReason = currentSafetyStopReason(
+                startedAt: startedAt,
+                maximumDuration: maximumDuration
+            ) {
+                throw runtimeError(for: stopReason)
+            }
             let end = min(offset + Int(Self.batchSize), tokens.count)
             bonsaiBatchClear(&batch)
 
@@ -290,6 +435,27 @@ private final class BonsaiLlamaContext {
                 throw BonsaiRuntimeError.evaluationFailed
             }
             offset = end
+        }
+    }
+
+    private func currentSafetyStopReason(
+        startedAt: Date,
+        maximumDuration: TimeInterval
+    ) -> BonsaiGenerationSafetyStopReason? {
+        let processInfo = ProcessInfo.processInfo
+        return BonsaiGenerationSafetyPolicy.stopReason(
+            thermalLevel: processInfo.bonsaiThermalLevel,
+            isLowPowerModeEnabled: processInfo.isLowPowerModeEnabled,
+            elapsed: Date().timeIntervalSince(startedAt),
+            maximumDuration: maximumDuration
+        )
+    }
+
+    private func runtimeError(for stopReason: BonsaiGenerationSafetyStopReason) -> BonsaiRuntimeError {
+        switch stopReason {
+        case .lowPowerMode: return .lowPowerMode
+        case .thermal: return .thermalLimitReached
+        case .timeLimit: return .timeLimitReached
         }
     }
 

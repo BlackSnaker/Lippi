@@ -17,9 +17,10 @@
   <img alt="PrismML Bonsai" src="https://img.shields.io/badge/Bonsai-On--device-64D2FF?style=flat-square">
   <img alt="Personal roadmaps" src="https://img.shields.io/badge/Roadmaps-Personalized-BF5AF2?style=flat-square">
   <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=flat-square">
+  <img alt="Thermal protection" src="https://img.shields.io/badge/Thermal-Guarded-FF375F?style=flat-square">
   <img alt="Local AI storage" src="https://img.shields.io/badge/Local%20AI-~577%20MB-30D158?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Ready-BF5AF2?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-67%20passing-30D158?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-71%20passing-30D158?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
@@ -84,37 +85,37 @@ Lippi объединяет планирование, фокус и восста�
 
 ## Последнее обновление · Latest release
 
-### 21 июля 2026 — Lippi понимает контекст и готовится сама
+### 22 июля 2026 — локальный интеллект без четырёх минут нагрева
 
-Lippi стала увереннее не за счёт более громких обещаний, а за счёт более точного контекста, предметной логики и устойчивого локального исполнения.
+Lippi сохраняет персональную логику дорожных карт, но теперь выполняет её внутри строгого вычислительного контура: один проход модели, компактный ответ и безопасная остановка до длительного нагрева iPhone.
 
 <table>
   <tr>
     <td width="33%" align="center" valign="top">
-      <strong>🧭 Личный маршрут</strong><br><br>
-      Пожелания, опыт, ресурсы, сроки и явные «не хочу» теперь меняют саму последовательность этапов.<br><br>
-      <sub>Context becomes route decisions.</sub>
+      <strong>⏱️ Не дольше 80 секунд</strong><br><br>
+      Тяжёлая часть генерации имеет жёсткий лимит вместо нескольких минут непрерывного инференса.<br><br>
+      <sub>A bounded compute envelope.</sub>
     </td>
     <td width="33%" align="center" valign="top">
-      <strong>🌱 Bonsai готовится сама</strong><br><br>
-      Модель автоматически начинает загружаться при первом запуске, а onboarding показывает живой статус.<br><br>
-      <sub>Local intelligence starts preparing immediately.</sub>
+      <strong>🌡️ Реакция на нагрев</strong><br><br>
+      Lippi сокращает работу при <code>fair</code> и не запускает модель при серьёзном нагреве или энергосбережении.<br><br>
+      <sub>Thermal state drives the workload.</sub>
     </td>
     <td width="33%" align="center" valign="top">
-      <strong>⌚ Apple Watch вовремя</strong><br><br>
-      После обнаружения сопряжённых часов Lippi один раз предлагает приватную синхронизацию через Apple Здоровье.<br><br>
-      <sub>A contextual offer, never a nag.</sub>
+      <strong>🧩 Полезный ответ остаётся</strong><br><br>
+      Готовые выводы и этапы сохраняются, а недостающие поля достраиваются локально без второго AI-прохода.<br><br>
+      <sub>Partial intelligence, deterministic completion.</sub>
     </td>
   </tr>
 </table>
 
-- **Предметные дорожные карты.** Продукт, бизнес, карьера, разработка, дизайн, языки, обучение, творчество и здоровье получили собственную логику этапов и полезные контрольные точки.
-- **Видимая персонализация.** Отдельный блок объясняет, почему маршрут подходит именно этому запросу и какое решение стоит принять после первого результата.
-- **Устойчивый Bonsai.** Оборванный JSON безопасно восстанавливается, полезные секции сохраняются, а отсутствующие части аккуратно дополняются локально вместо общей ошибки генерации.
-- **Честное качество.** Lippi отсекает общие советы, повторы, выдуманные показатели, названия и неподтверждённые обещания; уверенность ответа ограничивается реально известным контекстом.
-- **Автоматический первый запуск.** Закреплённая модель загружается только один раз, проходит проверку SHA-256 и не появляется заново после осознанного удаления пользователем.
-- **Бережная работа с часами.** WatchConnectivity отслеживает системное состояние Apple Watch, предложение появляется только после знакомства и входа, а ответ «Не сейчас» запоминается.
-- **Проверено.** Настоящая GGUF-модель прошла production-сценарий в iOS Simulator; успешны все **67 тестов** и подписанная generic iOS Debug-сборка.
+- **Один AI-проход вместо двух.** Если ответ не прошёл строгую проверку, Lippi очищает и дополняет его локально, не запуская Bonsai повторно.
+- **Почти вдвое меньше генерации.** Бюджет снижен с 1300/1500 до 640/760 токенов. Модель отвечает за смысл маршрута, а проверяемые служебные поля вычисляются приложением.
+- **Жёсткий лимит времени.** Обработка промпта и токенов останавливается через 80 секунд; при состоянии `.fair` — через 45 секунд и на 75% бюджета.
+- **Защита устройства.** При `.serious`, `.critical` и Low Power Mode тяжёлая генерация не начинается, а пользователь всё равно получает предметный локальный план.
+- **Сохранение результата.** Частичный JSON с персональными выводами и готовыми этапами восстанавливается, после чего недостающие секции добавляются детерминированно.
+- **Быстрое освобождение ресурсов.** После защитной остановки модель выгружается сразу, не оставаясь в памяти на обычные 90 секунд.
+- **Проверено.** Новые safety-тесты покрывают токены, время, thermal state, энергосбережение и частичный ответ; полный набор содержит **71 тест**.
 
 [Читать полную историю изменений →](CHANGELOG.md)
 
@@ -138,7 +139,7 @@ Lippi стала увереннее не за счёт более громких
 | Платформа | iOS 18.5+, Swift 5 |
 | Здоровье | HealthKit, WatchConnectivity, фоновые observer queries, Apple Watch source awareness |
 | Виджеты | WidgetKit, Live Activities, Dynamic Island |
-| Интеллект | PrismML Bonsai 4B 1-bit на iPhone, Foundation Models fallback, ручной черновик |
+| Интеллект | PrismML Bonsai 4B 1-bit, thermal-aware лимиты, восстановление JSON, Foundation Models fallback и локальное дополнение |
 | Голос | Speech, AVFoundation, системная и локальная neural voice озвучка |
 | Качество | Swift Testing, UI Tests, device crash diagnostics |
 
@@ -189,9 +190,9 @@ The product is designed around four promises:
 
 ### Latest release
 
-The July 21 update makes Lippi more personal and more self-sufficient. Smart Goals now turn preferences, starting points, resources, constraints, and explicit non-goals into domain-specific route decisions, then explain why that sequence fits. Truncated Bonsai JSON is recovered safely, unsupported claims are removed, and a grounded local fallback preserves a useful plan when generation is incomplete.
+The July 22 update places on-device generation inside a strict compute envelope. A roadmap now uses one Bonsai pass instead of a possible second repair pass, and the model produces only the high-value route core with a 640/760-token budget. Lippi derives support fields locally, so personalization remains useful without spending model time on predictable JSON.
 
-The pinned Bonsai model now begins downloading automatically on first launch with live onboarding status. WatchConnectivity monitors the system relationship with a paired Apple Watch and, after onboarding and sign-in, offers private Apple Health synchronization once without nagging. The release is covered by **67 passing tests** and a successful signed generic iOS build.
+Prompt evaluation and decoding stop after 80 seconds, or after 45 seconds when iOS reports a fair thermal state. Serious or critical heat and Low Power Mode prevent heavy inference from starting. Useful partial JSON is recovered and completed deterministically, while a safety-stopped model context is released immediately. The full suite now contains **71 tests**.
 
 [Read the complete bilingual changelog →](CHANGELOG.md)
 
