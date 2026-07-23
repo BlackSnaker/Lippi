@@ -12,9 +12,11 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2022%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2023%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Local voices" src="https://img.shields.io/badge/Voice-F2%20·%20M3-BF5AF2?style=for-the-badge">
+    <img alt="On-device speech" src="https://img.shields.io/badge/TTS-On--device-30D158?style=for-the-badge">
     <img alt="On-device intelligence" src="https://img.shields.io/badge/Bonsai-Device%20tested-64D2FF?style=for-the-badge">
-    <img alt="Thermal protection" src="https://img.shields.io/badge/Thermal-Guarded-FF375F?style=for-the-badge">
+    <img alt="Bonsai thermal protection" src="https://img.shields.io/badge/Bonsai-Guarded-FF375F?style=for-the-badge">
     <img alt="Bounded decoding" src="https://img.shields.io/badge/Decode-80s%20cap-FF9F0A?style=for-the-badge">
     <img alt="Personalized roadmaps" src="https://img.shields.io/badge/Roadmaps-Personalized-30D158?style=for-the-badge">
     <img alt="JSON recovery" src="https://img.shields.io/badge/JSON-Recovery-FF9F0A?style=for-the-badge">
@@ -30,32 +32,73 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Bounded inference</strong><br>
-      <sub>Heavy roadmap decoding stops after 80 seconds instead of running for several minutes.</sub>
+      <strong>F2 + M3</strong><br>
+      <sub>Two selected natural voices, with F2 as Lippi's default.</sub>
       <br><br>
-      <strong>Ограниченный инференс</strong><br>
-      <sub>Тяжёлая генерация карты останавливается через 80 секунд и больше не длится несколько минут.</sub>
+      <strong>F2 + M3</strong><br>
+      <sub>Два выбранных естественных голоса, F2 — по умолчанию.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Lean model core</strong><br>
-      <sub>Bonsai generates route intelligence; deterministic app logic completes support fields.</sub>
+      <strong>Truly on-device</strong><br>
+      <sub>Speech is generated on iPhone without a Mac, endpoint, or cloud TTS.</sub>
       <br><br>
-      <strong>Компактное ядро</strong><br>
-      <sub>Bonsai создаёт смысл маршрута, а служебные поля достраиваются детерминированно.</sub>
+      <strong>Действительно локально</strong><br>
+      <sub>Речь создаётся на iPhone без Mac, endpoint или облачного TTS.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Thermal aware</strong><br>
-      <sub>Low Power Mode and iOS thermal state reduce or prevent expensive local generation.</sub>
+      <strong>Bounded synthesis</strong><br>
+      <sub>Two threads, five steps, a 20-second deadline, and a short spoken-text cap.</sub>
       <br><br>
-      <strong>Контроль нагрева</strong><br>
-      <sub>Энергосбережение и thermal state iOS сокращают или отменяют тяжёлую локальную генерацию.</sub>
+      <strong>Ограниченный синтез</strong><br>
+      <sub>Два потока, пять шагов, лимит 20 секунд и короткий озвучиваемый текст.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Useful partial output</strong><br>
-      <sub>Early insights and milestones survive a safety stop; local completion finishes the roadmap.</sub>
+      <strong>Always available</strong><br>
+      <sub>Device temperature never disables or interrupts the local voice.</sub>
       <br><br>
-      <strong>Полезный частичный ответ</strong><br>
-      <sub>Готовые выводы и этапы сохраняются, а дорожная карта завершается локально.</sub>
+      <strong>Всегда на связи</strong><br>
+      <sub>Температура устройства больше не отключает и не прерывает локальный голос.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 23, 2026 — A voice of its own. Right on iPhone.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi now has a more natural voice — generated privately, directly on iPhone. F2 brings a warm feminine sound by default, while M3 offers a calm masculine alternative.</strong></p>
+      <ul>
+        <li><strong>A voice that feels like Lippi:</strong> F2 is the new default and M3 is one tap away. The previous iOS voice picker, automatic system voice, and AVSpeech fallback are gone, so the assistant never changes character unexpectedly.</li>
+        <li><strong>Private by design:</strong> Supertonic 3 runs through sherpa-onnx 1.13.4 and ONNX Runtime 1.27.0 on iPhone. Text and audio stay on the device, with no Mac service, HTTP endpoint, or cloud TTS.</li>
+        <li><strong>Download once. Speak offline:</strong> the pinned INT8 model is about 123 MiB to download and 139 MiB when installed. It lives separately in Application Support and can be removed without touching personal data.</li>
+        <li><strong>Progress you can see:</strong> a redesigned Liquid Glass card presents download, verification, decompression, and installation as clear stages, complete with percentage, speed, ETA, elapsed time, and a definitive success state.</li>
+        <li><strong>Built to recover:</strong> progress and resume data survive interruptions, temporary network failures receive up to five automatic retries, and a fully downloaded archive continues with verification after relaunch instead of starting over.</li>
+        <li><strong>Ready means verified:</strong> Lippi checks the exact 128,774,318-byte size, SHA-256 digest, seven-file allowlist, and every installed file before declaring the voice ready. The final model is excluded from iCloud backup.</li>
+        <li><strong>Available when the iPhone gets warm:</strong> thermal state no longer blocks startup or interrupts speech. Each generation remains bounded to two CPU threads, five steps, 480 characters, and 20 seconds; Low Power Mode and a short recovery pause still limit resource use.</li>
+        <li><strong>Prepared when needed:</strong> the assistant starts the one-time model download automatically when speech is first requested, while keeping the response readable as text and never substituting an older voice.</li>
+        <li><strong>Speaks every Lippi language:</strong> the same private pipeline supports Russian, English, German, and Spanish, with every model state and control fully localized.</li>
+        <li><strong>Verified end to end:</strong> the real model produced valid F2 and M3 WAV audio in iPhone Simulator. The 74-test suite compiles successfully, as do unsigned Debug and optimized Release builds for generic arm64 iPhone.</li>
+        <li><strong>Real-device check remains:</strong> listening quality, latency, energy use, and temperature still need final measurement on the next available physical iPhone.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>У Lippi появился более естественный голос — он создаётся приватно, прямо на iPhone. F2 звучит мягко и используется по умолчанию, M3 предлагает спокойную мужскую альтернативу.</strong></p>
+      <ul>
+        <li><strong>Голос с характером Lippi:</strong> F2 стал новым стандартом, M3 включается одним касанием. Прежний выбор голосов iOS, автоматический системный тембр и AVSpeech fallback удалены — помощник больше не меняет характер неожиданно.</li>
+        <li><strong>Приватность по замыслу:</strong> Supertonic 3 работает через sherpa-onnx 1.13.4 и ONNX Runtime 1.27.0 прямо на iPhone. Текст и аудио остаются на устройстве — без Mac-сервиса, HTTP endpoint и облачного TTS.</li>
+        <li><strong>Одна загрузка. Дальше офлайн:</strong> закреплённая INT8-модель занимает около 123 МиБ при загрузке и 139 МиБ после установки. Она хранится отдельно в Application Support и удаляется без затрагивания личных данных.</li>
+        <li><strong>Весь прогресс перед глазами:</strong> обновлённая Liquid Glass-карточка ясно разделяет загрузку, проверку, распаковку и установку, показывает процент, скорость, ETA, длительность этапа и однозначный статус успеха.</li>
+        <li><strong>Продолжает с того же места:</strong> прогресс и resume-data переживают перезапуск, временные сетевые ошибки получают до пяти автоматических повторов, а готовый архив продолжает проверку без повторной загрузки.</li>
+        <li><strong>Готово — значит проверено:</strong> Lippi сверяет точные 128 774 318 байт, SHA-256, whitelist из семи файлов и каждый установленный файл до появления статуса готовности. Финальная модель исключается из iCloud backup.</li>
+        <li><strong>Доступен, даже когда iPhone нагрелся:</strong> thermal state больше не запрещает запуск и не прерывает речь. Одна генерация по-прежнему ограничена двумя CPU-потоками, пятью шагами, 480 символами и 20 секундами; Low Power Mode и короткая пауза восстановления продолжают сдерживать нагрузку.</li>
+        <li><strong>Готовится, когда нужен:</strong> при первом запросе речи помощник сам начинает одноразовую загрузку модели, оставляет ответ доступным текстом и никогда не подменяет новый голос старым.</li>
+        <li><strong>Говорит на всех языках Lippi:</strong> один приватный pipeline поддерживает русский, английский, немецкий и испанский; все состояния модели и элементы управления локализованы.</li>
+        <li><strong>Проверено от начала до конца:</strong> настоящая модель создала корректный WAV для F2 и M3 в iPhone Simulator. Набор из 74 тестов компилируется успешно, как и unsigned Debug и оптимизированная Release-сборка для generic arm64 iPhone.</li>
+        <li><strong>Остаётся проверка на устройстве:</strong> качество звучания, задержку, энергопотребление и температуру нужно финально измерить на первом доступном физическом iPhone.</li>
+      </ul>
     </td>
   </tr>
 </table>

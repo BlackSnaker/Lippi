@@ -17,10 +17,11 @@
   <img alt="PrismML Bonsai" src="https://img.shields.io/badge/Bonsai-On--device-64D2FF?style=flat-square">
   <img alt="Personal roadmaps" src="https://img.shields.io/badge/Roadmaps-Personalized-BF5AF2?style=flat-square">
   <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=flat-square">
-  <img alt="Thermal protection" src="https://img.shields.io/badge/Thermal-Guarded-FF375F?style=flat-square">
-  <img alt="Local AI storage" src="https://img.shields.io/badge/Local%20AI-~577%20MB-30D158?style=flat-square">
+  <img alt="Bonsai thermal protection" src="https://img.shields.io/badge/Bonsai-Guarded-FF375F?style=flat-square">
+  <img alt="Local voices" src="https://img.shields.io/badge/Voice-F2%20·%20M3-BF5AF2?style=flat-square">
+  <img alt="Local model storage" src="https://img.shields.io/badge/Local%20models-~684%20MiB-30D158?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Ready-BF5AF2?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-71%20passing-30D158?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-74%20passing-30D158?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
@@ -71,7 +72,7 @@ Lippi объединяет планирование, фокус и восста�
 | **Задачи и Pomodoro** | Контекстные действия, гибкие фокус-сессии, надёжные пауза и продолжение, статистика без визуального шума. |
 | **Здоровье** | Разрешённые показатели HealthKit, системное обнаружение сопряжённых Apple Watch, личная база, отметки самочувствия и объяснимые рекомендации. |
 | **Восстановление** | Дыхательные практики, упражнения для глаз и мягкие сценарии перерыва, которые не превращаются в новые обязательства. |
-| **Голосовой помощник** | Управление функциями голосом, компактная кнопка у правого края и отдельные действия VoiceOver. |
+| **Голосовой помощник** | Управление функциями голосом, только локальные естественные голоса F2 и M3 и отдельные действия VoiceOver. |
 | **Знакомство с Lippi** | Четыре интерактивных шага, осмысленный выбор темпа и видимая автоматическая подготовка локальной модели уже при первом запуске. |
 | **Виджеты** | Быстрый взгляд на задачи, таймер и важные действия с домашнего экрана и экрана блокировки. |
 
@@ -85,37 +86,38 @@ Lippi объединяет планирование, фокус и восста�
 
 ## Последнее обновление · Latest release
 
-### 22 июля 2026 — локальный интеллект без четырёх минут нагрева
+### 23 июля 2026 — новый голос Lippi. Естественный. Локальный. Ваш.
 
-Lippi сохраняет персональную логику дорожных карт, но теперь выполняет её внутри строгого вычислительного контура: один проход модели, компактный ответ и безопасная остановка до длительного нагрева iPhone.
+Теперь Lippi отвечает голосом, который звучит теплее и естественнее — прямо на iPhone. Женский F2 готов по умолчанию, мужской M3 доступен в настройках. Никакого Mac, отдельного сервера или передачи текста в облако.
 
 <table>
   <tr>
     <td width="33%" align="center" valign="top">
-      <strong>⏱️ Не дольше 80 секунд</strong><br><br>
-      Тяжёлая часть генерации имеет жёсткий лимит вместо нескольких минут непрерывного инференса.<br><br>
-      <sub>A bounded compute envelope.</sub>
+      <strong>🎙️ Звучит как Lippi</strong><br><br>
+      Два тщательно выбранных нейро-тембра: мягкий женский F2 и спокойный мужской M3.<br><br>
+      <sub>A voice of its own.</sub>
     </td>
     <td width="33%" align="center" valign="top">
-      <strong>🌡️ Реакция на нагрев</strong><br><br>
-      Lippi сокращает работу при <code>fair</code> и не запускает модель при серьёзном нагреве или энергосбережении.<br><br>
-      <sub>Thermal state drives the workload.</sub>
+      <strong>🔒 Остаётся личным</strong><br><br>
+      Ответ превращается в речь на устройстве. После одной загрузки голос работает полностью офлайн.<br><br>
+      <sub>Private by design.</sub>
     </td>
     <td width="33%" align="center" valign="top">
-      <strong>🧩 Полезный ответ остаётся</strong><br><br>
-      Готовые выводы и этапы сохраняются, а недостающие поля достраиваются локально без второго AI-прохода.<br><br>
-      <sub>Partial intelligence, deterministic completion.</sub>
+      <strong>✨ Просто продолжает говорить</strong><br><br>
+      Температура устройства больше не блокирует запуск и не обрывает локальную озвучку.<br><br>
+      <sub>No thermal voice lockouts.</sub>
     </td>
   </tr>
 </table>
 
-- **Один AI-проход вместо двух.** Если ответ не прошёл строгую проверку, Lippi очищает и дополняет его локально, не запуская Bonsai повторно.
-- **Почти вдвое меньше генерации.** Бюджет снижен с 1300/1500 до 640/760 токенов. Модель отвечает за смысл маршрута, а проверяемые служебные поля вычисляются приложением.
-- **Жёсткий лимит времени.** Обработка промпта и токенов останавливается через 80 секунд; при состоянии `.fair` — через 45 секунд и на 75% бюджета.
-- **Защита устройства.** При `.serious`, `.critical` и Low Power Mode тяжёлая генерация не начинается, а пользователь всё равно получает предметный локальный план.
-- **Сохранение результата.** Частичный JSON с персональными выводами и готовыми этапами восстанавливается, после чего недостающие секции добавляются детерминированно.
-- **Быстрое освобождение ресурсов.** После защитной остановки модель выгружается сразу, не оставаясь в памяти на обычные 90 секунд.
-- **Проверено.** Новые safety-тесты покрывают токены, время, thermal state, энергосбережение и частичный ответ; полный набор содержит **71 тест**.
+- **Два голоса. Один характер.** F2 выбран голосом Lippi по умолчанию, M3 можно включить одним касанием. Старые системные голоса и незаметная подмена тембра удалены.
+- **Загрузите один раз.** Проверенная модель Supertonic 3 занимает около 123 МиБ при загрузке и после установки говорит без интернета, Mac и внешнего TTS.
+- **Каждый этап на виду.** Lippi отдельно показывает загрузку, проверку, распаковку и установку — с процентом, скоростью, оставшимся временем и понятным подтверждением готовности.
+- **Продолжает с того же места.** Прогресс сохраняется, временные сетевые ошибки исправляются автоматическими повторами, а готовый архив не скачивается заново после перезапуска.
+- **Готово — значит готово.** Размер, SHA-256 и все семь файлов проверяются до того, как голос становится доступен; установленная модель не попадает в резервную копию iCloud.
+- **Без температурных отключений.** Озвучка не зависит от thermal state iOS. Каждая генерация при этом остаётся короткой и предсказуемой: два CPU-потока, пять шагов, до 480 символов и не более 20 секунд.
+- **На языке Lippi.** Один локальный голосовой pipeline поддерживает русский, английский, немецкий и испанский.
+- **Проверено от загрузки до воспроизведения.** F2 и M3 создали корректный WAV в iPhone Simulator; набор содержит **74 теста**, а Debug и Release собираются для generic arm64 iPhone.
 
 [Читать полную историю изменений →](CHANGELOG.md)
 
@@ -123,13 +125,14 @@ Lippi сохраняет персональную логику дорожных 
 
 | Компонент | Объём на iPhone |
 |---|---:|
-| Текущая unsigned Debug-сборка приложения | ≈ 39 МиБ |
-| Runtime PrismML внутри приложения | ≈ 4,8 МБ |
-| Bonsai 4B Q1_0 после загрузки | 572 270 624 байта · ≈ 573 МБ |
-| Полный дополнительный объём локального AI | ≈ 577 МБ |
-| Debug-приложение вместе с загруженной моделью | ≈ 614 МБ |
+| Текущая unsigned Release-сборка приложения | ≈ 61 МиБ |
+| Bonsai 4B Q1_0 после загрузки | 572 270 624 байта · ≈ 546 МиБ |
+| Архив Supertonic 3 при загрузке | 128 774 318 байт · ≈ 123 МиБ |
+| Supertonic 3 после установки | 145 295 768 байт · ≈ 139 МиБ |
+| Обе необязательные модели после установки | ≈ 684 МиБ |
+| Release-приложение вместе с обеими моделями | ≈ 745 МиБ |
 
-Модель хранится отдельно в Application Support и может быть удалена из настроек без удаления приложения или пользовательских данных. Размер 39 МиБ измерен по текущей arm64 Debug-сборке для iPhone без загруженной модели; итоговый размер в App Store будет отличаться после Release-оптимизации, thinning и сжатия Apple.
+Обе модели хранятся отдельно в Application Support и удаляются из настроек без удаления приложения или пользовательских данных. Для распаковки голоса временно требуется около 520 МБ свободного места. Размер 61 МиБ измерен по текущей unsigned arm64 Release-сборке для iPhone без весов; итоговый размер в App Store изменится после thinning и сжатия Apple.
 
 ## Технологии
 
@@ -140,7 +143,7 @@ Lippi сохраняет персональную логику дорожных 
 | Здоровье | HealthKit, WatchConnectivity, фоновые observer queries, Apple Watch source awareness |
 | Виджеты | WidgetKit, Live Activities, Dynamic Island |
 | Интеллект | PrismML Bonsai 4B 1-bit, thermal-aware лимиты, восстановление JSON, Foundation Models fallback и локальное дополнение |
-| Голос | Speech, AVFoundation, системная и локальная neural voice озвучка |
+| Голос | Speech, AVFoundation, Supertonic 3 INT8, sherpa-onnx, ONNX Runtime и только F2/M3 |
 | Качество | Swift Testing, UI Tests, device crash diagnostics |
 
 ## Архитектура · Architecture
@@ -151,6 +154,7 @@ Lippi/
 │   ├── AI/             # PrismML runtime, verified model storage and inference
 │   ├── Goals/          # adaptive planning and gentle coaching
 │   ├── Health/         # HealthKit, diagnostics, Watch and wellbeing
+│   ├── Voice/          # verified Supertonic storage and bounded local TTS
 │   └── Localization/   # RU, EN, DE and ES
 ├── Features/
 │   ├── Today · Tasks · Pomodoro
@@ -163,7 +167,7 @@ LippiWidgets/           # home and lock-screen widgets
 OrganizerWidget/        # organizer widget extension
 LippiTests/             # unit and integration coverage
 LippiUITests/           # interface scenarios
-Scripts/                # local voice provider tooling
+Vendor/                 # pinned iOS inference runtimes
 ```
 
 ## Локальный запуск · Run locally
@@ -175,7 +179,7 @@ Scripts/                # local voice provider tooling
 3. Для реальных показателей Apple Здоровья используйте физический iPhone; интерфейс можно проверять в Simulator.
 4. Запустите приложение на iOS 18.5 или новее.
 5. При первом запуске загрузка Bonsai начнётся автоматически и будет видна в onboarding. Если сеть или свободное место потребуют внимания, продолжите её через **Настройки → ИИ → Локальный интеллект**. После проверки модель работает без Mac и облачного AI.
-6. Для необязательной локальной neural voice озвучки один раз выполните `./Scripts/install-local-tts.zsh` и держите Mac и iPhone в одной Wi‑Fi сети.
+6. Для естественной локальной озвучки откройте **Настройки → Здоровье → Живой голос Lippi**, выберите F2 или M3 и один раз загрузите проверяемый архив. Mac и локальный TTS-сервер не нужны.
 
 ## English
 
@@ -190,9 +194,9 @@ The product is designed around four promises:
 
 ### Latest release
 
-The July 22 update places on-device generation inside a strict compute envelope. A roadmap now uses one Bonsai pass instead of a possible second repair pass, and the model produces only the high-value route core with a 640/760-token budget. Lippi derives support fields locally, so personalization remains useful without spending model time on predictable JSON.
+The July 23 update gives Lippi a voice of its own — natural, private, and entirely on iPhone. F2 is the default feminine voice, while M3 is available as a calm masculine alternative.
 
-Prompt evaluation and decoding stop after 80 seconds, or after 45 seconds when iOS reports a fair thermal state. Serious or critical heat and Low Power Mode prevent heavy inference from starting. Useful partial JSON is recovered and completed deterministically, while a safety-stopped model context is released immediately. The full suite now contains **71 tests**.
+Download the verified model once and Lippi can speak offline without a Mac, endpoint, cloud TTS, or system-voice substitution. Installation progress is clear, interrupted downloads recover automatically, and device temperature no longer disables or interrupts speech. Generation remains bounded to two CPU threads, five steps, 480 spoken characters, and 20 seconds. The suite contains **74 tests**, including real F2 and M3 synthesis in iPhone Simulator.
 
 [Read the complete bilingual changelog →](CHANGELOG.md)
 

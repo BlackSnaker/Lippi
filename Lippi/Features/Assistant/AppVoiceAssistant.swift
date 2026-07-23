@@ -1274,7 +1274,6 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
 
     private let silenceCommitDelay: UInt64 = 1_150_000_000
 
-    private let synthesizer = AVSpeechSynthesizer()
     private var neuralVoicePlayer: AVAudioPlayer?
     private var neuralSpeechTask: Task<Void, Never>?
     private var speechRequestID = UUID()
@@ -1297,7 +1296,6 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        synthesizer.delegate = self
         quickCommandKeys = Self.defaultQuickCommandKeys
     }
 
@@ -1611,7 +1609,6 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             guard !Task.isCancelled else { return }
             guard !audioEngine.isRunning, recognitionTask == nil else { return }
-            guard !synthesizer.isSpeaking else { return }
             guard neuralVoicePlayer?.isPlaying != true else { return }
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         }
@@ -1624,49 +1621,47 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
             return
         }
 
-        configureAudioSessionForSpeechPlayback()
         stopSpeechPlayback()
         let requestID = UUID()
         speechRequestID = requestID
         state = .speaking
 
         let configuration = NeuralVoiceConfiguration.stored
-        guard configuration.isConfigured, configuration.supports(lang) else {
-            speakWithSystemVoice(message, lang: lang)
+        guard configuration.isEnabled, configuration.supports(lang) else {
+            state = .error(NeuralVoiceProviderError.disabled.message(lang: lang))
+            scheduleAudioSessionDeactivation()
+            return
+        }
+        guard configuration.isConfigured else {
+            LocalVoiceModelStore.shared.ensureDownloadStarted()
+            state = .error(NeuralVoiceProviderError.modelUnavailable.message(lang: lang))
+            scheduleAudioSessionDeactivation()
             return
         }
 
         neuralSpeechTask = Task { [weak self] in
             do {
-                let audio = try await MacNeuralVoiceProvider().synthesize(
+                let audio = try await LocalNeuralVoiceProvider.shared.synthesize(
                     message,
                     language: lang,
-                    lengthScale: HealthVoicePlaybackSpeed.balanced.neuralLengthScale,
-                    configuration: configuration
+                    speed: HealthVoicePlaybackSpeed.balanced.neuralSpeed,
+                    profile: configuration.profile
                 )
                 guard !Task.isCancelled, let self, self.speechRequestID == requestID else { return }
-                self.playNeuralSpeech(audio, fallbackText: message, lang: lang)
+                self.playNeuralSpeech(audio, lang: lang)
+            } catch let error as NeuralVoiceProviderError {
+                guard !Task.isCancelled, let self, self.speechRequestID == requestID else { return }
+                self.state = .error(error.message(lang: lang))
+                self.scheduleAudioSessionDeactivation()
             } catch {
                 guard !Task.isCancelled, let self, self.speechRequestID == requestID else { return }
-                self.speakWithSystemVoice(message, lang: lang)
+                self.state = .error(NeuralVoiceProviderError.generation.message(lang: lang))
+                self.scheduleAudioSessionDeactivation()
             }
         }
     }
 
-    private func speakWithSystemVoice(_ text: String, lang: AppLang) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AppVoiceSelector.preferredVoice(for: lang)
-            ?? AVSpeechSynthesisVoice(language: lang.speechLanguageCode)
-            ?? AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = 0.46
-        utterance.pitchMultiplier = 1.02
-        utterance.preUtteranceDelay = 0.04
-        utterance.postUtteranceDelay = 0.12
-        utterance.prefersAssistiveTechnologySettings = true
-        synthesizer.speak(utterance)
-    }
-
-    private func playNeuralSpeech(_ audio: Data, fallbackText: String, lang: AppLang) {
+    private func playNeuralSpeech(_ audio: Data, lang: AppLang) {
         do {
             configureAudioSessionForSpeechPlayback()
             let player = try AVAudioPlayer(data: audio)
@@ -1675,7 +1670,8 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
             guard player.play() else { throw NSError(domain: "Lippi.NeuralVoice", code: 1) }
             neuralVoicePlayer = player
         } catch {
-            speakWithSystemVoice(fallbackText, lang: lang)
+            state = .error(NeuralVoiceProviderError.generation.message(lang: lang))
+            scheduleAudioSessionDeactivation()
         }
     }
 
@@ -1685,9 +1681,6 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
         neuralSpeechTask = nil
         neuralVoicePlayer?.stop()
         neuralVoicePlayer = nil
-        if synthesizer.isSpeaking {
-            synthesizer.stopSpeaking(at: .immediate)
-        }
     }
 
     private func requestSpeechAuthorization() async -> SFSpeechRecognizerAuthorizationStatus {
@@ -1741,25 +1734,7 @@ private enum AppVoiceAssistantFeedback {
     }
 }
 
-extension AppVoiceAssistantCenter: AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
-    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in
-            if case .speaking = self.state {
-                self.state = .idle
-            }
-            self.scheduleAudioSessionDeactivation()
-        }
-    }
-
-    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        Task { @MainActor in
-            if case .speaking = self.state {
-                self.state = .idle
-            }
-            self.scheduleAudioSessionDeactivation()
-        }
-    }
-
+extension AppVoiceAssistantCenter: AVAudioPlayerDelegate {
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
             guard self.neuralVoicePlayer === player else { return }

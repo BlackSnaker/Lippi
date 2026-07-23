@@ -2,9 +2,6 @@ import SwiftUI
 #if canImport(ActivityKit)
 import ActivityKit
 #endif
-#if canImport(AVFoundation)
-import AVFoundation
-#endif
 #if os(iOS)
 import UIKit
 #endif
@@ -33,9 +30,6 @@ struct SettingsView: View {
     @State private var selectedScope: SettingsScope = .all
     @State private var confirmClear = false
     @State private var showsLippiOnboarding = false
-    @StateObject private var healthVoiceAssistant = HealthVoiceAssistant()
-    @State private var availableVoiceModels: [AVSpeechSynthesisVoice] = []
-    @State private var selectedVoiceIdentifier: String = AppVoicePreferences.autoIdentifier
 
     // единая сетка для рядов (чтобы всё было ровно)
     private let rowHInset: CGFloat = 14
@@ -235,15 +229,6 @@ struct SettingsView: View {
         } message: {
             Text(t(.settings_alert_clear_message))
         }
-        .onDisappear {
-            healthVoiceAssistant.stop()
-        }
-        .onAppear {
-            refreshVoiceModels()
-        }
-        .onChange(of: langRaw) { _, _ in
-            refreshVoiceModels()
-        }
         .fullScreenCover(isPresented: $showsLippiOnboarding) {
             LippiOnboardingView(mode: .replay) {
                 showsLippiOnboarding = false
@@ -366,43 +351,6 @@ struct SettingsView: View {
 
     private var selectedHealthVoiceSpeed: HealthVoicePlaybackSpeed {
         HealthVoicePlaybackSpeed(rawValue: healthVoiceSpeedRaw) ?? .defaultSpeed
-    }
-
-    private var selectedVoiceDisplayTitle: String {
-        if selectedVoiceIdentifier == AppVoicePreferences.autoIdentifier {
-            return s("settings.voice.model_auto")
-        }
-        guard let voice = AppVoiceSelector.voice(withIdentifier: selectedVoiceIdentifier) else {
-            return s("settings.voice.model_auto")
-        }
-        return AppVoiceSelector.displayName(for: voice)
-    }
-
-    private func refreshVoiceModels() {
-        availableVoiceModels = AppVoiceSelector.availableVoices(for: lang)
-        let stored = AppVoiceSelector.storedIdentifier(for: lang)
-
-        if stored != AppVoicePreferences.autoIdentifier,
-           !availableVoiceModels.contains(where: { $0.identifier == stored }) {
-            selectedVoiceIdentifier = AppVoicePreferences.autoIdentifier
-            AppVoiceSelector.storeIdentifier(nil, for: lang)
-            return
-        }
-        selectedVoiceIdentifier = stored
-    }
-
-    private func setVoiceSelection(_ identifier: String?) {
-        let normalized = identifier?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let normalized, !normalized.isEmpty, normalized != AppVoicePreferences.autoIdentifier {
-            selectedVoiceIdentifier = normalized
-            AppVoiceSelector.storeIdentifier(normalized, for: lang)
-        } else {
-            selectedVoiceIdentifier = AppVoicePreferences.autoIdentifier
-            AppVoiceSelector.storeIdentifier(nil, for: lang)
-        }
-        #if os(iOS)
-        UISelectionFeedbackGenerator().selectionChanged()
-        #endif
     }
 
     // MARK: - Sections (split to help compiler)
@@ -1153,127 +1101,6 @@ struct SettingsView: View {
                     .allowsHitTesting(false)
             )
             .opacity(healthVoiceEnabled ? 1 : 0.62)
-
-            HStack(alignment: .center, spacing: 10) {
-                Image(safeSystemName: "person.wave.2.fill", fallback: "speaker.wave.2.fill")
-                    .foregroundStyle(DS.text(0.86))
-                    .frame(width: 22, height: 22, alignment: .center)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(s("settings.voice.model_title"))
-                        .foregroundStyle(DS.text(0.94))
-                        .lineLimit(1)
-
-                    Text(s("settings.voice.model_subtitle"))
-                        .font(.caption2)
-                        .foregroundStyle(DS.text(0.55))
-                        .lineLimit(2)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-
-                Spacer(minLength: 8)
-
-                Menu {
-                    Button {
-                        setVoiceSelection(nil)
-                    } label: {
-                        HStack {
-                            Text(s("settings.voice.model_auto"))
-                            if selectedVoiceIdentifier == AppVoicePreferences.autoIdentifier {
-                                Spacer()
-                                Image(safeSystemName: "checkmark", fallback: "checkmark")
-                            }
-                        }
-                    }
-
-                    ForEach(availableVoiceModels, id: \.identifier) { voice in
-                        Button {
-                            setVoiceSelection(voice.identifier)
-                        } label: {
-                            HStack {
-                                Text(AppVoiceSelector.displayName(for: voice))
-                                if selectedVoiceIdentifier == voice.identifier {
-                                    Spacer()
-                                    Image(safeSystemName: "checkmark", fallback: "checkmark")
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(selectedVoiceDisplayTitle)
-                            .font(.caption.weight(.semibold))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        Image(safeSystemName: "chevron.up.chevron.down", fallback: "chevron.down")
-                            .font(.caption2.weight(.semibold))
-                    }
-                    .foregroundStyle(DS.text(0.88))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(DS.glassFill(0.10), in: Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(DS.glassStroke(0.14), lineWidth: 1)
-                            .allowsHitTesting(false)
-                    )
-                }
-                .menuStyle(.button)
-                .buttonStyle(.plain)
-                .disabled(!healthVoiceEnabled)
-            }
-            .padding(.horizontal, rowHInset)
-            .padding(.vertical, rowVInset)
-            .background(DS.glassFill(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(DS.glassStroke(0.14))
-                    .allowsHitTesting(false)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.white.opacity(0.06), .white.opacity(0.0)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .blendMode(.screen)
-                    .allowsHitTesting(false)
-            )
-            .opacity(healthVoiceEnabled ? 1 : 0.62)
-
-            HStack(spacing: 10) {
-                Button {
-                    healthVoiceAssistant.speak(
-                        s("settings.voice.preview_text"),
-                        language: lang,
-                        speed: selectedHealthVoiceSpeed
-                    )
-                    #if os(iOS)
-                    UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.56)
-                    #endif
-                } label: {
-                    Label(s("settings.voice.preview"), systemImage: "play.fill")
-                        .labelStyle(TightLabelStyle())
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(LippiButtonStyle(kind: .primary))
-                .disabled(!healthVoiceEnabled)
-                .opacity(healthVoiceEnabled ? 1 : 0.62)
-
-                Button {
-                    healthVoiceAssistant.stop()
-                } label: {
-                    Label(s("settings.voice.stop"), systemImage: "stop.fill")
-                        .labelStyle(TightLabelStyle())
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(LippiButtonStyle(kind: .secondary))
-                .disabled(!healthVoiceAssistant.isSpeaking)
-                .opacity(healthVoiceAssistant.isSpeaking ? 1 : 0.70)
-            }
 
             if !healthVoiceEnabled {
                 Text(s("settings.voice.disabled_hint"))
