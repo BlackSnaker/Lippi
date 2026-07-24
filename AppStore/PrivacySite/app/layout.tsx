@@ -8,28 +8,29 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    "https://lippi-privacy.contu4575gazeta-pl.chatgpt.site",
-  ),
   title: {
-    default: "Lippi — Privacy Policy",
-    template: "%s · Lippi",
+    default: "Lippi — Фокус, умные цели и забота о себе",
+    template: "Lippi — %s",
   },
   description:
-    "Lippi keeps goals, health context, voice interactions, and local intelligence private by design.",
-  openGraph: {
-    title: "Privacy, by design — Lippi",
-    description:
-      "On-device intelligence, clear permissions, and no cross-app tracking.",
-    type: "website",
-    images: ["/og.png"],
+    "Lippi помогает держать важное в фокусе, строить умные цели, беречь энергию и управлять днём — прямо на iPhone.",
+  applicationName: "Lippi",
+  category: "productivity",
+  keywords: [
+    "Lippi",
+    "продуктивность",
+    "умные цели",
+    "Помодоро",
+    "фокус",
+    "Apple Watch",
+  ],
+  icons: {
+    icon: "/favicon.svg",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "Privacy, by design — Lippi",
-    description:
-      "On-device intelligence, clear permissions, and no cross-app tracking.",
-    images: ["/og.png"],
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
   },
 };
 
@@ -39,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ru">
       <body className={geist.variable}>{children}</body>
     </html>
   );

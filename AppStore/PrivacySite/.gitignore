@@ -40,6 +40,8 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+/static-export/
+/lippi-site-*.zip
 
 # Source helper imported by vite.config.ts. The repository-level build/
 # exclusion is intended for generated artifacts, not this Sites plugin.

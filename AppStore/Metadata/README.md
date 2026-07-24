@@ -14,9 +14,9 @@ Prepared for version `1.0`, build `2`.
 
 ## URLs
 
-- Privacy Policy: https://lippi-privacy.contu4575gazeta-pl.chatgpt.site
-- Support: https://lippi-privacy.contu4575gazeta-pl.chatgpt.site#english
-- Marketing: https://github.com/BlackSnaker/Lippi
+- Privacy Policy: https://lippi.lenuma.ru/privacy
+- Support: https://lippi.lenuma.ru#release
+- Marketing: https://lippi.lenuma.ru
 
 ## Recommended commercial settings
 

@@ -11,7 +11,7 @@ import UIKit
 // =======================================================
 struct SettingsView: View {
     private static let privacyPolicyURL = URL(
-        string: "https://lippi-privacy.contu4575gazeta-pl.chatgpt.site"
+        string: "https://lippi.lenuma.ru/privacy"
     )!
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

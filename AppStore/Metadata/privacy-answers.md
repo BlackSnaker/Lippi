@@ -25,4 +25,4 @@ The local account’s email, name, password hash, tasks, goals, and voice-comman
 
 ## Privacy URL
 
-https://lippi-privacy.contu4575gazeta-pl.chatgpt.site
+https://lippi.lenuma.ru/privacy

@@ -7,6 +7,20 @@
 **Осознанный фокус, бережное восстановление и движение к важным целям без перегруза.**
 
 <p>
+  <a href="https://lippi.lenuma.ru">
+    <img
+      alt="Lippi — официальный сайт приложения для продуктивности, концентрации и заботы о себе"
+      src="AppStore/PrivacySite/public/showcase/day-harmony.jpg"
+      width="100%"
+    >
+  </a>
+</p>
+
+### [Открыть официальный сайт Lippi →](https://lippi.lenuma.ru)
+
+**Познакомьтесь с возможностями Lippi, умными целями, локальным интеллектом, голосовым помощником и интеграцией с Apple Watch — в одной цельной интерактивной презентации.**
+
+<p>
   <img alt="iOS 18.5+" src="https://img.shields.io/badge/iOS-18.5%2B-0A84FF?style=for-the-badge&logo=apple&logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-5.0-FA7343?style=for-the-badge&logo=swift&logoColor=white">
   <img alt="SwiftUI" src="https://img.shields.io/badge/UI-SwiftUI-111111?style=for-the-badge&logo=apple&logoColor=white">
@@ -30,7 +44,7 @@
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
 
-[Возможности](#возможности) · [Последнее обновление](#последнее-обновление--latest-release) · [Архитектура](#архитектура--architecture) · [Запуск](#локальный-запуск--run-locally) · [Privacy](https://lippi-privacy.contu4575gazeta-pl.chatgpt.site) · [English](#english) · [Changelog](CHANGELOG.md)
+[Возможности](#возможности) · [Последнее обновление](#последнее-обновление--latest-release) · [Архитектура](#архитектура--architecture) · [Запуск](#локальный-запуск--run-locally) · [Сайт](https://lippi.lenuma.ru) · [Privacy](https://lippi.lenuma.ru/privacy) · [English](#english) · [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -88,7 +102,7 @@ Lippi объединяет планирование, фокус и восста�
 - **Плавность важнее декора.** Стекло, тени и анимации упрощаются во время прокрутки, энергосбережения и нагрева.
 - **Доступность встроена.** Dynamic Type, VoiceOver, Reduce Motion и Reduce Transparency учитываются общей дизайн-системой.
 
-[Политика конфиденциальности Lippi →](https://lippi-privacy.contu4575gazeta-pl.chatgpt.site)
+[Политика конфиденциальности Lippi →](https://lippi.lenuma.ru/privacy)
 
 ## Последнее обновление · Latest release
 
@@ -120,7 +134,7 @@ Lippi объединяет планирование, фокус и восста�
 - **Карточки больше не отсвечивают.** Движущиеся блики и декоративные отражения удалены; интерфейс сохраняет объём, оставаясь спокойным при прокрутке.
 - **Подготовлена версия 1.0 (2).** Release-сборка, arm64-архив, настройки экспорта и комплект Store-метаданных собраны в воспроизводимый сценарий публикации.
 - **Приватность описана полностью.** Основное приложение и два виджета получили Privacy Manifest; использование системных API задекларировано, трекинг отключён, а экспортная криптография отмечена корректно.
-- **Политика всегда рядом.** Ссылка появилась в настройках на русском, английском, немецком и испанском; [двуязычная веб-версия](https://lippi-privacy.contu4575gazeta-pl.chatgpt.site) доступна для App Store Connect.
+- **Политика всегда рядом.** Ссылка появилась в настройках на русском, английском, немецком и испанском; [двуязычная веб-версия](https://lippi.lenuma.ru/privacy) доступна для App Store Connect.
 - **Материалы для ревью готовы.** Описания RU/EN, ключевые слова, заметки рецензенту, ответы о данных, план скриншотов и Export Options хранятся рядом с кодом.
 - **Исправлены предупреждения Release.** Жизненный цикл локального Bonsai-провайдера теперь явно удерживается интерфейсом во время генерации.
 
@@ -268,7 +282,7 @@ The product is designed around four promises:
 
 The July 24 release gives Lippi a calmer, more coherent Liquid Glass design across light and dark appearances. Decorative card sheen is gone; depth now comes from material, edge, tint, and hierarchy. Reduce Motion, Reduce Transparency, energy, and thermal adaptations remain part of the same design system.
 
-It also prepares version **1.0 (2)** for App Store submission with privacy manifests for the app and both widgets, export-compliance metadata, localized store copy, review notes, screenshot guidance, and a [public bilingual privacy policy](https://lippi-privacy.contu4575gazeta-pl.chatgpt.site). The archive is prepared and locally validated; upload remains pending Apple Developer Program activation.
+It also prepares version **1.0 (2)** for App Store submission with privacy manifests for the app and both widgets, export-compliance metadata, localized store copy, review notes, screenshot guidance, and a [public bilingual privacy policy](https://lippi.lenuma.ru/privacy). The archive is prepared and locally validated; upload remains pending Apple Developer Program activation.
 
 The voice assistant now understands rephrased requests, tolerates small recognition errors, and connects short follow-ups to recent context. Smart Goals are part of the voice experience: Lippi can open the planner, carry a spoken idea into a new goal, or show roadmap progress. Interpretation and learning stay local, and generation waits for the user to review and confirm the request. The suite now contains **85 tests**.
 

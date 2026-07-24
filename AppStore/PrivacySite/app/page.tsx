@@ -1,333 +1,367 @@
+import Image from "next/image";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Lippi",
+  title: "Фокус, умные цели и забота о себе",
   description:
-    "How Lippi keeps goals, health context, voice interactions, and local intelligence private.",
+    "Lippi помогает держать важное в фокусе, строить умные цели, беречь энергию и управлять днём — прямо на iPhone.",
+  openGraph: {
+    title: "Lippi — ваш день в гармонии",
+    description:
+      "Фокус, умные цели, голосовой помощник и бережная продуктивность на iPhone.",
+    type: "website",
+    images: ["/showcase/introducing-lippi.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lippi — ваш день в гармонии",
+    description:
+      "Фокус, умные цели, голосовой помощник и бережная продуктивность на iPhone.",
+    images: ["/showcase/introducing-lippi.jpg"],
+  },
 };
 
-const effectiveDate = "July 24, 2026";
+const featureCards = [
+  {
+    icon: "◎",
+    tone: "blue",
+    title: "Фокус без лишнего",
+    text: "Органайзер и Помодоро помогают начать с главного, выдержать ритм и вовремя сделать паузу.",
+  },
+  {
+    icon: "↗",
+    tone: "mint",
+    title: "Цели, которые становятся планом",
+    text: "Lippi уточняет контекст, разбивает большое на выполнимые этапы и мягко адаптирует маршрут.",
+  },
+  {
+    icon: "◌",
+    tone: "violet",
+    title: "Помощник, который слышит",
+    text: "Добавляйте задачи, запускайте фокус и открывайте нужный раздел естественной голосовой командой.",
+  },
+  {
+    icon: "♡",
+    tone: "coral",
+    title: "Забота входит в план",
+    text: "Сон, активность и восстановление учитываются только с вашего разрешения и остаются под вашим контролем.",
+  },
+];
 
-function Mark() {
+const gallery = [
+  {
+    src: "/showcase/smart-goals.jpg",
+    alt: "Умные цели Lippi превращают большую цель в персональный маршрут",
+    label: "Умные цели",
+    caption: "Из желания — в понятную дорожную карту.",
+    className: "gallery-card gallery-card-wide",
+  },
+  {
+    src: "/showcase/voice-assistant.jpg",
+    alt: "Голосовой помощник Lippi помогает управлять приложением без рук",
+    label: "Голосовой помощник",
+    caption: "Когда руки заняты, идеи всё равно попадают в план.",
+    className: "gallery-card",
+  },
+  {
+    src: "/showcase/pomodoro.jpg",
+    alt: "Таймер Помодоро Lippi с циклами фокуса и перерывами",
+    label: "Помодоро",
+    caption: "Глубокая работа без забытого отдыха.",
+    className: "gallery-card",
+  },
+  {
+    src: "/showcase/widgets.jpg",
+    alt: "Виджеты Lippi на экране блокировки iPhone",
+    label: "Виджеты",
+    caption: "Главное остаётся на виду и всегда под рукой.",
+    className: "gallery-card gallery-card-wide",
+  },
+];
+
+function LippiMark() {
   return (
-    <span className="mark" aria-hidden="true">
-      <span />
+    <span className="lippi-mark" aria-hidden="true">
+      <i />
+      <i />
+      <i />
+      <i />
+      <i />
     </span>
   );
 }
 
-function SummaryCard({
-  eyebrow,
-  title,
-  body,
-}: {
-  eyebrow: string;
-  title: string;
-  body: string;
-}) {
+function Brand() {
   return (
-    <article className="summary-card">
-      <p className="eyebrow">{eyebrow}</p>
-      <h3>{title}</h3>
-      <p>{body}</p>
-    </article>
+    <span className="brand-lockup">
+      <LippiMark />
+      <span>Lippi</span>
+    </span>
   );
+}
+
+function Arrow() {
+  return <span aria-hidden="true">↗</span>;
 }
 
 export default function Home() {
   return (
-    <main>
-      <nav aria-label="Privacy policy navigation">
-        <a className="brand" href="#top" aria-label="Lippi privacy policy">
-          <Mark />
-          <span>Lippi</span>
+    <main className="landing-page">
+      <header className="site-header">
+        <a className="brand" href="#top" aria-label="Lippi — на главную">
+          <Brand />
         </a>
-        <div className="nav-links">
-          <a href="#english">English</a>
-          <a href="#russian">Русский</a>
-        </div>
-      </nav>
+        <nav className="desktop-nav" aria-label="Навигация по сайту">
+          <a href="#possibilities">Возможности</a>
+          <a href="#intelligence">Интеллект</a>
+          <a href="#privacy">Приватность</a>
+        </nav>
+        <a className="header-cta" href="#release">
+          Скоро в App Store
+        </a>
+      </header>
 
-      <section className="hero" id="top">
-        <div className="hero-orb" aria-hidden="true">
-          <div className="shield">L</div>
+      <section className="landing-hero" id="top">
+        <div className="hero-glow hero-glow-blue" aria-hidden="true" />
+        <div className="hero-glow hero-glow-mint" aria-hidden="true" />
+        <div className="hero-copy">
+          <p className="overline">
+            <span className="status-dot" aria-hidden="true" />
+            Персональный помощник для iPhone
+          </p>
+          <h1>
+            Важное — в фокусе.
+            <span>Ваш ритм — в центре.</span>
+          </h1>
+          <p className="hero-lede">
+            Lippi соединяет планы, умные цели, фокус и заботу о себе в одном
+            спокойном пространстве. Без лишнего шума и давления.
+          </p>
+          <div className="hero-actions">
+            <a className="button button-primary" href="#possibilities">
+              Познакомиться с Lippi
+              <span aria-hidden="true">↓</span>
+            </a>
+            <Link className="button button-secondary" href="/privacy">
+              Как Lippi хранит данные
+            </Link>
+          </div>
         </div>
-        <p className="kicker">Privacy, by design</p>
-        <h1>Your day stays yours.</h1>
-        <p className="lede">
-          Lippi is designed around on-device intelligence, clear permission
-          boundaries, and data minimization. No ads. No tracking. No sale of
-          personal data.
-        </p>
-        <p className="date">Effective {effectiveDate}</p>
+
+        <figure className="hero-visual">
+          <Image
+            src="/showcase/day-harmony.jpg"
+            alt="Главный экран Lippi с органайзером дня на iPhone"
+            width={1536}
+            height={1024}
+            priority
+            sizes="(max-width: 900px) 100vw, 1320px"
+          />
+          <figcaption>
+            <span>Один день</span>
+            <strong>Один спокойный ритм.</strong>
+            <span>Фокус · Прогресс · Забота</span>
+          </figcaption>
+        </figure>
+
+        <div className="trust-row" aria-label="Основные преимущества">
+          <span>Работает на iPhone</span>
+          <span>Локальный интеллект</span>
+          <span>Apple Watch и HealthKit</span>
+          <span>Русский нейроголос</span>
+        </div>
       </section>
 
-      <section className="summary-grid" aria-label="Privacy highlights">
-        <SummaryCard
-          eyebrow="On device"
-          title="Personal by default"
-          body="Your account, plans, goals, progress, and wellbeing context are stored locally on your device."
-        />
-        <SummaryCard
-          eyebrow="Your choice"
-          title="Permission first"
-          body="Health, microphone, and speech access only begin after you choose to grant the relevant system permission."
-        />
-        <SummaryCard
-          eyebrow="No profiling"
-          title="Nothing to follow"
-          body="Lippi contains no advertising SDKs, third-party analytics, or cross-app tracking."
-        />
+      <section className="feature-overview" id="possibilities">
+        <div className="section-intro">
+          <p className="overline">Продуман до мелочей</p>
+          <h2>
+            Всё, что помогает двигаться.
+            <span>Ничего, что мешает жить.</span>
+          </h2>
+          <p>
+            Lippi подстраивается под ваш день, а не требует подстроить день под
+            приложение.
+          </p>
+        </div>
+
+        <div className="feature-grid">
+          {featureCards.map((feature) => (
+            <article className="feature-card" key={feature.title}>
+              <span className={`feature-icon feature-icon-${feature.tone}`}>
+                {feature.icon}
+              </span>
+              <h3>{feature.title}</h3>
+              <p>{feature.text}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
-      <article className="policy" id="english">
-        <header className="section-heading">
-          <p className="eyebrow">English</p>
-          <h2>Lippi Privacy Policy</h2>
+      <section className="intelligence-story" id="intelligence">
+        <div className="story-copy">
+          <p className="overline">Интеллект Lippi</p>
+          <h2>
+            Понимает намерение.
+            <span>Помогает сделать первый шаг.</span>
+          </h2>
           <p>
-            This policy explains what information Lippi processes, where that
-            processing happens, and the controls available to you.
+            Опишите, чего хотите добиться, своими словами. Lippi учитывает
+            пожелания, доступное время и текущий ритм, чтобы предложить
+            содержательный маршрут — с конкретикой, а не общими фразами.
           </p>
-        </header>
+          <ul className="check-list">
+            <li>Уточняет смысл и контекст цели</li>
+            <li>Строит этапы, задачи и полезные ориентиры</li>
+            <li>Адаптирует нагрузку без потери направления</li>
+          </ul>
+        </div>
+        <figure className="story-image">
+          <Image
+            src="/showcase/adaptive-goals.jpg"
+            alt="Lippi адаптирует умные цели в фоне под прогресс пользователя"
+            width={1536}
+            height={1024}
+            sizes="(max-width: 900px) 100vw, 58vw"
+          />
+        </figure>
+      </section>
 
-        <section>
-          <h3>1. Information Lippi processes</h3>
-          <p>
-            Depending on the features you use, Lippi may process the name and
-            email you enter for a local account; tasks, goals, routines,
-            progress, focus sessions, and app preferences; voice commands;
-            and Apple Health information you explicitly authorize.
-          </p>
-          <p>
-            This information supports the features you request. It is not used
-            to build advertising profiles or sold to anyone.
-          </p>
-        </section>
+      <section className="showcase-section" aria-labelledby="showcase-title">
+        <div className="section-intro section-intro-centered">
+          <p className="overline">Ближе к вашему дню</p>
+          <h2 id="showcase-title">
+            Возможности, которые
+            <span>ощущаются естественно.</span>
+          </h2>
+        </div>
 
-        <section>
-          <h3>2. Local accounts and storage</h3>
-          <p>
-            Lippi accounts are local to the app. Account records, including a
-            one-way password hash, are kept in the app container; the active
-            session is protected by the Apple Keychain. Tasks, goals, settings,
-            and progress remain in the app container or Lippi&apos;s shared App
-            Group for its widgets.
-          </p>
-          <p>
-            Removing the app normally removes its app-container data. Keychain
-            behavior is controlled by the operating system. You can also stop
-            using a feature, revoke permissions in iOS Settings, or delete
-            downloaded AI and voice models from Lippi.
-          </p>
-        </section>
+        <div className="gallery-grid">
+          {gallery.map((item) => (
+            <figure className={item.className} key={item.src}>
+              <div className="gallery-image">
+                <Image
+                  src={item.src}
+                  alt={item.alt}
+                  width={1536}
+                  height={1024}
+                  sizes={
+                    item.className.includes("wide")
+                      ? "(max-width: 900px) 100vw, 1200px"
+                      : "(max-width: 900px) 100vw, 50vw"
+                  }
+                />
+              </div>
+              <figcaption>
+                <span>{item.label}</span>
+                <strong>{item.caption}</strong>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
 
-        <section>
-          <h3>3. Apple Health and Apple Watch</h3>
+      <section className="ecosystem-section">
+        <figure className="ecosystem-image">
+          <Image
+            src="/showcase/watch-health.jpg"
+            alt="Интеграция Lippi с Apple Watch и Apple Здоровьем"
+            width={1536}
+            height={1024}
+            sizes="(max-width: 900px) 100vw, 58vw"
+          />
+        </figure>
+        <div className="ecosystem-copy">
+          <p className="overline">Ваш ритм — в центре плана</p>
+          <h2>
+            iPhone, часы и самочувствие.
+            <span>В одном бережном контексте.</span>
+          </h2>
           <p>
-            If you opt in, Lippi reads only the HealthKit categories shown in
-            Apple&apos;s permission sheet and may save completed breathing
-            practices as mindful sessions. Health information is used on your
-            device to shape gentle planning and wellbeing suggestions. Lippi
-            does not send HealthKit data to external AI providers, advertisers,
-            or analytics services.
+            Если вы разрешите, Lippi учитывает доступные показатели Apple
+            Здоровья и предлагает темп, который поддерживает продуктивность, а
+            не выжимает её.
           </p>
-          <p>
-            Lippi provides general wellbeing support and is not a medical
-            device, diagnosis, or substitute for professional care.
-          </p>
-        </section>
+          <div className="mini-points">
+            <span>Рекомендации на iPhone</span>
+            <span>Напоминания на Apple Watch</span>
+            <span>Каждое разрешение — под вашим контролем</span>
+          </div>
+        </div>
+      </section>
 
-        <section>
-          <h3>4. Voice and local intelligence</h3>
+      <section className="privacy-section" id="privacy">
+        <div className="privacy-copy">
+          <p className="overline">Приватность по умолчанию</p>
+          <h2>
+            Ваши цели остаются
+            <span>на вашем iPhone.</span>
+          </h2>
           <p>
-            Lippi&apos;s neural voice and Bonsai intelligence models run on your
-            device after their model files are downloaded. Goal text and model
-            output stay local. Voice recognition uses Apple&apos;s Speech
-            framework. On-device recognition is required whenever the device
-            supports it; where the operating system cannot provide it, Apple
-            may process speech under Apple&apos;s own privacy terms. Lippi does
-            not keep raw microphone audio after a command finishes.
+            Локальная модель Bonsai создаёт планы прямо на устройстве. Lippi не
+            строит рекламный профиль, не отслеживает вас между приложениями и
+            не отправляет текст целей внешнему ИИ.
           </p>
-        </section>
+          <Link className="text-link" href="/privacy">
+            Прочитать политику конфиденциальности
+            <Arrow />
+          </Link>
+        </div>
+        <figure className="privacy-image">
+          <Image
+            src="/showcase/local-intelligence.jpg"
+            alt="Локальный интеллект Lippi работает на iPhone и сохраняет приватность"
+            width={1536}
+            height={1024}
+            sizes="(max-width: 900px) 100vw, 58vw"
+          />
+        </figure>
+      </section>
 
-        <section>
-          <h3>5. Network access</h3>
+      <section className="release-section" id="release">
+        <div className="release-visual">
+          <Image
+            src="/showcase/introducing-lippi.jpg"
+            alt="Представляем Lippi — помощника для продуктивности, концентрации и заботы о себе"
+            width={1536}
+            height={1024}
+            sizes="(max-width: 900px) 100vw, 1200px"
+          />
+        </div>
+        <div className="release-copy">
+          <span className="release-pill">Скоро в App Store</span>
+          <h2>Спокойнее планировать. Увереннее двигаться.</h2>
           <p>
-            Lippi makes limited network requests to download optional AI and
-            voice model files from their published sources and to retrieve
-            public reference pages used to ground certain Smart Goal roadmaps.
-            These requests do not include your goal text, health information,
-            account details, or voice recordings. Like ordinary internet
-            requests, the destination may receive technical information such as
-            an IP address and request headers under its own privacy policy.
+            Lippi готовится к первому релизу для iPhone. А пока можно
+            познакомиться с возможностями и задать вопрос разработчику.
           </p>
-        </section>
+          <a
+            className="button button-primary"
+            href="https://github.com/BlackSnaker/Lippi/issues"
+            rel="noreferrer"
+          >
+            Связаться с поддержкой
+            <Arrow />
+          </a>
+        </div>
+      </section>
 
-        <section>
-          <h3>6. Sharing, tracking, and retention</h3>
-          <p>
-            Lippi does not sell personal data, share it for targeted
-            advertising, or track you across apps and websites. Lippi has no
-            developer-operated cloud account database and no third-party
-            analytics SDK. Locally stored information remains until you delete
-            it, reset the relevant feature, or remove the app, subject to normal
-            iOS and Keychain behavior.
-          </p>
-        </section>
-
-        <section>
-          <h3>7. Children and changes</h3>
-          <p>
-            Lippi is a general productivity and wellbeing app and is not
-            directed to children under 13. We may update this policy when Lippi
-            changes or legal requirements evolve. The effective date above will
-            always identify the current version.
-          </p>
-        </section>
-
-        <section>
-          <h3>8. Contact</h3>
-          <p>
-            For privacy questions, support requests, or deletion guidance,
-            contact the Lippi developer through the project&apos;s{" "}
-            <a
-              href="https://github.com/BlackSnaker/Lippi/issues"
-              rel="noreferrer"
-            >
-              public support page
-            </a>
-            .
-          </p>
-        </section>
-      </article>
-
-      <article className="policy" id="russian" lang="ru">
-        <header className="section-heading">
-          <p className="eyebrow">Русский</p>
-          <h2>Политика конфиденциальности Lippi</h2>
-          <p>
-            Здесь описано, какие данные обрабатывает Lippi, где происходит
-            обработка и чем управляете вы.
-          </p>
-        </header>
-
-        <section>
-          <h3>1. Какие данные обрабатывает Lippi</h3>
-          <p>
-            В зависимости от выбранных функций Lippi может обрабатывать имя и
-            email локального аккаунта, задачи, цели, привычки, прогресс,
-            фокус-сессии и настройки, голосовые команды, а также данные Apple
-            Здоровья, к которым вы отдельно разрешили доступ.
-          </p>
-          <p>
-            Эти сведения нужны только для выбранных вами функций. Они не
-            используются для рекламного профилирования и никому не продаются.
-          </p>
-        </section>
-
-        <section>
-          <h3>2. Локальный аккаунт и хранение</h3>
-          <p>
-            Аккаунт Lippi существует только внутри приложения. Данные аккаунта,
-            включая односторонний хеш пароля, хранятся в контейнере приложения,
-            а активная сессия защищена Apple Keychain. Задачи, цели, настройки и
-            прогресс остаются в контейнере Lippi или в общей App Group,
-            необходимой для виджетов.
-          </p>
-          <p>
-            При удалении приложения iOS обычно удаляет данные его контейнера.
-            Поведение Keychain определяется операционной системой. Вы можете
-            отключить функцию, отозвать разрешение в настройках iOS или удалить
-            загруженные модели ИИ и голоса в Lippi.
-          </p>
-        </section>
-
-        <section>
-          <h3>3. Apple Здоровье и Apple Watch</h3>
-          <p>
-            После вашего согласия Lippi читает только категории HealthKit,
-            показанные в системном окне Apple, и может сохранять завершённые
-            дыхательные практики как минуты осознанности. Данные здоровья
-            обрабатываются на устройстве и помогают составлять бережные планы.
-            Lippi не передаёт их внешним ИИ-провайдерам, рекламе или аналитике.
-          </p>
-          <p>
-            Lippi даёт общие рекомендации для самочувствия и не является
-            медицинским устройством, диагнозом или заменой специалиста.
-          </p>
-        </section>
-
-        <section>
-          <h3>4. Голос и локальный интеллект</h3>
-          <p>
-            Нейроголос Lippi и модель Bonsai работают на устройстве после
-            загрузки файлов моделей. Текст целей и ответы модели остаются
-            локальными. Для распознавания используется Speech framework Apple.
-            Когда устройство поддерживает локальное распознавание, Lippi
-            требует именно его; в остальных случаях речь может обрабатываться
-            Apple по собственным условиям конфиденциальности. Lippi не хранит
-            исходную запись микрофона после завершения команды.
-          </p>
-        </section>
-
-        <section>
-          <h3>5. Доступ к сети</h3>
-          <p>
-            Lippi обращается к сети, чтобы скачать необязательные модели ИИ и
-            голоса из их официальных источников, а также получить публичные
-            справочные страницы для некоторых дорожных карт «Умных целей». В
-            эти запросы не включаются текст вашей цели, данные здоровья, данные
-            аккаунта или записи голоса. Как и при любом интернет-запросе,
-            получатель может видеть IP-адрес и технические заголовки согласно
-            собственной политике.
-          </p>
-        </section>
-
-        <section>
-          <h3>6. Передача, отслеживание и срок хранения</h3>
-          <p>
-            Lippi не продаёт данные, не передаёт их для таргетированной рекламы
-            и не отслеживает вас между приложениями и сайтами. У Lippi нет
-            облачной базы аккаунтов разработчика и сторонних SDK аналитики.
-            Локальные сведения хранятся, пока вы не удалите их, не сбросите
-            соответствующую функцию или не удалите приложение, с учётом
-            обычного поведения iOS и Keychain.
-          </p>
-        </section>
-
-        <section>
-          <h3>7. Дети и изменения</h3>
-          <p>
-            Lippi — универсальное приложение для продуктивности и самочувствия,
-            не предназначенное специально для детей младше 13 лет. Политика
-            может обновляться вместе с приложением или требованиями закона.
-            Текущую версию всегда показывает дата в начале страницы.
-          </p>
-        </section>
-
-        <section>
-          <h3>8. Связаться с нами</h3>
-          <p>
-            По вопросам конфиденциальности, поддержки или удаления данных
-            напишите разработчику Lippi через{" "}
-            <a
-              href="https://github.com/BlackSnaker/Lippi/issues"
-              rel="noreferrer"
-            >
-              публичную страницу поддержки
-            </a>
-            .
-          </p>
-        </section>
-      </article>
-
-      <footer>
-        <a className="brand" href="#top">
-          <Mark />
-          <span>Lippi</span>
+      <footer className="site-footer">
+        <a className="brand footer-brand" href="#top">
+          <Brand />
         </a>
-        <p>Private focus. Thoughtful progress.</p>
-        <p>© 2026 Lippi. All rights reserved.</p>
+        <div className="footer-links">
+          <a href="#possibilities">Возможности</a>
+          <Link href="/privacy">Конфиденциальность</Link>
+          <a
+            href="https://github.com/BlackSnaker/Lippi/issues"
+            rel="noreferrer"
+          >
+            Поддержка
+          </a>
+        </div>
+        <p>© 2026 Lippi. Сделано с заботой о вашем внимании.</p>
       </footer>
     </main>
   );

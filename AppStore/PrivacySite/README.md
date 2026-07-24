@@ -1,10 +1,12 @@
-# Lippi Privacy
+# Lippi Product Site
 
-Public bilingual privacy policy for the Lippi App Store product page.
+Public product site for the Lippi iPhone app, with a separate bilingual privacy
+policy for App Store review.
 
-- Production: https://lippi-privacy.contu4575gazeta-pl.chatgpt.site
-- Languages: Russian and English
+- Primary language: Russian
+- Privacy policy: `/privacy`
 - Hosting project: declared in `.openai/hosting.json`
+- Custom domain: pending owner DNS configuration
 - Data services: none
 
 ## Local verification
@@ -17,16 +19,18 @@ npm test
 npm run lint
 ```
 
-`npm test` creates the production build and verifies the rendered privacy
-content, navigation anchors, contact details, and App Store-facing statements.
+`npm test` creates the production build and verifies both the product page and
+privacy policy, including navigation, metadata, imagery, support details, and
+App Store-facing statements.
 
 ## Source map
 
-- `app/page.tsx` — policy content and page structure
+- `app/page.tsx` — product page and feature showcase
+- `app/privacy/page.tsx` — bilingual privacy policy
 - `app/globals.css` — responsive visual design
-- `tests/rendered-html.test.mjs` — production-output checks
-- `public/og.png` — social preview
+- `tests/rendered-html.test.mjs` — production-output checks for both routes
+- `public/showcase/` — product visuals supplied for the Lippi launch site
 - `.openai/hosting.json` — existing Sites project binding
 
-The site is intentionally public and does not require authentication, store
-visitor data, or connect to a database.
+The site does not require authentication, store visitor data, or connect to a
+database. It is designed to be published under a Lippi-owned custom domain.
