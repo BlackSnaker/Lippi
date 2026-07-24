@@ -19,14 +19,18 @@
   <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=flat-square">
   <img alt="Bonsai thermal protection" src="https://img.shields.io/badge/Bonsai-Guarded-FF375F?style=flat-square">
   <img alt="Local voices" src="https://img.shields.io/badge/Voice-F2%20·%20M3-BF5AF2?style=flat-square">
+  <img alt="Context-aware assistant" src="https://img.shields.io/badge/Assistant-Context%20aware-0A84FF?style=flat-square">
+  <img alt="Liquid Glass themes" src="https://img.shields.io/badge/Design-Liquid%20Glass-5E5CE6?style=flat-square">
+  <img alt="App Store readiness" src="https://img.shields.io/badge/App%20Store-1.0%20(2)%20prepared-0A84FF?style=flat-square">
+  <img alt="Privacy manifest" src="https://img.shields.io/badge/Privacy-Manifest%20ready-30D158?style=flat-square">
   <img alt="Local model storage" src="https://img.shields.io/badge/Local%20models-~684%20MiB-30D158?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Ready-BF5AF2?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-74%20passing-30D158?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-85-30D158?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
 
-[Возможности](#возможности) · [Последнее обновление](#последнее-обновление--latest-release) · [Архитектура](#архитектура--architecture) · [Запуск](#локальный-запуск--run-locally) · [English](#english) · [Changelog](CHANGELOG.md)
+[Возможности](#возможности) · [Последнее обновление](#последнее-обновление--latest-release) · [Архитектура](#архитектура--architecture) · [Запуск](#локальный-запуск--run-locally) · [Privacy](https://lippi-privacy.contu4575gazeta-pl.chatgpt.site) · [English](#english) · [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -72,7 +76,7 @@ Lippi объединяет планирование, фокус и восста�
 | **Задачи и Pomodoro** | Контекстные действия, гибкие фокус-сессии, надёжные пауза и продолжение, статистика без визуального шума. |
 | **Здоровье** | Разрешённые показатели HealthKit, системное обнаружение сопряжённых Apple Watch, личная база, отметки самочувствия и объяснимые рекомендации. |
 | **Восстановление** | Дыхательные практики, упражнения для глаз и мягкие сценарии перерыва, которые не превращаются в новые обязательства. |
-| **Голосовой помощник** | Управление функциями голосом, только локальные естественные голоса F2 и M3 и отдельные действия VoiceOver. |
+| **Голосовой помощник** | Контекстные просьбы и перефразировки, голосовой доступ к «Умным целям», локальные естественные голоса F2 и M3 и отдельные действия VoiceOver. |
 | **Знакомство с Lippi** | Четыре интерактивных шага, осмысленный выбор темпа и видимая автоматическая подготовка локальной модели уже при первом запуске. |
 | **Виджеты** | Быстрый взгляд на задачи, таймер и важные действия с домашнего экрана и экрана блокировки. |
 
@@ -84,7 +88,74 @@ Lippi объединяет планирование, фокус и восста�
 - **Плавность важнее декора.** Стекло, тени и анимации упрощаются во время прокрутки, энергосбережения и нагрева.
 - **Доступность встроена.** Dynamic Type, VoiceOver, Reduce Motion и Reduce Transparency учитываются общей дизайн-системой.
 
+[Политика конфиденциальности Lippi →](https://lippi-privacy.contu4575gazeta-pl.chatgpt.site)
+
 ## Последнее обновление · Latest release
+
+### 24 июля 2026 — спокойнее выглядит. честнее рассказывает о приватности. готова к релизу.
+
+Светлая и тёмная темы стали частями одной цельной системы: стекло сохраняет глубину, но больше не отвлекает бликами. Одновременно Lippi завершила техническую подготовку версии **1.0 (2)** для App Store — с понятной политикой конфиденциальности и проверяемыми метаданными.
+
+<table>
+  <tr>
+    <td width="33%" align="center" valign="top">
+      <strong>◐ Две темы. Один характер.</strong><br><br>
+      Материалы, контраст и акцентные оттенки бережно адаптируются к светлому и тёмному окружению.<br><br>
+      <sub>Beautiful in every appearance.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>◌ Стекло без бликов</strong><br><br>
+      Декоративные отсветы убраны с карточек. Глубину создают материал, тонкая кромка и спокойная иерархия.<br><br>
+      <sub>Depth without distraction.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>🔒 Приватность на виду</strong><br><br>
+      Манифесты, ответы для App Store и открытая политика точно описывают локальную работу приложения.<br><br>
+      <sub>Clear by design.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Liquid Glass стал цельнее.** Главная, задачи, «Умные цели», настройки и помощник используют общую систему материалов, контраста и адаптивных акцентов в обеих темах.
+- **Карточки больше не отсвечивают.** Движущиеся блики и декоративные отражения удалены; интерфейс сохраняет объём, оставаясь спокойным при прокрутке.
+- **Подготовлена версия 1.0 (2).** Release-сборка, arm64-архив, настройки экспорта и комплект Store-метаданных собраны в воспроизводимый сценарий публикации.
+- **Приватность описана полностью.** Основное приложение и два виджета получили Privacy Manifest; использование системных API задекларировано, трекинг отключён, а экспортная криптография отмечена корректно.
+- **Политика всегда рядом.** Ссылка появилась в настройках на русском, английском, немецком и испанском; [двуязычная веб-версия](https://lippi-privacy.contu4575gazeta-pl.chatgpt.site) доступна для App Store Connect.
+- **Материалы для ревью готовы.** Описания RU/EN, ключевые слова, заметки рецензенту, ответы о данных, план скриншотов и Export Options хранятся рядом с кодом.
+- **Исправлены предупреждения Release.** Жизненный цикл локального Bonsai-провайдера теперь явно удерживается интерфейсом во время генерации.
+
+> Архив подготовлен и проверен локально. Отправка в App Store Connect остаётся ожидающим шагом до активации платной программы Apple Developer.
+
+### 24 июля 2026 — понимает просьбу, а не только команду
+
+Теперь с Lippi можно говорить естественнее. Помощник распознаёт разные формулировки, помнит контекст недавнего разговора и понимает короткие продолжения — от «и ещё купить молоко» до «а покажи прогресс».
+
+<table>
+  <tr>
+    <td width="33%" align="center" valign="top">
+      <strong>💬 Слышит смысл</strong><br><br>
+      Порядок слов, вежливые обороты и небольшие ошибки распознавания больше не мешают понятному действию.<br><br>
+      <sub>More ways to ask.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>🧠 Помнит контекст</strong><br><br>
+      Короткая следующая фраза связывается с предыдущей успешной командой, но старый контекст вовремя забывается.<br><br>
+      <sub>Natural follow-ups.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>🎯 Понимает цели</strong><br><br>
+      Голосом можно открыть «Умные цели», перенести идею в планировщик или посмотреть прогресс дорожной карты.<br><br>
+      <sub>Smart Goals, one request away.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Говорите своими словами.** Детерминированные правила, лемматизация `NaturalLanguage` и локальное fuzzy‑сопоставление вместе понимают больше безопасных вариантов одной просьбы.
+- **Продолжайте без повторов.** После «Открой задачи» достаточно сказать «И ещё купить молоко»; после работы с целью — «А что с прогрессом?».
+- **Создавайте Умные цели голосом.** Фразы «Составь дорожную карту для…», «Хочу достичь…» и их варианты на четырёх языках открывают планировщик с уже перенесённой идеей.
+- **Оставайтесь у руля.** Голос заполняет исходную формулировку, но генерация дорожной карты начинается только после проверки и подтверждения пользователем.
+- **Учится приватно.** Модель привычных команд и переходов хранится локально; успешные сценарии улучшают персональные быстрые предложения без отправки истории на сервер.
+- **Проверено на вариативности.** Набор вырос до **85 тестов**; новые сценарии покрывают перефразировки, опечатки распознавания, контекст задач и полный голосовой путь к «Умным целям».
 
 ### 23 июля 2026 — новый голос Lippi. Естественный. Локальный. Ваш.
 
@@ -168,6 +239,7 @@ OrganizerWidget/        # organizer widget extension
 LippiTests/             # unit and integration coverage
 LippiUITests/           # interface scenarios
 Vendor/                 # pinned iOS inference runtimes
+AppStore/               # localized metadata, review notes, export config and privacy site
 ```
 
 ## Локальный запуск · Run locally
@@ -194,9 +266,11 @@ The product is designed around four promises:
 
 ### Latest release
 
-The July 23 update gives Lippi a voice of its own — natural, private, and entirely on iPhone. F2 is the default feminine voice, while M3 is available as a calm masculine alternative.
+The July 24 release gives Lippi a calmer, more coherent Liquid Glass design across light and dark appearances. Decorative card sheen is gone; depth now comes from material, edge, tint, and hierarchy. Reduce Motion, Reduce Transparency, energy, and thermal adaptations remain part of the same design system.
 
-Download the verified model once and Lippi can speak offline without a Mac, endpoint, cloud TTS, or system-voice substitution. Installation progress is clear, interrupted downloads recover automatically, and device temperature no longer disables or interrupts speech. Generation remains bounded to two CPU threads, five steps, 480 spoken characters, and 20 seconds. The suite contains **74 tests**, including real F2 and M3 synthesis in iPhone Simulator.
+It also prepares version **1.0 (2)** for App Store submission with privacy manifests for the app and both widgets, export-compliance metadata, localized store copy, review notes, screenshot guidance, and a [public bilingual privacy policy](https://lippi-privacy.contu4575gazeta-pl.chatgpt.site). The archive is prepared and locally validated; upload remains pending Apple Developer Program activation.
+
+The voice assistant now understands rephrased requests, tolerates small recognition errors, and connects short follow-ups to recent context. Smart Goals are part of the voice experience: Lippi can open the planner, carry a spoken idea into a new goal, or show roadmap progress. Interpretation and learning stay local, and generation waits for the user to review and confirm the request. The suite now contains **85 tests**.
 
 [Read the complete bilingual changelog →](CHANGELOG.md)
 

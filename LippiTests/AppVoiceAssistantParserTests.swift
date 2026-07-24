@@ -86,6 +86,152 @@ struct AppVoiceAssistantParserTests {
         }
     }
 
+    @Test("Understands a polite task request with flexible word order")
+    func parsesFlexibleTaskRequest() {
+        let intent = AppVoiceCommandParser.parse(
+            "Добавь, пожалуйста, в задачи позвонить врачу",
+            lang: .ru
+        )
+
+        switch intent {
+        case .addTask(let title, let category):
+            #expect(title == "позвонить врачу")
+            #expect(category == .other)
+        default:
+            Issue.record("Expected addTask intent")
+        }
+    }
+
+    @Test("Does not confuse a task about a goal with Smart Goal creation")
+    func keepsGoalRelatedTaskAsTask() {
+        let intent = AppVoiceCommandParser.parse(
+            "Создай задачу сформулировать цель проекта",
+            lang: .ru
+        )
+
+        switch intent {
+        case .addTask(let title, _):
+            #expect(title == "сформулировать цель проекта")
+        default:
+            Issue.record("Expected addTask intent")
+        }
+    }
+
+    @Test("Uses task context for an elliptical follow-up")
+    func parsesContextualTaskFollowUp() {
+        let intent = AppVoiceCommandParser.parse(
+            "И ещё купить молоко",
+            lang: .ru,
+            context: .openTab(.tasks)
+        )
+
+        switch intent {
+        case .addTask(let title, let category):
+            #expect(title == "купить молоко")
+            #expect(category == .home)
+        default:
+            Issue.record("Expected contextual addTask intent")
+        }
+    }
+
+    @Test("Creates a Smart Goal from a natural roadmap request")
+    func parsesSmartGoalRoadmapRequest() {
+        let intent = AppVoiceCommandParser.parse(
+            "Составь дорожную карту для изучения испанского за полгода",
+            lang: .ru
+        )
+
+        switch intent {
+        case .createSmartGoal(let description):
+            #expect(description == "изучения испанского за полгода")
+        default:
+            Issue.record("Expected createSmartGoal intent")
+        }
+    }
+
+    @Test("Understands an idea transformed into a Smart Goal")
+    func parsesSmartGoalTransformation() {
+        let intent = AppVoiceCommandParser.parse(
+            "Хочу превратить запуск приложения в умную цель",
+            lang: .ru
+        )
+
+        switch intent {
+        case .createSmartGoal(let description):
+            #expect(description == "запуск приложения")
+        default:
+            Issue.record("Expected createSmartGoal intent")
+        }
+    }
+
+    @Test("Opens Smart Goals using roadmap terminology")
+    func parsesOpenSmartGoals() {
+        let intent = AppVoiceCommandParser.parse(
+            "Покажи мою дорожную карту",
+            lang: .ru
+        )
+        #expect(intent == .openSmartGoals)
+    }
+
+    @Test("Fuzzy local interpretation tolerates a speech recognition typo")
+    func parsesFuzzySmartGoalsRequest() {
+        let intent = AppVoiceCommandParser.parse(
+            "Открой умную цэль",
+            lang: .ru
+        )
+        #expect(intent == .openSmartGoals)
+    }
+
+    @Test("Recognizes a Smart Goal progress question")
+    func parsesSmartGoalProgress() {
+        let intent = AppVoiceCommandParser.parse(
+            "Как продвигается моя цель?",
+            lang: .ru
+        )
+        #expect(intent == .showSmartGoalProgress)
+    }
+
+    @Test("Uses Smart Goal context for a short progress follow-up")
+    func parsesContextualSmartGoalProgress() {
+        let intent = AppVoiceCommandParser.parse(
+            "А что там с прогрессом?",
+            lang: .ru,
+            context: .openSmartGoals
+        )
+        #expect(intent == .showSmartGoalProgress)
+    }
+
+    @Test("Uses Smart Goal context for a natural goal description")
+    func parsesContextualSmartGoalDescription() {
+        let intent = AppVoiceCommandParser.parse(
+            "Хочу выучить японский за год",
+            lang: .ru,
+            context: .openSmartGoals
+        )
+
+        switch intent {
+        case .createSmartGoal(let description):
+            #expect(description == "японский за год")
+        default:
+            Issue.record("Expected contextual createSmartGoal intent")
+        }
+    }
+
+    @Test("Understands an English achievement request as a Smart Goal")
+    func parsesEnglishSmartGoalRequest() {
+        let intent = AppVoiceCommandParser.parse(
+            "Help me achieve a half marathon in six months",
+            lang: .en
+        )
+
+        switch intent {
+        case .createSmartGoal(let description):
+            #expect(description == "a half marathon in six months")
+        default:
+            Issue.record("Expected createSmartGoal intent")
+        }
+    }
+
     @Test("Falls back to unknown intent")
     func parsesUnknown() {
         let intent = AppVoiceCommandParser.parse("квантовая бабочка", lang: .ru)
@@ -109,6 +255,8 @@ struct AppVoiceAssistantParserTests {
             "assistant.response.unknown",
             "assistant.quick.title",
             "assistant.quick.add",
+            "assistant.quick.smart_goal",
+            "assistant.quick.goal_progress",
             "assistant.quick.tasks",
             "assistant.quick.pomodoro",
             "assistant.quick.pause",
@@ -133,7 +281,12 @@ struct AppVoiceAssistantParserTests {
             "assistant.response.short_break_started",
             "assistant.response.long_break_started",
             "assistant.response.pomodoro_stopped",
-            "assistant.response.eye_opened"
+            "assistant.response.eye_opened",
+            "assistant.response.smart_goals_opened",
+            "assistant.response.smart_goal_ready",
+            "assistant.response.smart_goal_prepared",
+            "assistant.response.goal_progress_opened",
+            "assistant.response.goal_progress_missing"
         ]
 
         for lang in AppLang.allCases {

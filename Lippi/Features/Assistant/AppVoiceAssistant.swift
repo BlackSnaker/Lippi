@@ -33,6 +33,9 @@ enum AppVoiceCommandIntent: Equatable {
     case stopPomodoro
     case openEyeExercise
     case summarizeMetrics(period: AppVoiceMetricsPeriod)
+    case openSmartGoals
+    case createSmartGoal(description: String?)
+    case showSmartGoalProgress
     case unknown
 }
 
@@ -56,6 +59,9 @@ private enum AppVoiceIntentKind: String, Codable, CaseIterable {
     case openEyeExercise
     case summarizeMetricsToday
     case summarizeMetricsWeek
+    case openSmartGoals
+    case createSmartGoal
+    case showSmartGoalProgress
     case unknown
 
     init(intent: AppVoiceCommandIntent) {
@@ -95,6 +101,12 @@ private enum AppVoiceIntentKind: String, Codable, CaseIterable {
             case .today: self = .summarizeMetricsToday
             case .week: self = .summarizeMetricsWeek
             }
+        case .openSmartGoals:
+            self = .openSmartGoals
+        case .createSmartGoal:
+            self = .createSmartGoal
+        case .showSmartGoalProgress:
+            self = .showSmartGoalProgress
         case .unknown:
             self = .unknown
         }
@@ -112,7 +124,11 @@ enum AppVoiceCommandParser {
         let normalized = normalize(text)
         guard !normalized.isEmpty else { return .unknown }
 
-        if let contextualIntent = resolveContextualIntent(in: normalized, context: context) {
+        if let contextualIntent = resolveContextualIntent(
+            in: normalized,
+            lang: lang,
+            context: context
+        ) {
             return contextualIntent
         }
 
@@ -128,6 +144,20 @@ enum AppVoiceCommandParser {
             return .stopPomodoro
         }
 
+        if isSmartGoalProgressRequest(normalized) {
+            return .showSmartGoalProgress
+        }
+
+        if isSmartGoalCreationRequest(normalized) {
+            return .createSmartGoal(
+                description: extractSmartGoalDescription(from: normalized)
+            )
+        }
+
+        if isOpenSmartGoalsRequest(normalized) {
+            return .openSmartGoals
+        }
+
         if let period = detectMetricsSummaryPeriod(in: normalized) {
             return .summarizeMetrics(period: period)
         }
@@ -137,12 +167,32 @@ enum AppVoiceCommandParser {
             return .addTask(title: taskTitle, category: category)
         }
 
+        if let taskTitle = extractFlexibleTaskTitle(
+            from: normalized,
+            actionStems: addTaskActionStems
+        ) {
+            let category = detectCategory(in: taskTitle, lang: lang)
+            return .addTask(title: taskTitle, category: category)
+        }
+
         if isCompleteTask(normalized) {
-            return .completeTask(title: extractSuffix(in: normalized, prefixes: completeTaskPrefixes))
+            return .completeTask(
+                title: extractSuffix(in: normalized, prefixes: completeTaskPrefixes)
+                    ?? extractFlexibleTaskTitle(
+                        from: normalized,
+                        actionStems: completeTaskActionStems
+                    )
+            )
         }
 
         if isDeleteTask(normalized) {
-            return .deleteTask(title: extractSuffix(in: normalized, prefixes: deleteTaskPrefixes))
+            return .deleteTask(
+                title: extractSuffix(in: normalized, prefixes: deleteTaskPrefixes)
+                    ?? extractFlexibleTaskTitle(
+                        from: normalized,
+                        actionStems: deleteTaskActionStems
+                    )
+            )
         }
 
         if isStartLongBreak(normalized) {
@@ -190,16 +240,55 @@ enum AppVoiceCommandParser {
         "добавить задачу",
         "создай задачу",
         "создать задачу",
+        "запиши задачу",
+        "запиши мне задачу",
+        "поставь задачу",
+        "добавь в задачи",
+        "напомни мне",
+        "не забудь",
         "новая задача",
         "add task",
         "create task",
+        "put on my task list",
+        "remind me to",
+        "remember to",
         "new task",
         "aufgabe hinzufugen",
         "aufgabe erstellen",
+        "erinnere mich",
         "neue aufgabe",
         "agregar tarea",
         "crear tarea",
+        "recuerdame",
         "nueva tarea"
+    ]
+
+    private static let taskEntityStems = [
+        "задач", "дело", "список",
+        "task", "todo", "list",
+        "aufgabe", "liste",
+        "tarea", "lista"
+    ]
+
+    private static let addTaskActionStems = [
+        "добав", "созда", "запиш", "постав", "напом", "не забуд",
+        "add", "create", "remember", "remind", "put",
+        "hinzuf", "erstell", "erinner",
+        "agreg", "crea", "recuerd"
+    ]
+
+    private static let completeTaskActionStems = [
+        "заверш", "выполн", "отмет", "готов",
+        "complete", "finish", "done", "mark",
+        "erledig", "abschliess",
+        "complet", "termin", "marc"
+    ]
+
+    private static let deleteTaskActionStems = [
+        "удал", "убер",
+        "delete", "remove",
+        "losch", "entfern",
+        "elimin", "borr", "quit"
     ]
 
     private static let completeTaskPrefixes = [
@@ -229,16 +318,229 @@ enum AppVoiceCommandParser {
     ]
 
     private static func extractSuffix(in text: String, prefixes: [String]) -> String? {
-        for rawPrefix in prefixes {
+        for rawPrefix in prefixes.sorted(by: { $0.count > $1.count }) {
             let prefix = normalize(rawPrefix)
             guard let range = text.range(of: prefix) else { continue }
             let suffix = text[range.upperBound...]
-            let cleaned = suffix
-                .replacingOccurrences(of: ":", with: " ")
-                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleaned = cleanActionPayload(String(suffix))
             return cleaned.isEmpty ? nil : cleaned
         }
+        return nil
+    }
+
+    private static func extractFlexibleTaskTitle(
+        from text: String,
+        actionStems: [String]
+    ) -> String? {
+        let hasAction = containsAny(text, keywords: actionStems)
+        let hasTaskEntity = containsAny(text, keywords: taskEntityStems)
+        let isImplicitReminder = containsAny(
+            text,
+            keywords: [
+                "напомни", "не забуд", "мне нужно",
+                "remind me", "remember to", "i need to",
+                "erinnere mich", "ich muss",
+                "recuerdame", "necesito"
+            ]
+        )
+        guard (hasAction && hasTaskEntity) || isImplicitReminder else { return nil }
+
+        var payload = text
+        payload = removingFirstKeyword(from: payload, keywords: actionStems)
+        payload = removingFirstKeyword(from: payload, keywords: taskEntityStems)
+        let cleaned = cleanActionPayload(payload)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    private static func removingFirstKeyword(
+        from text: String,
+        keywords: [String]
+    ) -> String {
+        let sourceTokens = text.split(separator: " ").map(String.init)
+        for keyword in keywords.sorted(by: { $0.count > $1.count }) {
+            let keywordTokens = normalize(keyword).split(separator: " ").map(String.init)
+            guard !keywordTokens.isEmpty, keywordTokens.count <= sourceTokens.count else {
+                continue
+            }
+
+            for start in 0...(sourceTokens.count - keywordTokens.count) {
+                let matches = keywordTokens.indices.allSatisfy { offset in
+                    let source = sourceTokens[start + offset]
+                    let target = keywordTokens[offset]
+                    return source == target
+                        || source.hasPrefix(target)
+                        || target.hasPrefix(source)
+                }
+                guard matches else { continue }
+
+                var resultTokens = sourceTokens
+                resultTokens.removeSubrange(
+                    start..<(start + keywordTokens.count)
+                )
+                return resultTokens.joined(separator: " ")
+            }
+        }
+        return text
+    }
+
+    private static func cleanActionPayload(_ source: String) -> String {
+        var cleaned = source
+            .replacingOccurrences(of: ":", with: " ")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let leadingFillers = [
+            "пожалуйста", "мне", "для меня", "еще", "ещё", "и еще", "и ещё",
+            "что", "чтобы", "по", "для", "в", "идею",
+            "добавь", "добавить", "создай", "создать", "запиши", "задачу",
+            "please", "for me", "also", "and another", "to", "that",
+            "add", "create", "task",
+            "bitte", "fur mich", "noch", "zu", "dass",
+            "hinzufugen", "erstellen", "aufgabe",
+            "por favor", "para mi", "tambien", "que",
+            "agregar", "crear", "tarea"
+        ]
+        var didTrim = true
+        while didTrim {
+            didTrim = false
+            for filler in leadingFillers.sorted(by: { $0.count > $1.count }) {
+                let normalizedFiller = normalize(filler)
+                if cleaned == normalizedFiller {
+                    return ""
+                }
+                if cleaned.hasPrefix(normalizedFiller + " ") {
+                    cleaned.removeFirst(normalizedFiller.count)
+                    cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+                    didTrim = true
+                    break
+                }
+            }
+        }
+
+        if cleaned.count > 240 {
+            cleaned = String(cleaned.prefix(240))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return cleaned
+    }
+
+    private static let smartGoalEntityWords = [
+        "умн цел", "мою цель", "моя цель", "цели", "цель",
+        "дорожн карт", "дорожн", "план достижения",
+        "smart goal", "my goal", "roadmap",
+        "smartes ziel", "mein ziel", "roadmap",
+        "meta inteligente", "mi meta", "hoja de ruta"
+    ]
+
+    private static let strongSmartGoalEntityWords = [
+        "умн", "дорожн", "smart goal", "roadmap",
+        "smartes ziel", "fahrplan",
+        "meta inteligente", "hoja de ruta"
+    ]
+
+    private static let smartGoalCreationWords = [
+        "созд", "сдел", "добав", "состав", "постро", "спланир", "преврат",
+        "create", "make", "build", "plan", "turn",
+        "erstell", "plan", "mach",
+        "crea", "haz", "planifica", "convierte"
+    ]
+
+    private static let smartGoalOpenWords = [
+        "откро", "покаж", "перейд", "верн", "продолж",
+        "open", "show", "go to", "continue",
+        "offne", "zeig", "weiter",
+        "abre", "muestra", "continua"
+    ]
+
+    private static let smartGoalProgressWords = [
+        "прогресс", "как продвига", "как дела", "результат", "статус цели",
+        "goal progress", "how is my goal", "goal status", "progress",
+        "zielfortschritt", "wie lauft mein ziel", "fortschritt",
+        "progreso de mi meta", "como va mi meta", "estado de mi meta"
+    ]
+
+    private static let smartGoalCreationPrefixes = [
+        "создай умную цель", "создать умную цель", "сделай умную цель",
+        "добавь умную цель", "создай цель", "создать цель",
+        "составь дорожную карту для", "построй дорожную карту для",
+        "составь план для", "помоги мне построить план чтобы",
+        "помоги построить план чтобы", "помоги мне достичь", "помоги достичь",
+        "хочу достичь", "хочу добиться", "хочу научиться",
+        "хочу освоить", "хочу выучить", "моя цель",
+        "create a smart goal to", "create smart goal to", "make a smart goal to",
+        "build a roadmap to", "make a plan to", "help me achieve",
+        "i want to achieve", "i want to learn", "my goal is to",
+        "erstelle ein smartes ziel", "erstelle ein ziel", "plane einen weg zu",
+        "hilf mir", "ich mochte lernen", "mein ziel ist",
+        "crea una meta inteligente", "crea una meta", "haz una hoja de ruta para",
+        "ayudame a lograr", "quiero lograr", "quiero aprender", "mi meta es"
+    ]
+
+    private static func isSmartGoalProgressRequest(_ text: String) -> Bool {
+        let hasProgress = containsAny(text, keywords: smartGoalProgressWords)
+        let hasGoal = containsAny(text, keywords: smartGoalEntityWords)
+        return hasProgress && hasGoal
+    }
+
+    private static func isSmartGoalCreationRequest(_ text: String) -> Bool {
+        let hasGoal = containsAny(text, keywords: smartGoalEntityWords)
+        let hasCreateAction = containsAny(text, keywords: smartGoalCreationWords)
+        let mentionsTask = containsAny(text, keywords: taskEntityStems)
+        let hasStrongGoalEntity = containsAny(
+            text,
+            keywords: strongSmartGoalEntityWords
+        )
+        if mentionsTask && !hasStrongGoalEntity {
+            return false
+        }
+        if hasGoal && hasCreateAction {
+            return true
+        }
+
+        return smartGoalCreationPrefixes.contains { prefix in
+            text.contains(normalize(prefix))
+        }
+    }
+
+    private static func isOpenSmartGoalsRequest(_ text: String) -> Bool {
+        let hasGoal = containsAny(text, keywords: smartGoalEntityWords)
+        guard hasGoal else { return false }
+        if containsAny(text, keywords: smartGoalOpenWords) {
+            return true
+        }
+        return text == "умные цели"
+            || text == "smart goals"
+            || text == "smarte ziele"
+            || text == "metas inteligentes"
+    }
+
+    fileprivate static func extractSmartGoalDescription(from text: String) -> String? {
+        if let suffix = extractSuffix(in: text, prefixes: smartGoalCreationPrefixes) {
+            return suffix
+        }
+
+        let destinationPhrases = [
+            " в умную цель", " как умную цель",
+            " into a smart goal", " as a smart goal",
+            " in ein smartes ziel", " als smartes ziel",
+            " en una meta inteligente", " como meta inteligente"
+        ]
+        for phrase in destinationPhrases {
+            guard let range = text.range(of: normalize(phrase)) else { continue }
+            var prefix = String(text[..<range.lowerBound])
+            prefix = removingFirstKeyword(
+                from: prefix,
+                keywords: [
+                    "хочу превратить", "преврати", "сделай",
+                    "turn", "make",
+                    "verwandle", "mach",
+                    "convierte", "haz"
+                ]
+            )
+            let cleaned = cleanActionPayload(prefix)
+            return cleaned.isEmpty ? nil : cleaned
+        }
+
         return nil
     }
 
@@ -344,7 +646,11 @@ enum AppVoiceCommandParser {
         return containsAny(text, keywords: summaryWords)
     }
 
-    private static func resolveContextualIntent(in text: String, context: AppVoiceCommandIntent?) -> AppVoiceCommandIntent? {
+    private static func resolveContextualIntent(
+        in text: String,
+        lang: AppLang,
+        context: AppVoiceCommandIntent?
+    ) -> AppVoiceCommandIntent? {
         guard let context else { return nil }
 
         switch context {
@@ -378,9 +684,108 @@ enum AppVoiceCommandParser {
             }
             return nil
 
-        case .addTask, .completeTask, .deleteTask, .openTab, .openEyeExercise, .unknown:
+        case .openSmartGoals, .createSmartGoal, .showSmartGoalProgress:
+            if containsAny(text, keywords: smartGoalProgressWords) {
+                return .showSmartGoalProgress
+            }
+            if isSmartGoalCreationRequest(text) {
+                return .createSmartGoal(
+                    description: extractSmartGoalDescription(from: text)
+                )
+            }
+            if isOpenSmartGoalsRequest(text)
+                || containsAny(
+                    text,
+                    keywords: [
+                        "продолжим", "вернись к ней", "открой ее",
+                        "continue with it", "open it",
+                        "weiter damit", "offne es",
+                        "continuemos", "abrela"
+                    ]
+                ) {
+                return .openSmartGoals
+            }
+            if let description = contextualSmartGoalDescription(from: text) {
+                return .createSmartGoal(description: description)
+            }
+            return nil
+
+        case .addTask, .openTab(.tasks):
+            if containsAny(text, keywords: completeTaskActionStems) {
+                return .completeTask(
+                    title: contextualTaskTitle(
+                        from: text,
+                        actionStems: completeTaskActionStems
+                    )
+                )
+            }
+            if containsAny(text, keywords: deleteTaskActionStems) {
+                return .deleteTask(
+                    title: contextualTaskTitle(
+                        from: text,
+                        actionStems: deleteTaskActionStems
+                    )
+                )
+            }
+            if let title = contextualTaskTitle(
+                from: text,
+                actionStems: addTaskActionStems
+            ) {
+                return .addTask(
+                    title: title,
+                    category: detectCategory(in: title, lang: lang)
+                )
+            }
+            return nil
+
+        case .completeTask, .deleteTask, .openTab, .openEyeExercise, .unknown:
             return nil
         }
+    }
+
+    private static func contextualTaskTitle(
+        from text: String,
+        actionStems: [String]
+    ) -> String? {
+        let continuationWords = [
+            "и еще", "и ещё", "еще", "ещё", "также",
+            "and another", "also",
+            "und noch", "noch",
+            "y tambien", "tambien"
+        ]
+        let hasAction = containsAny(text, keywords: actionStems)
+        let hasContinuation = containsAny(text, keywords: continuationWords)
+        guard hasAction || hasContinuation else { return nil }
+
+        var payload = text
+        if hasAction {
+            payload = removingFirstKeyword(from: payload, keywords: actionStems)
+        }
+        payload = removingFirstKeyword(from: payload, keywords: taskEntityStems)
+        let cleaned = cleanActionPayload(payload)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    private static func contextualSmartGoalDescription(from text: String) -> String? {
+        let goalVerbStems = [
+            "хочу", "выуч", "осво", "науч", "запуст", "созд", "подготов",
+            "похуд", "накоп", "достич", "добит",
+            "i want", "learn", "launch", "build", "prepare", "achieve", "save",
+            "ich mochte", "lernen", "starten", "erreichen", "sparen",
+            "quiero", "aprender", "lanzar", "lograr", "ahorrar"
+        ]
+        let unrelatedCommandWords = [
+            "помодоро", "таймер", "задач", "настро", "здоров", "перерыв",
+            "pomodoro", "timer", "task", "settings", "health", "break",
+            "aufgabe", "einstellungen", "pause",
+            "tarea", "ajustes", "descanso"
+        ]
+        guard containsAny(text, keywords: goalVerbStems),
+              !containsAny(text, keywords: unrelatedCommandWords) else {
+            return nil
+        }
+        let cleaned = cleanActionPayload(text)
+        return cleaned.isEmpty ? nil : cleaned
     }
 
     private static func extractMinutes(from text: String) -> Int? {
@@ -408,7 +813,12 @@ enum AppVoiceCommandParser {
             (.study, ["учеб", "урок", "экзам", "study", "learn", "lernen", "estudio"]),
             (.health, ["здоров", "спорт", "трен", "дыхан", "health", "workout", "gesund", "salud"]),
             (.rest, ["отдых", "перерыв", "сон", "rest", "break", "ruhe", "descanso"]),
-            (.home, ["дом", "уборк", "покупк", "home", "house", "haus", "hogar"])
+            (.home, [
+                "дом", "уборк", "покупк", "куп", "магаз",
+                "home", "house", "buy", "shop", "grocery",
+                "haus", "kauf", "einkauf",
+                "hogar", "compr", "tienda"
+            ])
         ]
 
         var bestMatch: (TaskCategory, Int) = (.other, 0)
@@ -679,6 +1089,10 @@ private final class AppVoiceBehaviorModel {
             return "assistant.quick.tasks"
         case .summarizeMetricsToday, .summarizeMetricsWeek:
             return "assistant.quick.summary"
+        case .openSmartGoals, .createSmartGoal:
+            return "assistant.quick.smart_goal"
+        case .showSmartGoalProgress:
+            return "assistant.quick.goal_progress"
         case .startPomodoro:
             return "assistant.quick.pomodoro"
         case .pausePomodoro:
@@ -689,7 +1103,8 @@ private final class AppVoiceBehaviorModel {
             return "assistant.quick.break"
         case .openEyeExercise, .openTabEye:
             return "assistant.quick.eye"
-        case .deleteTask, .completeTask, .openTabPomodoro, .openTabHealth, .openTabSettings, .stopPomodoro, .unknown:
+        case .deleteTask, .completeTask, .openTabPomodoro, .openTabHealth,
+             .openTabSettings, .stopPomodoro, .unknown:
             return nil
         }
     }
@@ -929,6 +1344,24 @@ private final class AppEmbeddedAIInterpreter {
             "kennzahlen",
             "resumen"
         ]
+        let smartGoalWords = [
+            "цел", "цель", "дорожн", "карт", "план",
+            "goal", "roadmap",
+            "ziel", "fahrplan",
+            "meta", "ruta"
+        ]
+        let smartGoalCreateWords = [
+            "созд", "состав", "постро", "спланир", "достич", "хочу",
+            "create", "build", "plan", "achieve", "want",
+            "erstell", "plan", "erreich", "mochte",
+            "crea", "planifica", "logra", "quiero"
+        ]
+        let smartGoalProgressWords = [
+            "прогресс", "продвига", "статус", "результат",
+            "progress", "status",
+            "fortschritt", "status",
+            "progreso", "estado"
+        ]
 
         if features.containsAny(stems: summaryWords) {
             let period: AppVoiceMetricsPeriod
@@ -942,6 +1375,38 @@ private final class AppEmbeddedAIInterpreter {
 
             let score = 0.55 + (0.30 * features.score(stems: summaryWords))
             candidates.append(.init(intent: .summarizeMetrics(period: period), score: score))
+        }
+
+        if features.containsAny(stems: smartGoalWords),
+           features.containsAny(stems: smartGoalProgressWords) {
+            let score = 0.69
+                + (0.10 * features.score(stems: smartGoalWords))
+                + (0.10 * features.score(stems: smartGoalProgressWords))
+            candidates.append(.init(intent: .showSmartGoalProgress, score: score))
+        }
+
+        if features.containsAny(stems: smartGoalWords),
+           features.containsAny(stems: smartGoalCreateWords) {
+            let description = AppVoiceCommandParser.extractSmartGoalDescription(
+                from: features.text
+            )
+            let score = 0.66
+                + (0.10 * features.score(stems: smartGoalWords))
+                + (0.10 * features.score(stems: smartGoalCreateWords))
+            candidates.append(
+                .init(
+                    intent: .createSmartGoal(description: description),
+                    score: score
+                )
+            )
+        }
+
+        if features.containsAny(stems: smartGoalWords),
+           features.containsAny(stems: openWords) {
+            let score = 0.65
+                + (0.11 * features.score(stems: smartGoalWords))
+                + (0.09 * features.score(stems: openWords))
+            candidates.append(.init(intent: .openSmartGoals, score: score))
         }
 
         if features.containsAny(stems: addWords), features.containsAny(stems: taskWords) {
@@ -1134,7 +1599,12 @@ private final class AppEmbeddedAIInterpreter {
             (.study, ["учеб", "урок", "экзам", "study", "learn", "lernen", "estudio"]),
             (.health, ["здоров", "спорт", "трен", "дыхан", "health", "workout", "gesund", "salud"]),
             (.rest, ["отдых", "перерыв", "сон", "rest", "break", "ruhe", "descanso"]),
-            (.home, ["дом", "уборк", "покупк", "home", "house", "haus", "hogar"])
+            (.home, [
+                "дом", "уборк", "покупк", "куп", "магаз",
+                "home", "house", "buy", "shop", "grocery",
+                "haus", "kauf", "einkauf",
+                "hogar", "compr", "tienda"
+            ])
         ]
 
         var bestMatch: (TaskCategory, Int) = (.other, 0)
@@ -1179,7 +1649,11 @@ private final class AppEmbeddedAIInterpreter {
             return 0.08
 
         case (.summarizeMetrics, .summarizeMetrics),
-             (.openTab, .openTab):
+             (.openTab, .openTab),
+             (.showSmartGoalProgress, .openSmartGoals),
+             (.showSmartGoalProgress, .createSmartGoal),
+             (.openSmartGoals, .showSmartGoalProgress),
+             (.createSmartGoal, .openSmartGoals):
             return 0.06
 
         default:
@@ -1271,8 +1745,10 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
     private var silenceCommitTask: Task<Void, Never>?
     private var lastPartialTranscript = ""
     private var lastResolvedIntent: AppVoiceCommandIntent?
+    private var lastResolvedAt: Date?
 
     private let silenceCommitDelay: UInt64 = 1_150_000_000
+    private let conversationContextLifetime: TimeInterval = 6 * 60
 
     private var neuralVoicePlayer: AVAudioPlayer?
     private var neuralSpeechTask: Task<Void, Never>?
@@ -1280,6 +1756,8 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
     private let behaviorModel = AppVoiceBehaviorModel.shared
     private static let defaultQuickCommandKeys = [
         "assistant.quick.add",
+        "assistant.quick.smart_goal",
+        "assistant.quick.goal_progress",
         "assistant.quick.tasks",
         "assistant.quick.summary",
         "assistant.quick.pomodoro",
@@ -1364,7 +1842,7 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
     func refreshSuggestions(lang: AppLang) {
         let learnedKeys = behaviorModel.suggestedQuickCommandKeys(
             lang: lang,
-            context: lastResolvedIntent,
+            context: activeConversationContext,
             limit: 4
         )
 
@@ -1395,13 +1873,15 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
         let prepared = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prepared.isEmpty else { return }
 
+        let previousContext = activeConversationContext
         AppEmbeddedAIInterpreter.shared.observeSuccessfulCommand(
             transcript: prepared,
             intent: intent,
-            context: lastResolvedIntent,
+            context: previousContext,
             lang: lang
         )
         lastResolvedIntent = intent
+        lastResolvedAt = .now
         refreshSuggestions(lang: lang)
     }
 
@@ -1415,11 +1895,23 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
         }
 
         state = .processing
-        let intent = AppVoiceCommandParser.parse(prepared, lang: lang, context: lastResolvedIntent)
+        let intent = AppVoiceCommandParser.parse(
+            prepared,
+            lang: lang,
+            context: activeConversationContext
+        )
         pendingCommand = AppVoiceCommandEnvelope(
             transcript: prepared,
             intent: intent
         )
+    }
+
+    private var activeConversationContext: AppVoiceCommandIntent? {
+        guard let lastResolvedIntent, let lastResolvedAt else { return nil }
+        guard Date().timeIntervalSince(lastResolvedAt) <= conversationContextLifetime else {
+            return nil
+        }
+        return lastResolvedIntent
     }
 
     private func ensurePermissions(lang: AppLang) async -> Bool {
@@ -1787,6 +2279,8 @@ struct AppVoiceAssistantSheet: View {
     private var allQuickCommands: [QuickCommandItem] {
         [
             .init(key: "assistant.quick.add", icon: "plus.circle.fill", tone: Color(hex: 0x34C7FF)),
+            .init(key: "assistant.quick.smart_goal", icon: "target", tone: Color(hex: 0xBF5AF2)),
+            .init(key: "assistant.quick.goal_progress", icon: "chart.line.uptrend.xyaxis", tone: Color(hex: 0x30D158)),
             .init(key: "assistant.quick.tasks", icon: "checklist", tone: Color(hex: 0x64D2FF)),
             .init(key: "assistant.quick.summary", icon: "chart.bar.xaxis", tone: Color(hex: 0x5AC8FA)),
             .init(key: "assistant.quick.pomodoro", icon: "timer", tone: Color(hex: 0x30B0FF)),

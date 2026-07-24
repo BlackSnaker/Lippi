@@ -19,8 +19,8 @@ struct DS {
     }
     static var solidSurface: Color {
         Color(
-            dynamicDark: palette.bgDarkStops[1],
-            light: palette.bgLightStops[1],
+            dynamicDark: palette.bgDarkStops[2],
+            light: 0xFFFFFF,
             darkAlpha: 0.98,
             lightAlpha: 0.98
         )
@@ -111,68 +111,138 @@ struct DS {
         )
     }
 
-    // Surfaces
-    static let glass = Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.11, lightAlpha: 0.74)
-    static let brandSoft = Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.12, lightAlpha: 0.70)
+    // MARK: Material hierarchy
+    //
+    // Liquid Glass belongs to the navigation/control layer. Content surfaces use
+    // restrained, mostly static materials so information remains readable while
+    // the floating controls above them keep their distinct optical character.
+    static var contentSurface: Color {
+        Color(
+            dynamicDark: palette.bgDarkStops[2],
+            light: 0xFFFFFF,
+            darkAlpha: 0.66,
+            lightAlpha: 0.72
+        )
+    }
 
-    // Glass tint
-    static let glassTint = LinearGradient(
-        colors: [
-            Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.18, lightAlpha: 0.70),
-            Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.07, lightAlpha: 0.42),
-            Color(dynamicDark: 0x0B1A31, light: 0xD8E2F3, darkAlpha: 0.46, lightAlpha: 0.82)
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    static var contentSurfaceSubtle: Color {
+        Color(
+            dynamicDark: palette.bgDarkStops[1],
+            light: palette.bgLightStops[0],
+            darkAlpha: 0.50,
+            lightAlpha: 0.58
+        )
+    }
 
-    static let glassDepth = LinearGradient(
-        colors: [
-            Color(dynamicDark: 0x10233F, light: 0xF3F7FF, darkAlpha: 0.44, lightAlpha: 0.66),
-            Color(dynamicDark: 0x0B1B31, light: 0xE8F0FF, darkAlpha: 0.56, lightAlpha: 0.72),
-            Color(dynamicDark: 0x071121, light: 0xDDE7FA, darkAlpha: 0.66, lightAlpha: 0.78)
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-    )
+    static var navigationSurface: Color {
+        Color(
+            dynamicDark: palette.bgDarkStops[1],
+            light: 0xFFFFFF,
+            darkAlpha: 0.24,
+            lightAlpha: 0.22
+        )
+    }
+
+    static var navigationTint: Color {
+        Color(
+            dynamicDark: palette.brandA,
+            light: palette.brandA,
+            darkAlpha: 0.09,
+            lightAlpha: 0.055
+        )
+    }
+
+    // Compatibility token used by existing surfaces.
+    static var glass: Color { contentSurface }
+    static var brandSoft: Color {
+        Color(
+            dynamicDark: palette.brandA,
+            light: palette.brandA,
+            darkAlpha: 0.10,
+            lightAlpha: 0.07
+        )
+    }
+
+    static var glassTint: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(
+                    dynamicDark: 0xFFFFFF,
+                    light: 0xFFFFFF,
+                    darkAlpha: 0.17,
+                    lightAlpha: 0.78
+                ),
+                Color(
+                    dynamicDark: palette.brandA,
+                    light: palette.brandA,
+                    darkAlpha: 0.075,
+                    lightAlpha: 0.045
+                ),
+                Color(
+                    dynamicDark: palette.bgDarkStops[3],
+                    light: palette.bgLightStops[2],
+                    darkAlpha: 0.46,
+                    lightAlpha: 0.34
+                )
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    static var glassDepth: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(
+                    dynamicDark: palette.bgDarkStops[1],
+                    light: 0xFFFFFF,
+                    darkAlpha: 0.30,
+                    lightAlpha: 0.46
+                ),
+                Color(
+                    dynamicDark: palette.bgDarkStops[2],
+                    light: palette.bgLightStops[1],
+                    darkAlpha: 0.52,
+                    lightAlpha: 0.34
+                ),
+                Color(
+                    dynamicDark: palette.bgDarkStops[4],
+                    light: palette.bgLightStops[2],
+                    darkAlpha: 0.68,
+                    lightAlpha: 0.42
+                )
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
 
     static let liquidSheen = LinearGradient(
         colors: [
-            Color.white.opacity(0.38),
-            Color.white.opacity(0.14),
+            Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.34, lightAlpha: 0.82),
+            Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.12, lightAlpha: 0.30),
             Color.clear
         ],
         startPoint: .top,
         endPoint: .bottom
     )
 
-    // Subtle top sheen
-    static let sheen = LinearGradient(
-        colors: [
-            Color.white.opacity(0.14),
-            Color.white.opacity(0.06),
-            Color.clear
-        ],
-        startPoint: .top,
-        endPoint: .center
-    )
-
     // Strokes
-    static let shadow = Color(dynamicDark: 0x000000, light: 0x0F172A, darkAlpha: 0.42, lightAlpha: 0.14)
+    static let shadow = Color(dynamicDark: 0x000000, light: 0x25334A, darkAlpha: 0.46, lightAlpha: 0.15)
     static let stroke = LinearGradient(
         colors: [
-            Color(dynamicDark: 0xFFFFFF, light: 0x111827, darkAlpha: 0.34, lightAlpha: 0.18),
-            Color(dynamicDark: 0xFFFFFF, light: 0x111827, darkAlpha: 0.12, lightAlpha: 0.08),
-            Color(dynamicDark: 0xFFFFFF, light: 0x111827, darkAlpha: 0.06, lightAlpha: 0.04)
+            Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.34, lightAlpha: 0.88),
+            Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.11, lightAlpha: 0.30),
+            Color(dynamicDark: 0x000000, light: 0x26354C, darkAlpha: 0.18, lightAlpha: 0.10)
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     static let strokeInner = LinearGradient(
         colors: [
-            Color(dynamicDark: 0xFFFFFF, light: 0x111827, darkAlpha: 0.17, lightAlpha: 0.11),
+            Color(dynamicDark: 0xFFFFFF, light: 0xFFFFFF, darkAlpha: 0.18, lightAlpha: 0.58),
             Color.clear,
-            Color(dynamicDark: 0x000000, light: 0x111827, darkAlpha: 0.20, lightAlpha: 0.07)
+            Color(dynamicDark: 0x000000, light: 0x26354C, darkAlpha: 0.24, lightAlpha: 0.09)
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
@@ -205,16 +275,6 @@ struct DS {
     static let textPrimary = Color(dynamicDark: 0xFFFFFF, light: 0x0F172A, darkAlpha: 0.95, lightAlpha: 0.95)
     static let textSecondary = Color(dynamicDark: 0xFFFFFF, light: 0x1E293B, darkAlpha: 0.72, lightAlpha: 0.72)
     static let textTertiary = Color(dynamicDark: 0xFFFFFF, light: 0x334155, darkAlpha: 0.56, lightAlpha: 0.56)
-
-    static let cardTopLine = LinearGradient(
-        colors: [
-            Color.white.opacity(0.20),
-            Color.white.opacity(0.06),
-            Color.clear
-        ],
-        startPoint: .leading,
-        endPoint: .trailing
-    )
 
     // Haptics fallback
     static func hapticSoft() {
@@ -499,51 +559,6 @@ private struct LippiSystemGlassModifier<S: Shape>: ViewModifier {
     }
 }
 
-struct LippiLiquidSheen: View {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.lippiIsScrolling) private var isScrolling
-
-    var cornerRadius: CGFloat
-    var duration: Double = 6.0
-    var intensity: Double = 1.0
-
-    private var shouldRender: Bool {
-        !reduceTransparency && !isScrolling && !DS.runtimeConstrained
-    }
-
-    var body: some View {
-        GeometryReader { proxy in
-            let size = proxy.size
-
-            if shouldRender, size.width > 2, size.height > 2 {
-                LinearGradient(
-                    colors: [
-                        .clear,
-                        Color.white.opacity(0.00),
-                        Color.white.opacity(0.24 * intensity),
-                        DS.accent.opacity(0.10 * intensity),
-                        Color.white.opacity(0.08 * intensity),
-                        .clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(width: max(58, size.width * 0.38), height: size.height * 1.9)
-                .rotationEffect(.degrees(18))
-                .offset(
-                    x: -size.width * 0.18,
-                    y: -size.height * 0.42
-                )
-                .blendMode(.screen)
-                .opacity(0.38)
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-}
-
 private struct LippiMagicAppearModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.lippiIsScrolling) private var isScrolling
@@ -807,6 +822,7 @@ enum GlassCardStyle {
 }
 
 struct GlassCard<Content: View>: View {
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.lippiIsScrolling) private var isScrolling
@@ -824,21 +840,6 @@ struct GlassCard<Content: View>: View {
     private var isFlatStyle: Bool { style == .flat }
     private var useFlatEffects: Bool { style == .flat || performanceMode || scrollPerformanceMode }
     private var useLightEffects: Bool { useFlatEffects || style == .lightweight || isScrolling }
-    private var useFullEffects: Bool { style == .full && !performanceMode && !scrollPerformanceMode }
-    private var useMagicSheen: Bool {
-        style == .full && !reduceTransparency && !reduceMotion && !scrollPerformanceMode
-    }
-    private var systemGlassEnabled: Bool {
-        !reduceTransparency
-            && !isScrolling
-            && (style == .full || forceSystemGlass)
-            && (!performanceMode || forceSystemGlass)
-    }
-    private var systemGlassTint: Color? {
-        if useFullEffects { return DS.accent.opacity(0.18) }
-        if isFlatStyle { return DS.accent.opacity(0.055) }
-        return DS.accent.opacity(0.10)
-    }
     private var cardShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
     }
@@ -849,23 +850,6 @@ struct GlassCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(cardBackground.allowsHitTesting(false))
             .overlay(cardBorder.allowsHitTesting(false))
-            .overlay {
-                if useMagicSheen {
-                    LippiLiquidSheen(
-                        cornerRadius: cornerRadius,
-                        duration: 6.4,
-                        intensity: 0.82
-                    )
-                    .clipShape(cardShape)
-                }
-            }
-            .lippiSystemGlass(
-                in: cardShape,
-                tint: systemGlassTint,
-                prominent: style == .full,
-                enabled: systemGlassEnabled,
-                forceSystemGlass: forceSystemGlass
-            )
             // One restrained elevation shadow keeps hierarchy without visual noise.
             .shadow(
                 color: primaryShadowColor,
@@ -912,19 +896,15 @@ struct GlassCard<Content: View>: View {
         if reduceTransparency {
             shape.fill(DS.solidSurface)
         } else if scrollPerformanceMode {
-            shape
-                .fill(DS.glassFill(0.085))
-                .overlay { shape.fill(DS.glassTint).opacity(0.11) }
+            shape.fill(DS.contentSurfaceSubtle)
         } else if useFlatEffects {
             shape
-                .fill(DS.glassFill(0.075))
-                .overlay { shape.fill(DS.glassTint).opacity(isFlatStyle ? 0.18 : 0.12) }
-                .overlay { shape.fill(DS.brandIridescent).blendMode(.screen).opacity(isFlatStyle ? 0.10 : 0.06) }
+                .fill(DS.contentSurfaceSubtle)
+                .overlay { shape.fill(DS.glassDepth).opacity(isFlatStyle ? 0.045 : 0.035) }
         } else if useLightEffects {
             shape
-                .fill(DS.glassFill(0.095))
-                .overlay { shape.fill(DS.glassDepth).opacity(0.12) }
-                .overlay { shape.fill(DS.glassTint).opacity(0.24) }
+                .fill(DS.contentSurface)
+                .overlay { shape.fill(DS.glassDepth).opacity(0.09) }
         } else {
             fullModeBackground(shape: shape)
         }
@@ -934,15 +914,12 @@ struct GlassCard<Content: View>: View {
     private var cardBorder: some View {
         let shape = cardShape
         shape
-            .stroke(DS.stroke, lineWidth: useFlatEffects ? 0.7 : DS.hairline)
-            .overlay {
-                if useFullEffects {
-                    shape
-                        .stroke(DS.strokeInner, lineWidth: 1)
-                        .padding(1)
-                        .blendMode(.overlay)
-                }
-            }
+            .stroke(
+                DS.stroke,
+                lineWidth: colorSchemeContrast == .increased
+                    ? 1.35
+                    : (useFlatEffects ? 0.7 : DS.hairline)
+            )
     }
 
     private var primaryShadowColor: Color {
@@ -959,28 +936,9 @@ struct GlassCard<Content: View>: View {
     }
     private func fullModeBackground(shape: RoundedRectangle) -> some View {
         shape
-            .fill(DS.glass)
-            .overlay { shape.fill(DS.glassDepth).opacity(0.22) }
-            .overlay { shape.fill(DS.glassTint).opacity(0.46) }
-            .overlay {
-                shape
-                    .fill(DS.brandIridescent)
-                    .opacity(0.18)
-                    .blendMode(.screen)
-            }
-            .overlay {
-                shape
-                    .fill(DS.sheen)
-                    .opacity(0.24)
-                    .blendMode(.screen)
-                    .mask(
-                        LinearGradient(
-                            colors: [.white, .white.opacity(0)],
-                            startPoint: .top,
-                            endPoint: .center
-                        )
-                    )
-            }
+            .fill(.thinMaterial)
+            .overlay { shape.fill(DS.contentSurface).opacity(0.82) }
+            .overlay { shape.fill(DS.glassDepth).opacity(0.08) }
     }
 }
 

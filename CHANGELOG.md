@@ -12,7 +12,12 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2023%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2024%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Liquid Glass" src="https://img.shields.io/badge/Design-Liquid%20Glass-5E5CE6?style=for-the-badge">
+    <img alt="App Store readiness" src="https://img.shields.io/badge/App%20Store-1.0%20(2)%20prepared-0A84FF?style=for-the-badge">
+    <img alt="Privacy manifest" src="https://img.shields.io/badge/Privacy-Manifest%20ready-30D158?style=for-the-badge">
+    <img alt="Context-aware assistant" src="https://img.shields.io/badge/Assistant-Context%20aware-5E5CE6?style=for-the-badge">
+    <img alt="Voice Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-Voice%20ready-BF5AF2?style=for-the-badge">
     <img alt="Local voices" src="https://img.shields.io/badge/Voice-F2%20·%20M3-BF5AF2?style=for-the-badge">
     <img alt="On-device speech" src="https://img.shields.io/badge/TTS-On--device-30D158?style=for-the-badge">
     <img alt="On-device intelligence" src="https://img.shields.io/badge/Bonsai-Device%20tested-64D2FF?style=for-the-badge">
@@ -32,32 +37,110 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>F2 + M3</strong><br>
-      <sub>Two selected natural voices, with F2 as Lippi's default.</sub>
+      <strong>Glass, refined</strong><br>
+      <sub>Depth and material without decorative glare.</sub>
       <br><br>
-      <strong>F2 + M3</strong><br>
-      <sub>Два выбранных естественных голоса, F2 — по умолчанию.</sub>
+      <strong>Стекло без бликов</strong><br>
+      <sub>Глубина и материал без декоративных отсветов.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Truly on-device</strong><br>
-      <sub>Speech is generated on iPhone without a Mac, endpoint, or cloud TTS.</sub>
+      <strong>Two themes. One system.</strong><br>
+      <sub>Balanced contrast and accents in every appearance.</sub>
       <br><br>
-      <strong>Действительно локально</strong><br>
-      <sub>Речь создаётся на iPhone без Mac, endpoint или облачного TTS.</sub>
+      <strong>Две темы. Одна система.</strong><br>
+      <sub>Выверенный контраст и акценты в любом оформлении.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Bounded synthesis</strong><br>
-      <sub>Two threads, five steps, a 20-second deadline, and a short spoken-text cap.</sub>
+      <strong>Privacy, declared</strong><br>
+      <sub>Manifests, store answers, and a public policy.</sub>
       <br><br>
-      <strong>Ограниченный синтез</strong><br>
-      <sub>Два потока, пять шагов, лимит 20 секунд и короткий озвучиваемый текст.</sub>
+      <strong>Приватность описана</strong><br>
+      <sub>Манифесты, ответы для Store и открытая политика.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Always available</strong><br>
-      <sub>Device temperature never disables or interrupts the local voice.</sub>
+      <strong>1.0 (2), prepared</strong><br>
+      <sub>A reproducible package for App Store submission.</sub>
       <br><br>
-      <strong>Всегда на связи</strong><br>
-      <sub>Температура устройства больше не отключает и не прерывает локальный голос.</sub>
+      <strong>1.0 (2) подготовлена</strong><br>
+      <sub>Воспроизводимый комплект для отправки в App Store.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 24, 2026 — A calmer surface. A release-ready foundation.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi now feels quieter in both appearances — and version 1.0 (2) has the technical foundation required for an honest, reproducible App Store submission.</strong></p>
+      <ul>
+        <li><strong>One Liquid Glass system:</strong> light and dark appearances now share a carefully balanced language of material, tint, contrast, edge, and depth across Today, Tasks, Smart Goals, Settings, and the assistant.</li>
+        <li><strong>Depth without distraction:</strong> moving sheen and decorative reflection overlays were removed from cards and key surfaces. Structure now comes from restrained materials and hierarchy instead of glare.</li>
+        <li><strong>Adaptive by design:</strong> Reduce Motion, Reduce Transparency, scrolling, Low Power Mode, and thermal-aware composition continue to simplify effects when the device or the person needs a calmer experience.</li>
+        <li><strong>Versioned for release:</strong> the project is prepared as version 1.0, build 2. Optimized Release output and a generic arm64 archive can be produced without launching Simulator.</li>
+        <li><strong>Privacy manifests included:</strong> the main app and both widget extensions declare tracking status and the required reasons for UserDefaults/App Groups, file timestamps, and available disk-space APIs.</li>
+        <li><strong>Export compliance made explicit:</strong> the app declares that it does not use non-exempt encryption; networking and cryptographic use remain within Apple's standard system facilities.</li>
+        <li><strong>A policy people can reach:</strong> Settings now links to the privacy policy in Russian, English, German, and Spanish. A public bilingual version is available at <a href="https://lippi-privacy.contu4575gazeta-pl.chatgpt.site">lippi-privacy…chatgpt.site</a>.</li>
+        <li><strong>A complete store package:</strong> Russian and English descriptions, promotional text, keywords, review notes, privacy answers, screenshot guidance, and Export Options now live beside the source.</li>
+        <li><strong>Release warnings resolved:</strong> the Smart Goals interface now explicitly retains its Bonsai provider throughout generation, removing lifetime warnings without changing the safe local workflow.</li>
+        <li><strong>Submission status stays precise:</strong> the archive is prepared and locally validated. Distribution signing and upload remain pending until the paid Apple Developer Program membership is active.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Lippi стала спокойнее в обеих темах, а версия 1.0 (2) получила техническую основу для честной и воспроизводимой отправки в App Store.</strong></p>
+      <ul>
+        <li><strong>Одна система Liquid Glass:</strong> светлая и тёмная темы теперь говорят на общем языке материалов, оттенков, контраста, кромок и глубины на главной, в задачах, «Умных целях», настройках и помощнике.</li>
+        <li><strong>Глубина без отвлечения:</strong> движущиеся блики и декоративные отражения удалены с карточек и ключевых поверхностей. Структуру создают сдержанные материалы и визуальная иерархия.</li>
+        <li><strong>Адаптивность встроена:</strong> Reduce Motion, Reduce Transparency, прокрутка, энергосбережение и тепловое состояние по-прежнему упрощают эффекты, когда устройству или человеку нужен более спокойный режим.</li>
+        <li><strong>Версия оформлена для релиза:</strong> проект подготовлен как версия 1.0, сборка 2. Оптимизированная Release-сборка и generic arm64-архив создаются без запуска Simulator.</li>
+        <li><strong>Privacy Manifest добавлены:</strong> основное приложение и оба виджета объявляют статус трекинга и причины использования UserDefaults/App Groups, временных меток файлов и API свободного места.</li>
+        <li><strong>Экспортная криптография описана явно:</strong> приложение отмечает отсутствие неосвобождённого шифрования; сеть и криптография используют стандартные системные средства Apple.</li>
+        <li><strong>Политика доступна пользователю:</strong> в настройках появилась ссылка на русском, английском, немецком и испанском. Открытая двуязычная версия размещена на <a href="https://lippi-privacy.contu4575gazeta-pl.chatgpt.site">lippi-privacy…chatgpt.site</a>.</li>
+        <li><strong>Комплект Store собран:</strong> русские и английские описания, промотекст, ключевые слова, заметки рецензенту, ответы о данных, план скриншотов и Export Options хранятся рядом с исходным кодом.</li>
+        <li><strong>Предупреждения Release устранены:</strong> интерфейс «Умных целей» теперь явно удерживает Bonsai-провайдер на протяжении генерации, сохраняя безопасный локальный сценарий.</li>
+        <li><strong>Статус отправки остаётся точным:</strong> архив подготовлен и локально проверен. Distribution-подпись и загрузка ждут активации платной программы Apple Developer.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+### July 24, 2026 — Understands the request. Remembers the context.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi's voice assistant now understands more ways to ask — and enough recent context to make a short follow-up feel natural.</strong></p>
+      <ul>
+        <li><strong>Meaning beyond keywords:</strong> deterministic intent rules now work together with Natural Language lemmatization, fuzzy matching, and the existing local behavior model. Polite phrasing, flexible word order, common synonyms, and small speech-recognition errors resolve more reliably.</li>
+        <li><strong>Relevant conversational memory:</strong> the most recent successful intent remains available for six minutes. This makes phrases such as “and another one” after adding a task or “what about progress?” after opening a goal understandable without letting stale context linger indefinitely.</li>
+        <li><strong>Smart Goals join the assistant:</strong> voice commands can open the planner, prepare a new goal from a spoken ambition, return to an existing roadmap, or open its progress summary.</li>
+        <li><strong>Natural goal interpretations:</strong> requests such as “build a roadmap to…”, “help me achieve…”, and “I want to learn…” map to the same safe Smart Goal flow in Russian, English, German, and Spanish.</li>
+        <li><strong>Review before generation:</strong> a spoken goal is carried into the planner as editable input. Lippi does not start the expensive roadmap model until the user has reviewed the idea and chosen to continue.</li>
+        <li><strong>Better task follow-ups:</strong> after opening Tasks, “and another — buy milk” becomes a categorized task. Requests with courtesy words or reordered action phrases are cleaned without leaking command words into the title.</li>
+        <li><strong>Safer ambiguity handling:</strong> a task that merely mentions a goal remains a task, while explicit Smart Goal and roadmap language opens the planner. Low-confidence or closely tied interpretations still return the unknown state instead of guessing.</li>
+        <li><strong>Personal suggestions stay local:</strong> successful intents and transitions continue to improve quick-command ranking in on-device storage only. Context expires automatically and is never sent to a remote service.</li>
+        <li><strong>Expanded interface:</strong> Smart Goal and goal-progress actions now appear in quick commands, with refreshed assistant guidance and responses across all four app languages.</li>
+        <li><strong>Coverage:</strong> the suite now contains 85 tests, including Smart Goal phrasing, contextual follow-ups, flexible task wording, fuzzy recognition, and ambiguity regression cases. Generic iPhone Debug build-for-testing succeeds without launching Simulator.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Голосовой помощник Lippi теперь понимает больше способов попросить об одном и том же — и достаточно свежего контекста, чтобы короткое продолжение звучало естественно.</strong></p>
+      <ul>
+        <li><strong>Смысл шире ключевых слов:</strong> детерминированные правила интентов теперь работают вместе с лемматизацией Natural Language, fuzzy-сопоставлением и локальной моделью привычек. Вежливые обороты, свободный порядок слов, частые синонимы и небольшие ошибки распознавания разбираются надёжнее.</li>
+        <li><strong>Уместная память разговора:</strong> последняя успешная команда остаётся контекстом на шесть минут. Поэтому «и ещё одну» после добавления задачи или «а что с прогрессом?» после открытия цели понятны без риска использовать давно устаревший контекст.</li>
+        <li><strong>«Умные цели» внутри помощника:</strong> голосом можно открыть планировщик, подготовить новую цель из произнесённого желания, вернуться к дорожной карте или открыть сводку её прогресса.</li>
+        <li><strong>Естественные формулировки целей:</strong> просьбы «составь дорожную карту для…», «помоги мне достичь…» и «хочу научиться…» ведут в один безопасный сценарий на русском, английском, немецком и испанском.</li>
+        <li><strong>Проверка перед генерацией:</strong> произнесённая цель переносится в планировщик как редактируемый текст. Тяжёлая модель дорожной карты не запускается, пока пользователь не проверит идею и сам не выберет продолжение.</li>
+        <li><strong>Умнее работает с задачами:</strong> после открытия задач фраза «и ещё купить молоко» превращается в задачу подходящей категории. Вежливые слова и переставленные части команды не попадают в название.</li>
+        <li><strong>Осторожнее с неоднозначностью:</strong> задача, в которой просто упоминается цель, остаётся задачей, а явные слова про «Умные цели» и дорожную карту открывают планировщик. При низкой уверенности помощник по-прежнему не угадывает.</li>
+        <li><strong>Персональные подсказки остаются локальными:</strong> успешные интенты и переходы улучшают порядок быстрых команд только в памяти устройства. Контекст автоматически истекает и не отправляется во внешний сервис.</li>
+        <li><strong>Расширенный интерфейс:</strong> создание цели и просмотр её прогресса добавлены в быстрые команды; подсказки и ответы обновлены на всех четырёх языках приложения.</li>
+        <li><strong>Покрытие:</strong> набор вырос до 85 тестов — добавлены разные формулировки целей, контекстные продолжения, свободные фразы задач, fuzzy-распознавание и регрессии неоднозначности. Generic iPhone Debug build-for-testing проходит без запуска Simulator.</li>
+      </ul>
     </td>
   </tr>
 </table>

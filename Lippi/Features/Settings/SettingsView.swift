@@ -10,6 +10,10 @@ import UIKit
 // MARK: - Settings (glass, dark Apple-style backdrop) — polished elements
 // =======================================================
 struct SettingsView: View {
+    private static let privacyPolicyURL = URL(
+        string: "https://lippi-privacy.contu4575gazeta-pl.chatgpt.site"
+    )!
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -455,6 +459,13 @@ struct SettingsView: View {
 
                     Spacer()
                 }
+
+                Link(destination: Self.privacyPolicyURL) {
+                    Label(s("settings.privacy_policy"), systemImage: "lock.shield.fill")
+                        .labelStyle(TightLabelStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .secondary))
 
                 Button {
                     auth.signOut()
@@ -1323,25 +1334,7 @@ struct SettingsView: View {
             #endif
         } label: {
             VStack(alignment: .leading, spacing: 10) {
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(theme.previewGradient)
-                    .frame(height: 56)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [.white.opacity(0.30), .white.opacity(0.05), .clear],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .allowsHitTesting(false)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .stroke(.white.opacity(0.18), lineWidth: 1)
-                            .allowsHitTesting(false)
-                    )
+                themeAppearancePreview(theme)
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -1388,6 +1381,103 @@ struct SettingsView: View {
             .shadow(color: isSelected ? theme.accentColor.opacity(0.22) : .clear, radius: isSelected ? 6 : 0, x: 0, y: 3)
         }
         .buttonStyle(PressScaleStyle(scale: 0.988, opacity: 0.96))
+    }
+
+    private func themeAppearancePreview(_ theme: AppTheme) -> some View {
+        let palette = theme.palette
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+
+        return HStack(spacing: 1) {
+            ZStack {
+                Rectangle()
+                    .fill(theme.previewLightGradient)
+
+                Circle()
+                    .fill(Color(hex: palette.glowA.lightHex, alpha: 0.24))
+                    .frame(width: 58, height: 58)
+                    .blur(radius: 9)
+                    .offset(x: -18, y: -14)
+
+                previewGlassCapsule(
+                    theme: theme,
+                    isDark: false,
+                    icon: "sun.max.fill"
+                )
+            }
+
+            ZStack {
+                Rectangle()
+                    .fill(theme.previewDarkGradient)
+
+                Circle()
+                    .fill(Color(hex: palette.glowB.darkHex, alpha: 0.18))
+                    .frame(width: 62, height: 62)
+                    .blur(radius: 11)
+                    .offset(x: 20, y: 16)
+
+                previewGlassCapsule(
+                    theme: theme,
+                    isDark: true,
+                    icon: "moon.stars.fill"
+                )
+            }
+        }
+        .frame(height: 62)
+        .clipShape(shape)
+        .overlay(
+            shape
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.72),
+                            .white.opacity(0.16),
+                            Color.black.opacity(0.14)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.9
+                )
+                .allowsHitTesting(false)
+        )
+        .accessibilityHidden(true)
+    }
+
+    private func previewGlassCapsule(
+        theme: AppTheme,
+        isDark: Bool,
+        icon: String
+    ) -> some View {
+        Capsule(style: .continuous)
+            .fill(
+                Color(
+                    hex: isDark ? 0xFFFFFF : 0xFFFFFF,
+                    alpha: isDark ? 0.13 : 0.66
+                )
+            )
+            .frame(width: 40, height: 27)
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(
+                        Color.white.opacity(isDark ? 0.28 : 0.88),
+                        lineWidth: 0.8
+                    )
+            )
+            .overlay {
+                Image(safeSystemName: icon, fallback: "circle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(
+                        isDark
+                            ? Color.white.opacity(0.88)
+                            : Color(hex: theme.palette.accent)
+                    )
+            }
+            .shadow(
+                color: Color.black.opacity(isDark ? 0.24 : 0.10),
+                radius: 5,
+                x: 0,
+                y: 3
+            )
     }
 
     private func languageTile(_ option: AppLang) -> some View {

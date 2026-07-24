@@ -321,7 +321,8 @@ struct BonsaiSettingsCard: View {
     private func checkModel() async {
         checkState = .checking
         do {
-            try await BonsaiGoalProvider().check(configuration: configuration)
+            let provider = BonsaiGoalProvider()
+            try await provider.check(configuration: configuration)
             checkState = .ready
             DS.hapticSoft()
         } catch let error as BonsaiProviderError {

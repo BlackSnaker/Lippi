@@ -183,4 +183,20 @@ enum AppTheme: String, CaseIterable, Identifiable {
             endPoint: .bottomTrailing
         )
     }
+
+    var previewLightGradient: LinearGradient {
+        LinearGradient(
+            colors: palette.bgLightStops.map { Color(hex: $0) },
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    var previewDarkGradient: LinearGradient {
+        LinearGradient(
+            colors: palette.bgDarkStops.map { Color(hex: $0) },
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
 }

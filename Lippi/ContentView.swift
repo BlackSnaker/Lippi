@@ -2251,6 +2251,7 @@ struct ContentView: View {
     @State private var tab: AppTab = .today
     @State private var showGoalPlanner = false
     @State private var openGoalProgressSummary = false
+    @State private var assistantGoalDraft: String?
     @State private var showVoiceAssistant = false
     @State private var taskCompletionObserver: NSObjectProtocol?
 
@@ -2319,6 +2320,40 @@ struct ContentView: View {
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         if trimmed.count <= 120 { return trimmed }
         return String(trimmed.prefix(120))
+    }
+
+    private func sanitizeVoiceGoalDescription(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        guard !trimmed.isEmpty else { return nil }
+        if trimmed.count <= 240 { return trimmed }
+        return String(trimmed.prefix(240))
+    }
+
+    private func presentGoalPlannerFromAssistant(
+        initialGoal: String? = nil,
+        showProgress: Bool = false
+    ) {
+        assistantGoalDraft = sanitizeVoiceGoalDescription(initialGoal)
+        openGoalProgressSummary = showProgress
+        showVoiceAssistant = false
+
+        // Let the assistant sheet finish dismissing before presenting the planner.
+        // This keeps voice commands reliable when they originate inside the sheet.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+            showGoalPlanner = true
+        }
+    }
+
+    private var hasSavedSmartGoal: Bool {
+        guard let value = UserDefaults.standard.string(
+            forKey: "goal.planner.lastRoadmap"
+        ) else {
+            return false
+        }
+        return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private enum AssistantDeepLinkMode: String {
@@ -2607,6 +2642,41 @@ struct ContentView: View {
             response = assistantMetricsSummary(for: period)
             didHandleSuccessfully = true
 
+        case .openSmartGoals:
+            presentGoalPlannerFromAssistant()
+            response = L10n.tr("assistant.response.smart_goals_opened", lang)
+            didHandleSuccessfully = true
+
+        case .createSmartGoal(let description):
+            let prepared = sanitizeVoiceGoalDescription(description)
+            presentGoalPlannerFromAssistant(initialGoal: prepared)
+            if let prepared {
+                response = L10n.fmt(
+                    "assistant.response.smart_goal_prepared",
+                    lang,
+                    prepared
+                )
+            } else {
+                response = L10n.tr("assistant.response.smart_goal_ready", lang)
+            }
+            didHandleSuccessfully = true
+
+        case .showSmartGoalProgress:
+            if hasSavedSmartGoal {
+                presentGoalPlannerFromAssistant(showProgress: true)
+                response = L10n.tr(
+                    "assistant.response.goal_progress_opened",
+                    lang
+                )
+            } else {
+                presentGoalPlannerFromAssistant()
+                response = L10n.tr(
+                    "assistant.response.goal_progress_missing",
+                    lang
+                )
+            }
+            didHandleSuccessfully = true
+
         case .unknown:
             response = L10n.tr("assistant.response.unknown", lang)
         }
@@ -2771,8 +2841,12 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showGoalPlanner, onDismiss: {
             openGoalProgressSummary = false
+            assistantGoalDraft = nil
         }) {
-            GoalPlannerView(openProgressSummaryOnAppear: openGoalProgressSummary)
+            GoalPlannerView(
+                openProgressSummaryOnAppear: openGoalProgressSummary,
+                initialGoalText: assistantGoalDraft
+            )
                 .environmentObject(store)
                 .environmentObject(stats)
                 .environmentObject(healthKit)
@@ -2815,6 +2889,8 @@ struct AppBackdrop: View {
         case force
     }
 
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.lippiHasGlobalBackdrop) private var hasGlobalBackdrop
     @Environment(\.lippiIsScrolling) private var isScrolling
@@ -2822,6 +2898,7 @@ struct AppBackdrop: View {
     var renderMode: RenderMode = .auto
 
     private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
+    private var increasedContrast: Bool { colorSchemeContrast == .increased }
     private var activeTheme: AppTheme { AppTheme(rawValue: themeRaw) ?? AppTheme.defaultTheme }
     private var palette: AppThemePalette { activeTheme.palette }
     private var shouldRender: Bool { renderMode == .force || !hasGlobalBackdrop }
@@ -2866,6 +2943,16 @@ struct AppBackdrop: View {
         )
     }
 
+    private var themedGlowC: Color {
+        let glow = palette.glowC
+        return Color(
+            dynamicDark: glow.darkHex,
+            light: glow.lightHex,
+            darkAlpha: glow.darkAlpha,
+            lightAlpha: glow.lightAlpha
+        )
+    }
+
     var body: some View {
         Group {
             if shouldRender {
@@ -2874,31 +2961,10 @@ struct AppBackdrop: View {
 
                     themedBgBase
 
-                    RadialGradient(
-                        colors: [themedGlowA.opacity(performanceMode ? 0.42 : 0.68), .clear],
-                        center: .topLeading,
-                        startRadius: 0,
-                        endRadius: performanceMode ? 250 : 320
-                    )
-
-                    RadialGradient(
-                        colors: [themedGlowB.opacity(performanceMode ? 0.34 : 0.56), .clear],
-                        center: .bottomTrailing,
-                        startRadius: 0,
-                        endRadius: performanceMode ? 280 : 350
-                    )
-
-                    if !performanceMode {
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.018),
-                                .clear,
-                                DS.depthShadow(0.06)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .opacity(0.64)
+                    if colorScheme == .dark {
+                        darkLighting
+                    } else {
+                        lightLighting
                     }
                 }
                 .lippiWindowChrome()
@@ -2909,6 +2975,102 @@ struct AppBackdrop: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .allowsHitTesting(false)
+    }
+
+    private var darkLighting: some View {
+        ZStack {
+            RadialGradient(
+                colors: [
+                    themedGlowA.opacity(increasedContrast ? 0.54 : (performanceMode ? 0.72 : 1.0)),
+                    .clear
+                ],
+                center: UnitPoint(x: 0.08, y: 0.02),
+                startRadius: 0,
+                endRadius: performanceMode ? 300 : 420
+            )
+
+            RadialGradient(
+                colors: [
+                    themedGlowB.opacity(increasedContrast ? 0.42 : (performanceMode ? 0.62 : 0.88)),
+                    .clear
+                ],
+                center: UnitPoint(x: 0.96, y: 0.72),
+                startRadius: 0,
+                endRadius: performanceMode ? 310 : 460
+            )
+
+            if !performanceMode && !increasedContrast {
+                RadialGradient(
+                    colors: [themedGlowC.opacity(0.72), .clear],
+                    center: UnitPoint(x: 0.20, y: 0.92),
+                    startRadius: 0,
+                    endRadius: 360
+                )
+            }
+
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(increasedContrast ? 0.025 : 0.055),
+                    .clear,
+                    Color.black.opacity(increasedContrast ? 0.24 : 0.17)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
+
+    private var lightLighting: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(increasedContrast ? 0.74 : 0.90),
+                    Color.white.opacity(0.16),
+                    Color.clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    themedGlowA.opacity(increasedContrast ? 0.42 : (performanceMode ? 0.70 : 0.94)),
+                    .clear
+                ],
+                center: UnitPoint(x: 0.02, y: 0.04),
+                startRadius: 0,
+                endRadius: performanceMode ? 320 : 470
+            )
+
+            RadialGradient(
+                colors: [
+                    themedGlowB.opacity(increasedContrast ? 0.34 : (performanceMode ? 0.52 : 0.72)),
+                    .clear
+                ],
+                center: UnitPoint(x: 1.0, y: 0.62),
+                startRadius: 0,
+                endRadius: performanceMode ? 330 : 480
+            )
+
+            if !performanceMode && !increasedContrast {
+                RadialGradient(
+                    colors: [themedGlowC.opacity(0.62), .clear],
+                    center: UnitPoint(x: 0.32, y: 1.0),
+                    startRadius: 0,
+                    endRadius: 390
+                )
+            }
+
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.24),
+                    .clear,
+                    DS.depthShadow(increasedContrast ? 0.07 : 0.035)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
     }
 }
 
@@ -2993,6 +3155,7 @@ private struct PomodoroAlarmBanner: View {
 struct GlassTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.lippiIsScrolling) private var isScrolling
 
     @Binding var selection: AppTab
@@ -3032,12 +3195,24 @@ struct GlassTabBar: View {
                     lang: lang
                 )
             }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
+            .background(tabBarBackground)
+            .overlay(tabBarOverlay)
+            .lippiSystemGlass(
+                in: tabBarShape,
+                prominent: true,
+                enabled: !simplifiedEffects
+            )
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 3)
-        .background(tabBarBackground)
-        .overlay(tabBarOverlay)
-        .shadow(color: DS.depthShadow(simplifiedEffects ? 0.14 : 0.20), radius: simplifiedEffects ? 5 : 8, x: 0, y: simplifiedEffects ? 3 : 4)
+        .shadow(
+            color: DS.depthShadow(
+                simplifiedEffects ? 0.14 : (usesSystemGlass ? 0.16 : 0.20)
+            ),
+            radius: simplifiedEffects ? 5 : (usesSystemGlass ? 10 : 8),
+            x: 0,
+            y: simplifiedEffects ? 3 : 5
+        )
         .animation(reduceMotion ? nil : DS.motionTabSwitch, value: selection)
         .accessibilityElement(children: .contain)
     }
@@ -3053,36 +3228,51 @@ struct GlassTabBar: View {
             shape.fill(DS.solidSurface)
         } else if usesSystemGlass {
             shape
-                .fill(DS.glassFill(0.12, lightOpacity: 0.30))
+                .fill(DS.navigationSurface)
+                .overlay(shape.fill(DS.navigationTint))
         } else if simplifiedEffects {
             shape
-                .fill(DS.glassFill(0.30, lightOpacity: 0.93))
+                .fill(DS.contentSurface)
                 .overlay(
                     shape
                         .fill(DS.glassTint)
-                        .opacity(0.50)
+                        .opacity(0.20)
                 )
                 .overlay(
                     shape
                         .fill(DS.glassDepth)
-                        .opacity(0.26)
+                        .opacity(0.12)
                 )
         } else {
             tabBarMaterialBase
                 .overlay(
                     shape
-                        .fill(DS.glassFill(0.30, lightOpacity: 0.82))
+                        .fill(DS.navigationSurface)
                 )
                 .overlay(
                     shape
                         .fill(DS.glassTint)
-                        .opacity(0.36)
+                        .opacity(0.22)
                 )
                 .overlay(alignment: .top) {
                     shape
                         .fill(
                             LinearGradient(
-                                colors: [.white.opacity(0.28), .white.opacity(0.08), .clear],
+                                colors: [
+                                    Color(
+                                        dynamicDark: 0xFFFFFF,
+                                        light: 0xFFFFFF,
+                                        darkAlpha: 0.28,
+                                        lightAlpha: 0.82
+                                    ),
+                                    Color(
+                                        dynamicDark: 0xFFFFFF,
+                                        light: 0xFFFFFF,
+                                        darkAlpha: 0.08,
+                                        lightAlpha: 0.20
+                                    ),
+                                    .clear
+                                ],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
@@ -3099,9 +3289,9 @@ struct GlassTabBar: View {
         if #available(iOS 26.0, *), DS.systemGlassEffectsEnabled {
             // The system glass modifier supplies refraction on iOS 26; stacking
             // a live Material underneath creates a redundant blur pass.
-            shape.fill(DS.glassFill(0.20, lightOpacity: 0.72))
+            shape.fill(DS.navigationSurface)
         } else {
-            shape.fill(.thickMaterial)
+            shape.fill(.regularMaterial)
         }
     }
 
@@ -3110,16 +3300,25 @@ struct GlassTabBar: View {
         let shape = tabBarShape
         if usesSystemGlass {
             shape
-                .stroke(DS.glassStroke(0.20, lightOpacity: 0.12), lineWidth: 1)
+                .stroke(
+                    DS.stroke,
+                    lineWidth: colorSchemeContrast == .increased ? 1.4 : 0.85
+                )
         } else if simplifiedEffects {
             shape
-                .stroke(DS.glassStroke(0.34, lightOpacity: 0.18), lineWidth: 1.1)
+                .stroke(
+                    DS.stroke,
+                    lineWidth: colorSchemeContrast == .increased ? 1.5 : 1.0
+                )
         } else {
             shape
-                .stroke(DS.glassStroke(0.38, lightOpacity: 0.20), lineWidth: 1)
+                .stroke(
+                    DS.stroke,
+                    lineWidth: colorSchemeContrast == .increased ? 1.5 : 1.0
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 23, style: .continuous)
-                        .stroke(.white.opacity(0.16), lineWidth: 0.8)
+                        .stroke(DS.strokeInner, lineWidth: 0.8)
                         .padding(1)
                 )
         }

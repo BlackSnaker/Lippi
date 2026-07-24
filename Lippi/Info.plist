@@ -35,6 +35,8 @@
 	<true/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Microphone access is used for voice assistant commands.</string>
 	<key>NSAppTransportSecurity</key>

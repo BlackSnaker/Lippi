@@ -15,6 +15,19 @@ import UIKit
 // =======================================================
 struct GoalPlannerView: View {
     var openProgressSummaryOnAppear: Bool = false
+    private let initialGoalText: String?
+
+    init(
+        openProgressSummaryOnAppear: Bool = false,
+        initialGoalText: String? = nil
+    ) {
+        self.openProgressSummaryOnAppear = openProgressSummaryOnAppear
+        let trimmed = initialGoalText?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let prepared = trimmed?.isEmpty == false ? trimmed : nil
+        self.initialGoalText = prepared
+        _goalText = State(initialValue: prepared ?? "")
+    }
 
     @EnvironmentObject private var store: TaskStore
     @EnvironmentObject private var stats: StatsStore
@@ -157,8 +170,10 @@ struct GoalPlannerView: View {
             bottomActionBar
         }
         .onAppear {
-            restoreRoadmap()
-            restoreProgressSummary()
+            if initialGoalText == nil {
+                restoreRoadmap()
+                restoreProgressSummary()
+            }
             refreshProgressNotifications()
             handleProgressDeepLinkIfNeeded()
         }
@@ -1202,13 +1217,6 @@ struct GoalPlannerView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(DS.glassFill(0.08))
                 .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(DS.brandSoftGradient).opacity(0.18))
-                .overlay(
-                    LippiLiquidSheen(
-                        cornerRadius: 22,
-                        duration: 3.4,
-                        intensity: 0.84
-                    )
-                )
 
             VStack(spacing: 14) {
                 processingEmblem.scaleEffect(0.78)

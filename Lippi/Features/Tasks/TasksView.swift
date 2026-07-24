@@ -284,13 +284,6 @@ struct TasksView: View {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .stroke(DS.stroke, lineWidth: 1)
                 )
-                .overlay(alignment: .topLeading) {
-                    Capsule()
-                        .fill(DS.cardTopLine)
-                        .frame(width: 92, height: 1.3)
-                        .padding(.top, 10)
-                        .padding(.leading, 14)
-                }
         )
         .lippiSystemGlass(
             in: RoundedRectangle(cornerRadius: 24, style: .continuous),
