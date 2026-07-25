@@ -28,15 +28,35 @@
     ".privacy-image",
     ".release-visual",
   ];
+  const glassSelectors = [
+    ".site-header",
+    ".header-cta",
+    ".button",
+    ".hero-visual figcaption",
+    ".trust-row",
+    ".feature-card",
+    ".gallery-card",
+    ".release-copy",
+    ".check-list li",
+    ".mini-points span",
+  ];
 
   root.classList.add("motion-capable");
+  root.classList.toggle("motion-reduced", reduceMotionQuery.matches);
 
   const header = document.querySelector(".site-header, .site-nav");
+  const desktopNav = document.querySelector(".desktop-nav");
   const hero = document.querySelector(".landing-hero");
   const heroCopy = document.querySelector(".hero-copy");
   const heroVisual = document.querySelector(".hero-visual");
   const revealElements = [...document.querySelectorAll(revealSelectors.join(","))];
   const mediaFrames = [...document.querySelectorAll(mediaSelectors.join(","))];
+  const glassElements = [...document.querySelectorAll(glassSelectors.join(","))];
+  const storySections = [
+    ...document.querySelectorAll(
+      ".intelligence-story, .ecosystem-section, .privacy-section, .release-section",
+    ),
+  ];
   const progress = document.createElement("div");
 
   progress.className = "scroll-progress";
@@ -97,7 +117,15 @@
     progress.style.transform = `scaleX(${scrollProgress})`;
     header?.classList.toggle("is-condensed", scrollY > 28);
 
-    if (reduceMotionQuery.matches) return;
+    if (reduceMotionQuery.matches) {
+      root.style.setProperty("--ambient-scroll-y", "0px");
+      return;
+    }
+
+    root.style.setProperty(
+      "--ambient-scroll-y",
+      `${Math.round(scrollY * -0.025)}px`,
+    );
 
     if (hero && heroCopy && heroVisual) {
       const heroProgress = clamp(scrollY / Math.max(viewportHeight, 720), 0, 1);
@@ -129,6 +157,26 @@
       const shift = clamp(centerOffset * -18, -14, 14);
       frame.style.setProperty("--media-shift", `${shift.toFixed(2)}px`);
     });
+
+    storySections.forEach((section) => {
+      const rect = section.getBoundingClientRect();
+      if (rect.bottom < -160 || rect.top > viewportHeight + 160) return;
+
+      const sectionProgress = clamp(
+        (viewportHeight - rect.top) / (viewportHeight + rect.height),
+        0,
+        1,
+      );
+      const glassX = 18 + sectionProgress * 64;
+      const glassY = 10 + Math.sin(sectionProgress * Math.PI) * 24;
+
+      section.style.setProperty("--glass-x", `${glassX.toFixed(1)}%`);
+      section.style.setProperty("--glass-y", `${glassY.toFixed(1)}%`);
+      section.style.setProperty(
+        "--section-progress",
+        sectionProgress.toFixed(3),
+      );
+    });
   };
 
   const requestScrollMotion = () => {
@@ -144,6 +192,40 @@
   const tiltElements = [
     ...document.querySelectorAll(".feature-card, .gallery-card"),
   ];
+
+  const resetGlassPoint = (element) => {
+    element.style.setProperty("--glass-x", "50%");
+    element.style.setProperty("--glass-y", "16%");
+    element.classList.remove("is-glass-pressed");
+  };
+
+  glassElements.forEach((element) => {
+    resetGlassPoint(element);
+
+    element.addEventListener("pointermove", (event) => {
+      if (reduceMotionQuery.matches || !finePointerQuery.matches) return;
+
+      const rect = element.getBoundingClientRect();
+      const x = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+      const y = clamp((event.clientY - rect.top) / rect.height, 0, 1);
+
+      element.style.setProperty("--glass-x", `${(x * 100).toFixed(1)}%`);
+      element.style.setProperty("--glass-y", `${(y * 100).toFixed(1)}%`);
+    });
+
+    element.addEventListener("pointerdown", () => {
+      if (!reduceMotionQuery.matches) {
+        element.classList.add("is-glass-pressed");
+      }
+    });
+    element.addEventListener("pointerup", () =>
+      element.classList.remove("is-glass-pressed"),
+    );
+    element.addEventListener("pointercancel", () =>
+      element.classList.remove("is-glass-pressed"),
+    );
+    element.addEventListener("pointerleave", () => resetGlassPoint(element));
+  });
 
   const resetTilt = (element) => {
     element.style.setProperty("--tilt-x", "0deg");
@@ -176,6 +258,111 @@
 
   enableTilt();
 
+  if (desktopNav) {
+    const navIndicator = document.createElement("span");
+    const navLinks = [...desktopNav.querySelectorAll("a")];
+    navIndicator.className = "nav-glass-indicator";
+    navIndicator.setAttribute("aria-hidden", "true");
+    desktopNav.append(navIndicator);
+
+    const moveNavIndicator = (link) => {
+      const navRect = desktopNav.getBoundingClientRect();
+      const linkRect = link.getBoundingClientRect();
+      desktopNav.style.setProperty(
+        "--nav-glass-left",
+        `${(linkRect.left - navRect.left).toFixed(1)}px`,
+      );
+      desktopNav.style.setProperty(
+        "--nav-glass-width",
+        `${linkRect.width.toFixed(1)}px`,
+      );
+      desktopNav.classList.add("is-glass-active");
+    };
+
+    navLinks.forEach((link) => {
+      link.addEventListener("pointerenter", () => moveNavIndicator(link));
+      link.addEventListener("focus", () => moveNavIndicator(link));
+    });
+
+    desktopNav.addEventListener("pointerleave", () =>
+      desktopNav.classList.remove("is-glass-active"),
+    );
+    desktopNav.addEventListener("focusout", () => {
+      window.requestAnimationFrame(() => {
+        if (!desktopNav.contains(document.activeElement)) {
+          desktopNav.classList.remove("is-glass-active");
+        }
+      });
+    });
+  }
+
+  let pointerFrameRequested = false;
+  let pointerX = window.innerWidth / 2;
+  let pointerY = window.innerHeight / 3;
+
+  const updateAmbientPointer = () => {
+    pointerFrameRequested = false;
+    if (reduceMotionQuery.matches || !finePointerQuery.matches) return;
+
+    const normalizedX = pointerX / Math.max(window.innerWidth, 1) - 0.5;
+    const normalizedY = pointerY / Math.max(window.innerHeight, 1) - 0.5;
+
+    root.style.setProperty("--cursor-shift-x", `${(normalizedX * 34).toFixed(2)}px`);
+    root.style.setProperty("--cursor-shift-y", `${(normalizedY * 28).toFixed(2)}px`);
+    root.style.setProperty(
+      "--ambient-blue-x",
+      `${(normalizedX * -12).toFixed(2)}px`,
+    );
+    root.style.setProperty(
+      "--ambient-blue-y",
+      `${(normalizedY * -9).toFixed(2)}px`,
+    );
+    root.style.setProperty(
+      "--ambient-mint-x",
+      `${(normalizedX * 10).toFixed(2)}px`,
+    );
+    root.style.setProperty(
+      "--ambient-mint-y",
+      `${(normalizedY * -7).toFixed(2)}px`,
+    );
+    root.style.setProperty(
+      "--ambient-violet-x",
+      `${(normalizedX * -7).toFixed(2)}px`,
+    );
+    root.style.setProperty(
+      "--ambient-violet-y",
+      `${(normalizedY * 8).toFixed(2)}px`,
+    );
+    root.style.setProperty(
+      "--ambient-arc-x",
+      `${(normalizedX * 5).toFixed(2)}px`,
+    );
+    root.style.setProperty(
+      "--ambient-arc-y",
+      `${(normalizedY * 4).toFixed(2)}px`,
+    );
+    root.style.setProperty(
+      "--ambient-arc-two-x",
+      `${(normalizedX * -4).toFixed(2)}px`,
+    );
+    root.style.setProperty(
+      "--ambient-arc-two-y",
+      `${(normalizedY * 3).toFixed(2)}px`,
+    );
+  };
+
+  window.addEventListener(
+    "pointermove",
+    (event) => {
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (pointerFrameRequested) return;
+      pointerFrameRequested = true;
+      window.requestAnimationFrame(updateAmbientPointer);
+    },
+    { passive: true },
+  );
+
   reduceMotionQuery.addEventListener("change", (event) => {
     root.classList.toggle("motion-reduced", event.matches);
     if (event.matches) {
@@ -184,6 +371,21 @@
         element.classList.remove("motion-tilt");
         resetTilt(element);
       });
+      glassElements.forEach(resetGlassPoint);
+      [
+        "--cursor-shift-x",
+        "--cursor-shift-y",
+        "--ambient-blue-x",
+        "--ambient-blue-y",
+        "--ambient-mint-x",
+        "--ambient-mint-y",
+        "--ambient-violet-x",
+        "--ambient-violet-y",
+        "--ambient-arc-x",
+        "--ambient-arc-y",
+        "--ambient-arc-two-x",
+        "--ambient-arc-two-y",
+      ].forEach((property) => root.style.removeProperty(property));
     }
     requestScrollMotion();
   });

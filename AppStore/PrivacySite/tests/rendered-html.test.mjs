@@ -51,6 +51,9 @@ test("server-renders the Lippi product page with the supplied showcase", async (
   assert.match(html, /href="#possibilities"/i);
   assert.match(html, /href="#intelligence"/i);
   assert.match(html, /src="\/motion\.js"/i);
+  assert.match(html, /class="ambient-field"/i);
+  assert.match(html, /liquid-glass/i);
+  assert.match(html, /liquid-panel/i);
   assert.match(html, /https:\/\/github\.com\/BlackSnaker\/Lippi\/issues/);
 
   for (const imageName of [
@@ -123,6 +126,8 @@ test("keeps product metadata, hosting, and image assets explicit", async () => {
   assert.match(motion, /IntersectionObserver/);
   assert.match(motion, /prefers-reduced-motion/);
   assert.match(motion, /requestAnimationFrame/);
+  assert.match(motion, /nav-glass-indicator/);
+  assert.match(motion, /--glass-x/);
 
   const hostingConfig = JSON.parse(hosting);
   assert.equal(

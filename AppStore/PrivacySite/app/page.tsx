@@ -108,7 +108,15 @@ function Arrow() {
 export default function Home() {
   return (
     <main className="landing-page">
-      <header className="site-header">
+      <div className="ambient-field" aria-hidden="true">
+        <span className="ambient-orb ambient-orb-blue" />
+        <span className="ambient-orb ambient-orb-mint" />
+        <span className="ambient-orb ambient-orb-violet" />
+        <span className="ambient-arc ambient-arc-one" />
+        <span className="ambient-arc ambient-arc-two" />
+      </div>
+
+      <header className="site-header liquid-glass glass-interactive">
         <a className="brand" href="#top" aria-label="Lippi — на главную">
           <Brand />
         </a>
@@ -117,7 +125,10 @@ export default function Home() {
           <a href="#intelligence">Интеллект</a>
           <a href="#privacy">Приватность</a>
         </nav>
-        <a className="header-cta" href="#release">
+        <a
+          className="header-cta liquid-glass glass-prominent glass-interactive"
+          href="#release"
+        >
           Скоро в App Store
         </a>
       </header>
@@ -139,11 +150,17 @@ export default function Home() {
             спокойном пространстве. Без лишнего шума и давления.
           </p>
           <div className="hero-actions">
-            <a className="button button-primary" href="#possibilities">
+            <a
+              className="button button-primary liquid-glass glass-prominent glass-interactive"
+              href="#possibilities"
+            >
               Познакомиться с Lippi
               <span aria-hidden="true">↓</span>
             </a>
-            <Link className="button button-secondary" href="/privacy">
+            <Link
+              className="button button-secondary liquid-glass glass-interactive"
+              href="/privacy"
+            >
               Как Lippi хранит данные
             </Link>
           </div>
@@ -158,14 +175,17 @@ export default function Home() {
             priority
             sizes="(max-width: 900px) 100vw, 1320px"
           />
-          <figcaption>
+          <figcaption className="liquid-glass glass-interactive">
             <span>Один день</span>
             <strong>Один спокойный ритм.</strong>
             <span>Фокус · Прогресс · Забота</span>
           </figcaption>
         </figure>
 
-        <div className="trust-row" aria-label="Основные преимущества">
+        <div
+          className="trust-row liquid-glass glass-interactive"
+          aria-label="Основные преимущества"
+        >
           <span>Работает на iPhone</span>
           <span>Локальный интеллект</span>
           <span>Apple Watch и HealthKit</span>
@@ -188,7 +208,10 @@ export default function Home() {
 
         <div className="feature-grid">
           {featureCards.map((feature) => (
-            <article className="feature-card" key={feature.title}>
+            <article
+              className={`feature-card liquid-panel glass-interactive liquid-panel-${feature.tone}`}
+              key={feature.title}
+            >
               <span className={`feature-icon feature-icon-${feature.tone}`}>
                 {feature.icon}
               </span>
@@ -199,7 +222,10 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="intelligence-story" id="intelligence">
+      <section
+        className="intelligence-story liquid-panel story-panel"
+        id="intelligence"
+      >
         <div className="story-copy">
           <p className="overline">Интеллект Lippi</p>
           <h2>
@@ -239,7 +265,10 @@ export default function Home() {
 
         <div className="gallery-grid">
           {gallery.map((item) => (
-            <figure className={item.className} key={item.src}>
+            <figure
+              className={`${item.className} liquid-panel glass-interactive`}
+              key={item.src}
+            >
               <div className="gallery-image">
                 <Image
                   src={item.src}
@@ -262,7 +291,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="ecosystem-section">
+      <section className="ecosystem-section liquid-panel story-panel">
         <figure className="ecosystem-image">
           <Image
             src="/showcase/watch-health.jpg"
@@ -291,7 +320,10 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="privacy-section" id="privacy">
+      <section
+        className="privacy-section liquid-panel story-panel"
+        id="privacy"
+      >
         <div className="privacy-copy">
           <p className="overline">Приватность по умолчанию</p>
           <h2>
@@ -329,7 +361,7 @@ export default function Home() {
             sizes="(max-width: 900px) 100vw, 1200px"
           />
         </div>
-        <div className="release-copy">
+        <div className="release-copy liquid-glass glass-interactive">
           <span className="release-pill">Скоро в App Store</span>
           <h2>Спокойнее планировать. Увереннее двигаться.</h2>
           <p>
@@ -337,7 +369,7 @@ export default function Home() {
             познакомиться с возможностями и задать вопрос разработчику.
           </p>
           <a
-            className="button button-primary"
+            className="button button-primary liquid-glass glass-prominent glass-interactive"
             href="https://github.com/BlackSnaker/Lippi/issues"
             rel="noreferrer"
           >
