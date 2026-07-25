@@ -910,6 +910,7 @@ img {
 
 .release-section {
   position: relative;
+  display: grid;
   width: min(1240px, calc(100% - 36px));
   margin: 150px auto 0;
   overflow: hidden;
@@ -920,7 +921,7 @@ img {
 }
 
 .release-visual {
-  opacity: 0.64;
+  opacity: 1;
 }
 
 .release-visual img {
@@ -929,36 +930,46 @@ img {
 }
 
 .release-copy {
-  position: absolute;
-  top: 50%;
-  left: clamp(28px, 7vw, 90px);
-  max-width: 540px;
-  padding: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.84);
-  border-radius: 30px;
-  transform: translateY(-50%);
+  position: relative;
+  display: grid;
+  max-width: none;
+  padding: clamp(30px, 5vw, 58px);
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 18px clamp(28px, 5vw, 64px);
   background: rgba(255, 255, 255, 0.76);
   box-shadow: 0 22px 62px rgba(29, 70, 119, 0.13);
   backdrop-filter: blur(26px) saturate(145%);
 }
 
 .release-copy h2 {
-  margin-top: 18px;
+  max-width: 780px;
+  margin: 0;
+  grid-column: 1;
   font-size: clamp(38px, 4.2vw, 58px);
 }
 
 .release-copy > p {
+  max-width: 680px;
+  grid-column: 1;
   font-size: 16px;
 }
 
 .release-copy .button {
-  margin-top: 26px;
+  margin: 0;
+  grid-column: 2;
+  grid-row: 2 / 4;
 }
 
 .release-pill {
   display: inline-flex;
+  width: fit-content;
   padding: 8px 12px;
   border-radius: 999px;
+  grid-column: 1 / -1;
   color: #1e70d3;
   background: rgba(37, 132, 243, 0.1);
   font-size: 11px;
@@ -1306,20 +1317,29 @@ img {
 .header-cta.glass-prominent,
 .button-primary.glass-prominent {
   border-color: rgba(255, 255, 255, 0.44);
-  background:
-    radial-gradient(
-      circle at var(--glass-x) var(--glass-y),
-      rgba(255, 255, 255, 0.5),
-      transparent 32%
-    ),
-    linear-gradient(145deg, rgba(52, 158, 255, 0.94), rgba(8, 91, 216, 0.88));
-  box-shadow:
-    0 15px 34px rgba(23, 110, 229, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(6, 61, 145, 0.18);
+  background: linear-gradient(
+    145deg,
+    rgba(43, 145, 244, 0.96),
+    rgba(8, 91, 216, 0.92)
+  );
+  box-shadow: 0 15px 34px rgba(23, 110, 229, 0.25);
 }
 
-.button-secondary.liquid-glass,
+.button.liquid-glass::before,
+.header-cta.liquid-glass::before {
+  display: none;
+}
+
+.button-secondary.liquid-glass {
+  border-color: rgba(255, 255, 255, 0.78);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.76),
+    rgba(229, 241, 255, 0.5)
+  );
+  box-shadow: 0 14px 34px rgba(29, 73, 125, 0.1);
+}
+
 .hero-visual figcaption.liquid-glass,
 .trust-row.liquid-glass,
 .release-copy.liquid-glass {
@@ -1792,13 +1812,13 @@ img {
 }
 
 .motion-capable .release-copy.motion-reveal {
-  --reveal-x: -18px;
-  --reveal-y: -46%;
+  --reveal-x: 0px;
+  --reveal-y: 34px;
   --reveal-scale: 0.97;
 }
 
 .motion-capable .release-copy.motion-reveal.is-visible {
-  transform: translate3d(0, -50%, 0) scale(1);
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .motion-capable .gallery-card figcaption > *,
@@ -1968,25 +1988,13 @@ img {
   }
 
   .release-copy {
-    position: relative;
-    top: auto;
-    left: auto;
-    max-width: none;
-    margin: -10% 18px 18px;
-    transform: none;
+    grid-template-columns: 1fr;
   }
 
-  .motion-capable .release-copy.motion-reveal {
-    --reveal-x: 0px;
-    --reveal-y: 28px;
-  }
-
-  .motion-capable .release-copy.motion-reveal.is-visible {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-
-  .release-visual {
-    opacity: 1;
+  .release-copy .button {
+    width: fit-content;
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .summary-grid {
@@ -2142,9 +2150,11 @@ img {
   }
 
   .release-copy {
-    margin: -4% 10px 10px;
     padding: 24px;
-    border-radius: 24px;
+  }
+
+  .release-copy .button {
+    width: 100%;
   }
 
   .site-footer {
@@ -2236,7 +2246,7 @@ img {
 
   .motion-capable .release-copy.motion-reveal,
   .motion-capable .release-copy.motion-reveal.is-visible {
-    transform: translateY(-50%) !important;
+    transform: none !important;
   }
 
   .motion-capable .gallery-card figcaption > *,

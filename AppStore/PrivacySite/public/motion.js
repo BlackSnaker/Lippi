@@ -30,8 +30,6 @@
   ];
   const glassSelectors = [
     ".site-header",
-    ".header-cta",
-    ".button",
     ".hero-visual figcaption",
     ".trust-row",
     ".feature-card",
