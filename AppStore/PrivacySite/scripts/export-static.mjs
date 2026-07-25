@@ -62,14 +62,17 @@ function makeStatic(html, pathname) {
     .replace(
       "</head>",
       `<link rel="canonical" href="${canonicalUrl}"/></head>`,
-    );
+    )
+    .replace("</body>", '<script src="/motion.js" defer></script></body>');
 }
 
 async function exportPage(pathname, destination) {
   const html = makeStatic(await render(pathname), pathname);
   assert.doesNotMatch(html, /chatgpt|openai/i);
   assert.doesNotMatch(html, /_vinext\/image/i);
-  assert.doesNotMatch(html, /<script\b/i);
+  const scripts = html.match(/<script\b[^>]*>[\s\S]*?<\/script>/gi) ?? [];
+  assert.equal(scripts.length, 1, `Unexpected scripts in ${pathname}`);
+  assert.match(scripts[0], /src="\/motion\.js"/i);
   assert.match(html, /href="\/assets\/[^"]+\.css"/i);
 
   const outputPath = resolve(outputRoot, destination);
@@ -90,7 +93,12 @@ const exportedFiles = await readdir(outputRoot, {
 });
 await Promise.all(
   exportedFiles
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".js"))
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.endsWith(".js") &&
+        entry.name !== "motion.js",
+    )
     .map((entry) => unlink(resolve(entry.parentPath, entry.name))),
 );
 
@@ -118,6 +126,7 @@ for (const requiredFile of [
   "index.html",
   "privacy/index.html",
   "favicon.svg",
+  "motion.js",
   "showcase/introducing-lippi.jpg",
 ]) {
   await readFile(resolve(outputRoot, requiredFile));

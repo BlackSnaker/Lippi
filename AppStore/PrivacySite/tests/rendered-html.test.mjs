@@ -50,6 +50,7 @@ test("server-renders the Lippi product page with the supplied showcase", async (
   assert.match(html, /href="\/privacy"/i);
   assert.match(html, /href="#possibilities"/i);
   assert.match(html, /href="#intelligence"/i);
+  assert.match(html, /src="\/motion\.js"/i);
   assert.match(html, /https:\/\/github\.com\/BlackSnaker\/Lippi\/issues/);
 
   for (const imageName of [
@@ -92,10 +93,12 @@ test("keeps the bilingual App Store privacy policy on its own route", async () =
 });
 
 test("keeps product metadata, hosting, and image assets explicit", async () => {
-  const [layout, page, privacyPage, packageJson, hosting] = await Promise.all([
+  const [layout, page, privacyPage, motion, packageJson, hosting] =
+    await Promise.all([
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/privacy/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../public/motion.js", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
@@ -103,6 +106,7 @@ test("keeps product metadata, hosting, and image assets explicit", async () => {
   assert.match(layout, /default:\s*"Lippi — Фокус, умные цели/);
   assert.match(layout, /template:\s*"Lippi — %s"/);
   assert.match(layout, /<html lang="ru">/);
+  assert.match(layout, /src="\/motion\.js"/);
   assert.doesNotMatch(layout, /chatgpt\.site/i);
   assert.match(page, /title:\s*"Фокус, умные цели и забота о себе"/);
   assert.match(page, /Скоро в App Store/);
@@ -116,6 +120,9 @@ test("keeps product metadata, hosting, and image assets explicit", async () => {
     /не отслеживает вас между приложениями и сайтами/i,
   );
   assert.match(packageJson, /"name": "lippi-product-site"/);
+  assert.match(motion, /IntersectionObserver/);
+  assert.match(motion, /prefers-reduced-motion/);
+  assert.match(motion, /requestAnimationFrame/);
 
   const hostingConfig = JSON.parse(hosting);
   assert.equal(

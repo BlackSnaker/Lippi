@@ -41,7 +41,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={geist.variable}>{children}</body>
+      <body className={geist.variable}>
+        {children}
+        <script src="/motion.js" defer />
+      </body>
     </html>
   );
 }
