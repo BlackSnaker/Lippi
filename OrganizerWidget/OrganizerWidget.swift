@@ -1,51 +1,50 @@
 import WidgetKit
 import SwiftUI
 
-private enum WG {
+private enum OrganizerStorage {
     static let suiteID = "group.illumionix.lippi"
     static let titleKey = "nextTaskTitle"
     static let dueKey = "nextTaskDue"
 }
 
-private enum OrganizerUrgency {
-    case none
+private enum OrganizerTone {
+    case clear
     case overdue
     case today
-    case upcoming
+    case later
+
+    init(due: Date?, hasTask: Bool) {
+        guard hasTask else { self = .clear; return }
+        guard let due else { self = .later; return }
+        if due < .now { self = .overdue }
+        else if Calendar.current.isDateInToday(due) { self = .today }
+        else { self = .later }
+    }
 
     var title: String {
         switch self {
-        case .none: return "Свободно"
-        case .overdue: return "Просрочено"
-        case .today: return "Сегодня"
-        case .upcoming: return "Запланировано"
+        case .clear: "Всё спокойно"
+        case .overdue: "Требует внимания"
+        case .today: "Сегодня"
+        case .later: "Следующий шаг"
         }
     }
 
     var icon: String {
         switch self {
-        case .none: return "sparkles"
-        case .overdue: return "exclamationmark.triangle.fill"
-        case .today: return "clock.fill"
-        case .upcoming: return "calendar"
+        case .clear: "checkmark"
+        case .overdue: "exclamationmark"
+        case .today: "clock.fill"
+        case .later: "arrow.up.right"
         }
     }
 
     var accent: Color {
         switch self {
-        case .none: return Color(hex: 0x30D158)
-        case .overdue: return Color(hex: 0xFF453A)
-        case .today: return Color(hex: 0xFF9F0A)
-        case .upcoming: return Color(hex: 0x64D2FF)
-        }
-    }
-
-    var glow: Color {
-        switch self {
-        case .none: return Color(hex: 0x7EF7AD)
-        case .overdue: return Color(hex: 0xFF7A70)
-        case .today: return Color(hex: 0xFFC06A)
-        case .upcoming: return Color(hex: 0x9BE7FF)
+        case .clear: Color(hex: 0x4BD79A)
+        case .overdue: Color(hex: 0xFF6B72)
+        case .today: Color(hex: 0xFFB44A)
+        case .later: Color(hex: 0x61BCFF)
         }
     }
 }
@@ -54,245 +53,260 @@ struct OrganizerEntry: TimelineEntry {
     let date: Date
     let title: String
     let due: Date?
+    let hasTask: Bool
+    let emoji: String
 }
 
 struct OrganizerProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> OrganizerEntry {
-        OrganizerEntry(date: .now, title: "Следующая задача", due: .now.addingTimeInterval(45 * 60))
+        .init(
+            date: .now,
+            title: "Подготовить презентацию",
+            due: .now.addingTimeInterval(45 * 60),
+            hasTask: true,
+            emoji: "📌"
+        )
     }
 
     func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> OrganizerEntry {
-        loadEntry()
+        loadEntry(configuration: configuration)
     }
 
     func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<OrganizerEntry> {
-        let entry = loadEntry()
+        let entry = loadEntry(configuration: configuration)
         return Timeline(entries: [entry], policy: .after(nextRefresh(for: entry)))
     }
 
-    private func loadEntry() -> OrganizerEntry {
-        let defaults = UserDefaults(suiteName: WG.suiteID)
-        let title = defaults?.string(forKey: WG.titleKey)?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let safeTitle = (title?.isEmpty == false) ? title! : "Нет активных задач"
+    private func loadEntry(configuration: ConfigurationAppIntent) -> OrganizerEntry {
+        let defaults = UserDefaults(suiteName: OrganizerStorage.suiteID)
+        let rawTitle = defaults?.string(forKey: OrganizerStorage.titleKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasTask = rawTitle?.isEmpty == false
+        let timestamp = defaults?.double(forKey: OrganizerStorage.dueKey) ?? 0
+        let emoji = configuration.favoriteEmoji.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let dueTimestamp = defaults?.double(forKey: WG.dueKey) ?? 0
-        let due = dueTimestamp > 0 ? Date(timeIntervalSince1970: dueTimestamp) : nil
-
-        return OrganizerEntry(date: .now, title: safeTitle, due: due)
+        return .init(
+            date: .now,
+            title: hasTask ? rawTitle! : "План на сегодня завершён",
+            due: timestamp > 0 ? Date(timeIntervalSince1970: timestamp) : nil,
+            hasTask: hasTask,
+            emoji: emoji.isEmpty ? "📌" : emoji
+        )
     }
 
     private func nextRefresh(for entry: OrganizerEntry) -> Date {
-        guard let due = entry.due else { return Date().addingTimeInterval(30 * 60) }
-
-        let now = Date()
-        if due <= now { return now.addingTimeInterval(10 * 60) }
-        if due.timeIntervalSince(now) <= 2 * 60 * 60 {
-            return now.addingTimeInterval(5 * 60)
-        }
-
-        return now.addingTimeInterval(20 * 60)
+        guard let due = entry.due else { return .now.addingTimeInterval(30 * 60) }
+        if due <= .now { return .now.addingTimeInterval(10 * 60) }
+        return .now.addingTimeInterval(due.timeIntervalSinceNow < 2 * 60 * 60 ? 5 * 60 : 20 * 60)
     }
 }
 
 struct OrganizerWidgetEntryView: View {
     @Environment(\.widgetFamily) private var family
-    var entry: OrganizerEntry
+    let entry: OrganizerEntry
 
-    private var urgency: OrganizerUrgency {
-        guard let due = entry.due else { return .none }
-        if due < .now { return .overdue }
-        if Calendar.current.isDateInToday(due) { return .today }
-        return .upcoming
-    }
+    private var tone: OrganizerTone { .init(due: entry.due, hasTask: entry.hasTask) }
 
     var body: some View {
-        OrganizerWidgetSurface(accent: urgency.accent, glow: urgency.glow) {
-            switch family {
-            case .systemMedium:
-                mediumLayout
-            default:
-                smallLayout
-            }
+        switch family {
+        case .accessoryInline:
+            inlineLayout
+        case .accessoryCircular:
+            circularLayout
+        case .accessoryRectangular:
+            rectangularLayout
+        case .systemMedium:
+            OrganizerSurface(accent: tone.accent) { mediumLayout }
+        default:
+            OrganizerSurface(accent: tone.accent) { smallLayout }
         }
-        .applyWidgetBackground()
     }
 
     private var smallLayout: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            topBar
+        VStack(alignment: .leading, spacing: 0) {
+            header
+
+            Spacer(minLength: 9)
 
             Text(entry.title)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
                 .lineLimit(3)
-                .minimumScaleFactor(0.74)
+                .minimumScaleFactor(0.72)
+
+            Spacer(minLength: 8)
 
             dueLine
         }
     }
 
     private var mediumLayout: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 9) {
-                topBar
+        HStack(spacing: 18) {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+
+                Spacer(minLength: 9)
 
                 Text(entry.title)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .font(.system(size: 21, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.68)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.72)
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
+
+                Text(entry.hasTask ? "Сделайте одно важное — остальное подождёт" : "Можно спокойно выбрать следующий шаг")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.58))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
 
             Spacer(minLength: 0)
 
-            rightPanel
-                .frame(width: 128)
+            VStack(alignment: .trailing, spacing: 8) {
+                Text(entry.emoji)
+                    .font(.system(size: 31))
+                    .frame(width: 50, height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(tone.accent.opacity(0.13))
+                    )
+
+                if let due = entry.due, entry.hasTask {
+                    Text(due, format: .dateTime.hour().minute())
+                        .font(.system(size: 27, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
+                    Text(due, style: .relative)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.58))
+                        .lineLimit(1)
+                } else {
+                    Text(entry.hasTask ? "без срока" : "готово")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.62))
+                }
+            }
+            .frame(width: 104, alignment: .trailing)
         }
     }
 
-    private var topBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 12, weight: .bold))
+    private var header: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "waveform")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color(hex: 0x65BFFF))
+                .widgetAccentable()
+            Text("Lippi")
+                .font(.caption.weight(.bold))
                 .foregroundStyle(.white)
-                .frame(width: 24, height: 24)
-                .background {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    urgency.glow.opacity(0.68),
-                                    urgency.accent.opacity(0.44),
-                                    .white.opacity(0.12)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
-                .overlay(Circle().stroke(.white.opacity(0.34), lineWidth: 1))
-                .shadow(color: urgency.glow.opacity(0.20), radius: 8, x: 0, y: 4)
-
-            Text("LIPPI")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white.opacity(0.8))
-                .tracking(0.6)
-                .lineLimit(1)
-
+            Text("·")
+                .foregroundStyle(.white.opacity(0.28))
+            Text("План дня")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.white.opacity(0.58))
             Spacer(minLength: 0)
-
-            if family == .systemSmall {
-                urgencyBadge
-            } else {
-                statusDot
-            }
+            Image(systemName: tone.icon)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(tone.accent)
+                .widgetAccentable()
         }
     }
 
     private var dueLine: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 5) {
-                Image(systemName: urgency.icon)
-                    .font(.caption.weight(.semibold))
-
-                if let due = entry.due {
-                    Text(due, format: .dateTime.hour().minute())
-                        .font(.caption.weight(.semibold))
-                        .monospacedDigit()
-                    Text("•")
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.38))
-                    Text(due, style: .relative)
-                        .font(.caption.weight(.medium))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.74)
-                } else {
-                    Text("Без дедлайна")
-                        .font(.caption.weight(.semibold))
-                }
-            }
-
-            HStack(spacing: 5) {
-                Image(systemName: urgency.icon)
-                    .font(.caption.weight(.semibold))
-
-                if let due = entry.due {
-                    Text(due, format: .dateTime.hour().minute())
-                        .font(.caption.weight(.semibold))
-                        .monospacedDigit()
-                } else {
-                    Text("Без срока")
-                        .font(.caption.weight(.semibold))
-                }
-            }
-        }
-        .foregroundStyle(.white.opacity(0.86))
-    }
-
-    private var rightPanel: some View {
-        VStack(alignment: .trailing, spacing: 8) {
-            if let due = entry.due {
+        HStack(spacing: 6) {
+            Image(systemName: tone.icon)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(tone.accent)
+                .widgetAccentable()
+            Text(tone.title)
+                .font(.caption.weight(.medium))
+            if let due = entry.due, entry.hasTask {
+                Text("·")
+                    .foregroundStyle(.white.opacity(0.32))
                 Text(due, format: .dateTime.hour().minute())
-                    .font(.system(size: 23, weight: .bold, design: .rounded))
+                    .font(.caption.weight(.semibold))
                     .monospacedDigit()
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.70)
-
-                Text(due, style: .relative)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.78))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-            } else {
-                Text("Без срока")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.82))
             }
-
-            urgencyBadge
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .organizerWidgetGlassPanel(RoundedRectangle(cornerRadius: 15, style: .continuous), accent: urgency.accent)
+        .foregroundStyle(.white.opacity(0.68))
     }
 
-    private var urgencyBadge: some View {
-        HStack(spacing: 5) {
-            Image(systemName: urgency.icon)
-                .font(.caption2.weight(.bold))
-            Text(urgency.title)
-                .font(.caption2.weight(.bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.68)
+    private var inlineLayout: some View {
+        Label {
+            if let due = entry.due, entry.hasTask {
+                Text("\(entry.title) · \(due, format: .dateTime.hour().minute())")
+            } else {
+                Text(entry.title)
+            }
+        } icon: {
+            Image(systemName: tone.icon)
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .organizerWidgetGlassPanel(Capsule(), accent: urgency.accent, intensity: 0.20)
     }
 
-    private var statusDot: some View {
-        Circle()
-            .fill(urgency.accent)
-            .frame(width: 7, height: 7)
-            .shadow(color: urgency.glow.opacity(0.45), radius: 5, x: 0, y: 0)
+    private var circularLayout: some View {
+        ZStack {
+            AccessoryWidgetBackground()
+            VStack(spacing: 0) {
+                Text(entry.emoji)
+                    .font(.system(size: 16))
+                if let due = entry.due, entry.hasTask {
+                    Text(due, format: .dateTime.hour().minute())
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                } else {
+                    Image(systemName: tone.icon)
+                        .font(.caption2.weight(.bold))
+                        .widgetAccentable()
+                }
+            }
+        }
+    }
+
+    private var rectangularLayout: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
+                Text(entry.emoji)
+                    .font(.caption)
+                Text(tone.title)
+                    .font(.caption2.weight(.semibold))
+                Spacer(minLength: 0)
+                if let due = entry.due, entry.hasTask {
+                    Text(due, format: .dateTime.hour().minute())
+                        .font(.caption2.weight(.bold))
+                        .monospacedDigit()
+                }
+            }
+            Text(entry.title)
+                .font(.headline.weight(.semibold))
+                .lineLimit(2)
+                .minimumScaleFactor(0.72)
+        }
     }
 }
 
 struct OrganizerWidget: Widget {
-    let kind: String = "OrganizerWidget"
+    let kind = "OrganizerWidget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: OrganizerProvider()) { entry in
+        AppIntentConfiguration(
+            kind: kind,
+            intent: ConfigurationAppIntent.self,
+            provider: OrganizerProvider()
+        ) { entry in
             OrganizerWidgetEntryView(entry: entry)
+                .widgetURL(URL(string: "lippi://tasks"))
         }
-        .configurationDisplayName("Органайзер")
-        .description("Показывает ближайшую задачу и её срок.")
-        .supportedFamilies([.systemSmall, .systemMedium])
-        .containerBackgroundRemovable(false)
+        .configurationDisplayName("План дня")
+        .description("Ближайшая задача в спокойном и ясном формате.")
+        .supportedFamilies([
+            .systemSmall,
+            .systemMedium,
+            .accessoryInline,
+            .accessoryCircular,
+            .accessoryRectangular
+        ])
         .contentMarginsDisabled()
     }
 }
@@ -300,276 +314,79 @@ struct OrganizerWidget: Widget {
 #Preview(as: .systemSmall) {
     OrganizerWidget()
 } timeline: {
-    OrganizerEntry(date: .now, title: "Подготовить презентацию", due: .now.addingTimeInterval(35 * 60))
+    OrganizerEntry(
+        date: .now,
+        title: "Подготовить презентацию",
+        due: .now.addingTimeInterval(35 * 60),
+        hasTask: true,
+        emoji: "📌"
+    )
 }
 
-#Preview(as: .systemMedium) {
+#Preview(as: .accessoryRectangular) {
     OrganizerWidget()
 } timeline: {
-    OrganizerEntry(date: .now, title: "Сверстать и отправить отчёт", due: .now.addingTimeInterval(115 * 60))
+    OrganizerEntry(
+        date: .now,
+        title: "Сверстать и отправить отчёт",
+        due: .now.addingTimeInterval(115 * 60),
+        hasTask: true,
+        emoji: "✨"
+    )
 }
 
-private struct OrganizerWidgetSurface<Content: View>: View {
-    @Environment(\.widgetRenderingMode) private var widgetRenderingMode
-    @Environment(\.showsWidgetContainerBackground) private var showsWidgetContainerBackground
+private struct OrganizerSurface<Content: View>: View {
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.showsWidgetContainerBackground) private var showsBackground
     @Environment(\.widgetFamily) private var family
+
     let accent: Color
-    let glow: Color
-    @ViewBuilder var content: Content
+    let content: Content
 
-    private var needsContrastFallback: Bool {
-        widgetRenderingMode != .fullColor || !showsWidgetContainerBackground
+    init(accent: Color, @ViewBuilder content: () -> Content) {
+        self.accent = accent
+        self.content = content()
     }
 
-    private var shellShape: ContainerRelativeShape {
-        ContainerRelativeShape()
-    }
-
-    private var contentPadding: CGFloat {
-        family == .systemSmall ? 12 : 14
-    }
+    private var padding: CGFloat { family == .systemSmall ? 14 : 16 }
+    private var fullColor: Bool { renderingMode == .fullColor && showsBackground }
 
     var body: some View {
         ZStack {
-            if needsContrastFallback {
-                shellShape
-                    .fill(Color.black.opacity(0.86))
+            if fullColor {
+                LinearGradient(
+                    colors: [Color(hex: 0x111B2D), Color(hex: 0x09111F)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Circle()
+                    .fill(accent.opacity(0.15))
+                    .frame(width: family == .systemSmall ? 130 : 190)
+                    .blur(radius: 30)
+                    .offset(x: family == .systemSmall ? 64 : 135, y: -60)
             }
-
-            shellShape
-                .fill(Color(hex: 0x07111F))
-
-            shellShape
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.24),
-                            Color(hex: 0xDDF7FF).opacity(0.12),
-                            Color(hex: 0x0B1B34).opacity(0.78),
-                            Color(hex: 0x060A15).opacity(0.94)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            RadialGradient(
-                colors: [glow.opacity(needsContrastFallback ? 0.42 : 0.78), .clear],
-                center: .topLeading,
-                startRadius: 0,
-                endRadius: 170
-            )
-            .blur(radius: 18)
-
-            RadialGradient(
-                colors: [accent.opacity(needsContrastFallback ? 0.22 : 0.42), .clear],
-                center: .bottomTrailing,
-                startRadius: 0,
-                endRadius: 210
-            )
-            .blur(radius: 24)
-
-            shellShape
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            .white.opacity(0.30),
-                            .white.opacity(0.10),
-                            .clear,
-                            Color.black.opacity(0.22)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .blendMode(.screen)
-
-            OrganizerLiquidRefraction(accent: accent, glow: glow)
-                .clipShape(shellShape)
 
             content
-                .padding(contentPadding)
+                .padding(padding)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .overlay(
-            shellShape
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            .white.opacity(0.48),
-                            .white.opacity(0.18),
-                            accent.opacity(0.20),
-                            .black.opacity(0.18)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
-        .overlay(alignment: .topLeading) {
-            shellShape
-                .fill(
-                    LinearGradient(
-                        colors: [.white.opacity(0.42), .white.opacity(0.12), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .center
-                    )
-                )
-                .blendMode(.screen)
-                .allowsHitTesting(false)
+        .clipShape(ContainerRelativeShape())
+        .containerBackground(for: .widget) {
+            LinearGradient(
+                colors: [Color(hex: 0x111B2D), Color(hex: 0x09111F)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
-        .overlay(alignment: .bottomTrailing) {
-            Circle()
-                .fill(accent.opacity(0.14))
-                .frame(width: 96, height: 96)
-                .blur(radius: 24)
-                .offset(x: 32, y: 32)
-                .allowsHitTesting(false)
-        }
-        .clipShape(shellShape)
-    }
-}
-
-private struct OrganizerLiquidRefraction: View {
-    let accent: Color
-    let glow: Color
-
-    var body: some View {
-        ZStack {
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [.white.opacity(0.30), glow.opacity(0.12), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(width: 150, height: 42)
-                .blur(radius: 18)
-                .rotationEffect(.degrees(-18))
-                .offset(x: -34, y: -42)
-
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [.clear, accent.opacity(0.20), .white.opacity(0.18)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(width: 190, height: 34)
-                .blur(radius: 16)
-                .rotationEffect(.degrees(-14))
-                .offset(x: 54, y: 38)
-
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [.white.opacity(0.16), .clear, accent.opacity(0.14)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-                .padding(6)
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-private struct OrganizerGlassPanelModifier<S: InsettableShape>: ViewModifier {
-    let shape: S
-    let accent: Color
-    let intensity: Double
-
-    func body(content: Content) -> some View {
-        content
-            .background {
-                shape
-                    .fill(.white.opacity(0.10 + intensity * 0.22))
-                    .overlay {
-                        shape
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        .white.opacity(0.24),
-                                        accent.opacity(intensity),
-                                        .black.opacity(0.10)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
-            }
-            .overlay {
-                shape
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.34), .white.opacity(0.12), accent.opacity(0.18)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-    }
-}
-
-private extension View {
-    func organizerWidgetGlassPanel<S: InsettableShape>(
-        _ shape: S,
-        accent: Color,
-        intensity: Double = 0.14
-    ) -> some View {
-        modifier(OrganizerGlassPanelModifier(shape: shape, accent: accent, intensity: intensity))
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func widgetContainerBackgroundForVisibility() -> some View {
-        if #available(iOSApplicationExtension 17.0, *) {
-            modifier(WidgetContainerBackgroundModifier())
-        } else {
-            self
-        }
-    }
-
-    @ViewBuilder
-    func applyWidgetBackground() -> some View {
-        widgetContainerBackgroundForVisibility()
-    }
-}
-
-private struct WidgetContainerBackgroundModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content.containerBackground(for: .widget) {
-            OrganizerContainerBackdrop()
-        }
-    }
-}
-
-private struct OrganizerContainerBackdrop: View {
-    var body: some View {
-        LinearGradient(
-            colors: [
-                Color(hex: 0xEEF9FF).opacity(0.26),
-                Color(hex: 0x273A5C).opacity(0.42),
-                Color(hex: 0x07111F).opacity(0.86)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 }
 
 private extension Color {
     init(hex: UInt32) {
-        let r = Double((hex >> 16) & 0xFF) / 255.0
-        let g = Double((hex >> 8) & 0xFF) / 255.0
-        let b = Double(hex & 0xFF) / 255.0
-        self.init(red: r, green: g, blue: b)
+        self.init(
+            red: Double((hex >> 16) & 0xFF) / 255,
+            green: Double((hex >> 8) & 0xFF) / 255,
+            blue: Double(hex & 0xFF) / 255
+        )
     }
 }

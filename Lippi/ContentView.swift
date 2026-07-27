@@ -235,7 +235,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         body: String,
         at date: Date,
         replaceExisting: Bool = true,
-        userInfo: [AnyHashable: Any] = [:]
+        userInfo: [AnyHashable: Any] = [:],
+        threadIdentifier: String = "lippi-care"
     ) {
         ensureAuthorized { [weak self] ok in
             guard let self, ok else { return }
@@ -246,7 +247,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             content.body = body
             content.sound = nil
             content.userInfo = userInfo
-            content.threadIdentifier = "goal-care"
+            content.threadIdentifier = threadIdentifier
             if #available(iOS 15.0, *) {
                 content.interruptionLevel = .passive
                 content.relevanceScore = 0.15
@@ -362,6 +363,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         let isPomodoroNotification = notification.request.identifier.hasPrefix("pomodoro-")
         let isGentleSuggestion = notification.request.identifier.hasPrefix("goal-care-")
+            || notification.request.identifier.hasPrefix("lippi-care-")
         if isPomodoroNotification {
             PomodoroAlarmCenter.shared.start(phaseTitle: notification.request.content.title)
         }
@@ -2248,6 +2250,8 @@ struct ContentView: View {
     @StateObject private var countdown = CountdownStore()
     @StateObject private var dailyReminder = DailyReminderStore()
     @StateObject private var scrollPerformance = ScrollPerformanceCoordinator()
+    @StateObject private var careCenter = LippiCareCenter.shared
+    @StateObject private var watchDiscovery = AppleWatchDiscovery.shared
     @State private var tab: AppTab = .today
     @State private var showGoalPlanner = false
     @State private var openGoalProgressSummary = false
@@ -2301,11 +2305,37 @@ struct ContentView: View {
             roadmap = nil
         }
 
-        GoalCareNotificationScheduler.refresh(
+        let now = Date.now
+        let isFocusRunning = pomo.phase == .focus
+        let focusElapsed = isFocusRunning
+            ? max(0, now.timeIntervalSince(pomo.startDate ?? now))
+            : 0
+        let userState = GoalUserState(rawValue: goalUserStateRaw) ?? .calm
+        careCenter.refresh(
+            now: now,
+            healthSnapshot: healthKit.snapshot,
+            healthRecommendation: healthKit.recommendation,
             roadmap: roadmap,
             tasks: store.tasks,
+            userState: userState,
+            focusElapsed: focusElapsed,
+            isFocusRunning: isFocusRunning,
+            lang: lang
+        )
+
+        let audit = roadmap.flatMap { GoalPlanProgressAudit.make(roadmap: $0, tasks: store.tasks, now: now) }
+        let pace = AdaptiveGoalPaceEngine.evaluate(
             health: healthKit.recommendation,
-            userState: GoalUserState(rawValue: goalUserStateRaw) ?? .calm,
+            audit: audit,
+            userState: userState
+        )
+        watchDiscovery.syncCareContext(
+            suggestion: careCenter.primarySuggestion,
+            nextGoalStep: audit?.nextActiveTask ?? roadmap?.firstActions.first,
+            paceTitle: L10n.tr("health.hub.pace.\(pace.level.rawValue)", lang),
+            isFocusRunning: isFocusRunning,
+            focusMinutes: Int(focusElapsed / 60),
+            stepsToday: healthKit.snapshot?.stepsToday.map { Int($0.rounded()) },
             lang: lang
         )
     }
@@ -2454,6 +2484,15 @@ struct ContentView: View {
 
         case "tasks":
             switchTab(to: .tasks)
+
+        case "health":
+            switchTab(to: .health)
+
+        case "break":
+            switchTab(to: .break)
+
+        case "eye":
+            showEyes = true
 
         case "goals":
             switchTab(to: .today)
@@ -2798,6 +2837,7 @@ struct ContentView: View {
         .environmentObject(countdown)
         .environmentObject(dailyReminder)
         .environmentObject(scrollPerformance)
+        .environmentObject(careCenter)
         .task {
             await healthKit.activateIfEnabled()
         }
@@ -2809,6 +2849,7 @@ struct ContentView: View {
                 }
             }
             GoalProgressNotificationScheduler.refresh(lang: lang)
+            watchDiscovery.activate()
             refreshGoalCareNotifications()
             pomo.stats = stats
             if taskCompletionObserver == nil {
@@ -2829,10 +2870,8 @@ struct ContentView: View {
         .onOpenURL { url in
             handleIncomingURL(url)
         }
-        .sheet(isPresented: $showEyes) {
-            EyeExerciseGameView()
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+        .fullScreenCover(isPresented: $showEyes) {
+            EyeComfortCameraView()
         }
         .sheet(isPresented: $showVoiceAssistant) {
             AppVoiceAssistantSheet(assistant: voiceAssistant, lang: lang)
@@ -2858,15 +2897,29 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .suggestEyeExercise)) { _ in
             showEyes = true
         }
-        .onChange(of: healthKit.recommendation) { _, _ in
-            refreshGoalCareNotifications()
-        }
-        .onChange(of: store.tasks) { _, _ in
-            refreshGoalCareNotifications()
-        }
-        .onChange(of: goalUserStateRaw) { _, _ in
-            refreshGoalCareNotifications()
-        }
+        .modifier(
+            LippiCareLifecycleModifier(
+                healthKit: healthKit,
+                taskStore: store,
+                pomodoro: pomo,
+                watch: watchDiscovery,
+                userStateRaw: goalUserStateRaw,
+                refresh: refreshGoalCareNotifications,
+                handleWatchAction: { event in
+                    careCenter.record(event.action, at: event.receivedAt)
+                    switch event.action {
+                    case .openEyes: showEyes = true
+                    case .openRecovery: switchTab(to: .break)
+                    case .openGoal:
+                        switchTab(to: .today)
+                        openGoalProgressSummary = true
+                        showGoalPlanner = true
+                    case .logMeal, .logMovement, .logWater, .none: break
+                    }
+                    refreshGoalCareNotifications()
+                }
+            )
+        )
         .onChange(of: voiceAssistant.pendingCommand) { _, newValue in
             guard let command = newValue else { return }
             handleAssistantCommand(command)

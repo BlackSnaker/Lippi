@@ -8,6 +8,32 @@ import SwiftUI
 import Charts
 #endif
 
+private struct EyeCameraFeatureChip: View {
+    let icon: String
+    let title: String
+
+    var body: some View {
+        VStack(spacing: 5) {
+            Image(safeSystemName: icon, fallback: "circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(DS.accent)
+
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DS.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, minHeight: 62)
+        .padding(.horizontal, 5)
+        .background(DS.glassFill(0.045), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 17, style: .continuous)
+                .stroke(DS.glassStroke(0.09), lineWidth: 1)
+        )
+    }
+}
+
 // =======================================================
 // MARK: - Входная точка раздела
 // =======================================================
@@ -17,6 +43,7 @@ public struct EyeHealthHomeView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @State private var showGame = false
+    @State private var showCameraGuide = false
     @State private var showStats = false
     @State private var showSettings = false
 
@@ -64,14 +91,17 @@ public struct EyeHealthHomeView: View {
                                 .lippiMotionScene(1)
                         }
 
-                        progressCard
+                        cameraComfortCard
                             .lippiMotionScene(2)
 
-                        achievementsCard
+                        progressCard
                             .lippiMotionScene(3)
 
-                        dailyTipCard
+                        achievementsCard
                             .lippiMotionScene(4)
+
+                        dailyTipCard
+                            .lippiMotionScene(5)
 
                         Color.clear.frame(height: 84)
                     }
@@ -94,6 +124,65 @@ public struct EyeHealthHomeView: View {
         }
         .sheet(isPresented: $showStats) { EyeStatsView().environmentObject(eye) }
         .sheet(isPresented: $showSettings) { EyeSettingsView().environmentObject(eye) }
+        .fullScreenCover(isPresented: $showCameraGuide) {
+            EyeComfortCameraView()
+                .environmentObject(eye)
+        }
+    }
+
+    private var cameraComfortCard: some View {
+        GlassCard(padding: 17, cornerRadius: 26, style: .lightweight, forceSystemGlass: false) {
+            VStack(alignment: .leading, spacing: 15) {
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color(hex: 0x64D2FF).opacity(0.14))
+
+                        Image(safeSystemName: "camera.viewfinder", fallback: "camera.fill")
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundStyle(Color(hex: 0x64D2FF))
+                    }
+                    .frame(width: 48, height: 48)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(DS.glassStroke(0.12), lineWidth: 1)
+                    )
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(s("eye.camera.card_title"))
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(DS.textPrimary)
+
+                        Text(s("eye.camera.card_subtitle"))
+                            .font(.footnote)
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 4)
+
+                    Text(s("eye.camera.local_badge"))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Color(hex: 0x30D158))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 6)
+                        .background(Color(hex: 0x30D158).opacity(0.11), in: Capsule())
+                }
+
+                HStack(spacing: 8) {
+                    EyeCameraFeatureChip(icon: "eye.fill", title: s("eye.camera.chip_tracking"))
+                    EyeCameraFeatureChip(icon: "drop.fill", title: s("eye.camera.metric_redness"))
+                    EyeCameraFeatureChip(icon: "moon.zzz.fill", title: s("eye.camera.metric_fatigue"))
+                }
+
+                Button { showCameraGuide = true } label: {
+                    Label(s("eye.camera.start"), systemImage: "camera.fill")
+                        .labelStyle(EyeActionLabelStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .primary, allowsMultiline: true, forceSystemGlass: true))
+            }
+        }
     }
 
     private var healthEyeRecommendation: HealthWellnessRecommendation? {

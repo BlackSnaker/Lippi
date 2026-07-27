@@ -12,6 +12,7 @@ struct HealthDashboardView: View {
     let onOpenGoals: () -> Void
 
     @EnvironmentObject private var store: TaskStore
+    @EnvironmentObject private var careCenter: LippiCareCenter
     @AppStorage("goal.progress.userState") private var userStateRaw: String = GoalUserState.calm.rawValue
     @AppStorage(GoalProgressNotificationScheduler.roadmapStorageKey) private var savedRoadmap: String = ""
     @AppStorage(AdaptiveGoalPlanRecordStore.storageKey) private var savedAdaptation: String = ""
@@ -61,8 +62,11 @@ struct HealthDashboardView: View {
             dailyRhythmCard
                 .lippiMotionScene(0)
 
-            wellbeingCheckInCard
+            careRhythmCard
                 .lippiMotionScene(1)
+
+            wellbeingCheckInCard
+                .lippiMotionScene(2)
 
             HealthKitInsightCard(
                 manager: manager,
@@ -70,10 +74,10 @@ struct HealthDashboardView: View {
                 onUseBreathing: onOpenPractice,
                 onOpenEyes: onOpenEyes
             )
-            .lippiMotionScene(2)
+            .lippiMotionScene(3)
 
             planAdaptationCard
-                .lippiMotionScene(3)
+                .lippiMotionScene(4)
         }
         .confirmationDialog(
             s("health.hub.plan.confirm.title"),
@@ -86,6 +90,155 @@ struct HealthDashboardView: View {
             Button(s("health.hub.plan.confirm.cancel"), role: .cancel) {}
         } message: {
             Text(s("health.hub.plan.confirm.message"))
+        }
+    }
+
+    private var careRhythmCard: some View {
+        let suggestion = careCenter.primarySuggestion
+        let kind = suggestion?.kind ?? .steady
+        let tone = careTone(kind)
+
+        return GlassCard(padding: 18, cornerRadius: 28, style: .full) {
+            VStack(alignment: .leading, spacing: 15) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(s("care.card.eyebrow"))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(tone)
+
+                        Text(s("care.card.title"))
+                            .font(.system(.title2, design: .rounded, weight: .bold))
+                            .foregroundStyle(DS.textPrimary)
+
+                        Text(s("care.card.subtitle"))
+                            .font(.footnote)
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(safeSystemName: kind.icon, fallback: "heart.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(tone)
+                        .frame(width: 50, height: 50)
+                        .background(tone.opacity(0.13), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 17, style: .continuous)
+                                .stroke(tone.opacity(0.22), lineWidth: 1)
+                        )
+                }
+
+                if let suggestion {
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(suggestion.title)
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(suggestion.body)
+                            .font(.subheadline)
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(tone.opacity(0.08), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(tone.opacity(0.18), lineWidth: 1)
+                    )
+
+                    if suggestion.action != .none {
+                        Button {
+                            performCareAction(suggestion.action)
+                        } label: {
+                            Label(suggestion.actionTitle, systemImage: kind.icon)
+                                .labelStyle(TightLabelStyle())
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(LippiButtonStyle(kind: .primary, allowsMultiline: true))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 9) {
+                    Text(s("care.card.quick"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(DS.textSecondary)
+
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                        careQuickButton(.logWater, icon: "drop.fill", tone: Color(hex: 0x64D2FF))
+                        careQuickButton(.logMeal, icon: "fork.knife", tone: Color(hex: 0xFFB340))
+                        careQuickButton(.logMovement, icon: "figure.walk", tone: Color(hex: 0x30D158))
+                        careQuickButton(.openEyes, icon: "eye.fill", tone: Color(hex: 0xBF5AF2))
+                    }
+                }
+
+                Label(s("care.card.privacy"), systemImage: "lock.shield.fill")
+                    .font(.caption2)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func careQuickButton(_ action: LippiCareAction, icon: String, tone: Color) -> some View {
+        Button {
+            performCareAction(action)
+        } label: {
+            HStack(spacing: 8) {
+                Image(safeSystemName: icon, fallback: "checkmark.circle.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(tone)
+                    .frame(width: 28, height: 28)
+                    .background(tone.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+                Text(s("care.action.\(action.rawValue)"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+            .background(DS.glassFill(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(DS.glassStroke(0.10), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.97, opacity: 0.88))
+    }
+
+    private func performCareAction(_ action: LippiCareAction) {
+        careCenter.record(action)
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        #endif
+        switch action {
+        case .openEyes:
+            onOpenEyes()
+        case .openRecovery:
+            onOpenPractice()
+        case .openGoal:
+            onOpenGoals()
+        case .logMeal, .logMovement, .logWater, .none:
+            break
+        }
+    }
+
+    private func careTone(_ kind: LippiCareKind) -> Color {
+        switch kind {
+        case .eyeBreak: return Color(hex: 0xBF5AF2)
+        case .recovery: return Color(hex: 0xFF6B7A)
+        case .mealCheck: return Color(hex: 0xFFB340)
+        case .movement: return Color(hex: 0x30D158)
+        case .hydration: return Color(hex: 0x64D2FF)
+        case .goalStep: return DS.accent
+        case .steady: return Color(hex: 0x5AC8FA)
         }
     }
 
@@ -636,13 +789,7 @@ struct HealthDashboardView: View {
         }
 
         GoalProgressNotificationScheduler.refresh(lang: lang)
-        GoalCareNotificationScheduler.refresh(
-            roadmap: adjusted,
-            tasks: store.tasks,
-            health: manager.isEnabled ? manager.recommendation : nil,
-            userState: selectedState,
-            lang: lang
-        )
+        NotificationCenter.default.post(name: .lippiCareDidChange, object: nil)
 
         #if os(iOS)
         UINotificationFeedbackGenerator().notificationOccurred(.success)

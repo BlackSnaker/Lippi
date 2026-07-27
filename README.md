@@ -27,7 +27,7 @@
 </p>
 <p>
   <img alt="HealthKit" src="https://img.shields.io/badge/HealthKit-Integrated-FF375F?style=flat-square">
-  <img alt="Apple Watch" src="https://img.shields.io/badge/Apple%20Watch-Aware-30D158?style=flat-square">
+  <img alt="Apple Watch" src="https://img.shields.io/badge/Apple%20Watch-Companion-30D158?style=flat-square">
   <img alt="PrismML Bonsai" src="https://img.shields.io/badge/Bonsai-On--device-64D2FF?style=flat-square">
   <img alt="Personal roadmaps" src="https://img.shields.io/badge/Roadmaps-Personalized-BF5AF2?style=flat-square">
   <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=flat-square">
@@ -38,8 +38,9 @@
   <img alt="App Store readiness" src="https://img.shields.io/badge/App%20Store-1.0%20(2)%20prepared-0A84FF?style=flat-square">
   <img alt="Privacy manifest" src="https://img.shields.io/badge/Privacy-Manifest%20ready-30D158?style=flat-square">
   <img alt="Local model storage" src="https://img.shields.io/badge/Local%20models-~684%20MiB-30D158?style=flat-square">
-  <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Ready-BF5AF2?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-85-30D158?style=flat-square">
+  <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=flat-square">
+  <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-89-30D158?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
@@ -70,8 +71,8 @@ Lippi объединяет планирование, фокус и восста�
   <tr>
     <td width="50%" valign="top">
       <strong>❤️ Здоровье</strong><br>
-      HealthKit, уместное подключение Apple Watch, дыхание и разминка глаз.<br>
-      <sub>Contextual wellness signals with user control.</sub>
+      HealthKit, полноценный Apple Watch companion и единый ритм заботы.<br>
+      <sub>Contextual care that follows the day.</sub>
     </td>
     <td width="50%" valign="top">
       <strong>✨ Помощник</strong><br>
@@ -85,14 +86,15 @@ Lippi объединяет планирование, фокус и восста�
 
 | Раздел | Что получает пользователь |
 |---|---|
-| **Сегодня** | Спокойный обзор дня, главный фокус, прогресс и быстрый переход к нужному действию. |
+| **Сегодня** | Спокойный обзор дня, главный фокус и «Ритм заботы», который выбирает один уместный следующий шаг. |
 | **Умные цели** | Пожелания, исходная точка, ресурсы и явные ограничения превращаются в предметную дорожную карту с объяснимой последовательностью, измеримыми этапами и адаптивным ритмом. |
 | **Задачи и Pomodoro** | Контекстные действия, гибкие фокус-сессии, надёжные пауза и продолжение, статистика без визуального шума. |
-| **Здоровье** | Разрешённые показатели HealthKit, системное обнаружение сопряжённых Apple Watch, личная база, отметки самочувствия и объяснимые рекомендации. |
-| **Восстановление** | Дыхательные практики, упражнения для глаз и мягкие сценарии перерыва, которые не превращаются в новые обязательства. |
+| **Здоровье** | Разрешённые показатели активности, сна, восстановления, воды и питания из HealthKit превращаются в осторожные и объяснимые рекомендации. |
+| **Apple Watch** | Отдельное приложение показывает текущую рекомендацию, фокус, шаг к цели и принимает быстрые отметки воды, еды, движения и отдыха. |
+| **Восстановление** | Дыхательные практики и упражнения для глаз; камера может локально следить за выполнением, морганием и приблизительными признаками усталости — без сохранения кадров и медицинских диагнозов. |
 | **Голосовой помощник** | Контекстные просьбы и перефразировки, голосовой доступ к «Умным целям», локальные естественные голоса F2 и M3 и отдельные действия VoiceOver. |
 | **Знакомство с Lippi** | Четыре интерактивных шага, осмысленный выбор темпа и видимая автоматическая подготовка локальной модели уже при первом запуске. |
-| **Виджеты** | Быстрый взгляд на задачи, таймер и важные действия с домашнего экрана и экрана блокировки. |
+| **Виджеты** | Единый новый дизайн задач, плана дня, Pomodoro и помощника на Home Screen, Lock Screen, в Live Activities и Dynamic Island. |
 
 ## Принципы продукта
 
@@ -105,6 +107,53 @@ Lippi объединяет планирование, фокус и восста�
 [Политика конфиденциальности Lippi →](https://lippi.lenuma.ru/privacy)
 
 ## Последнее обновление · Latest release
+
+### 27 июля 2026 — рядом с вашим ритмом. на iPhone, Apple Watch и экране блокировки.
+
+Lippi теперь замечает не только выполненные задачи, но и состояние дня вокруг них. Один локальный движок объединяет фокус, движение к цели, разрешённые сигналы HealthKit и недавние действия — чтобы вовремя предложить небольшой шаг, воду, движение, отдых, упражнение для глаз или осторожно напомнить проверить, не пора ли поесть.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img alt="Lippi на Apple Watch и Apple Здоровье" src="AppStore/PrivacySite/public/showcase/watch-health.jpg">
+    </td>
+    <td width="50%" valign="top">
+      <img alt="Новые виджеты Lippi" src="AppStore/PrivacySite/public/showcase/widgets.jpg">
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="33%" align="center" valign="top">
+      <strong>♥ Один ритм заботы</strong><br><br>
+      Lippi выбирает одну уместную рекомендацию вместо потока уведомлений и учитывает, что уже было сделано.<br><br>
+      <sub>Helpful, never overwhelming.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>⌚ Настоящий companion</strong><br><br>
+      Текущий фокус, шаг к цели и быстрые отметки доступны на Apple Watch даже при временной потере связи.<br><br>
+      <sub>Your rhythm, on your wrist.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>▣ Виджеты заново</strong><br><br>
+      Новая иерархия, спокойный цвет и полезные форматы для Home Screen, Lock Screen и Dynamic Island.<br><br>
+      <sub>One glance. The right detail.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Рекомендации понимают контекст.** Продолжительность фокуса, текущий шаг цели, состояние восстановления, недавнее движение, вода и питание складываются в одну приоритетную подсказку.
+- **Забота остаётся мягкой.** Пассивные уведомления ограничены по частоте и соблюдают тихие часы. Долгое отсутствие движения не считается доказательством пропущенной еды: в подходящее время Lippi лишь предлагает это проверить.
+- **План адаптируется прозрачно.** Темп дорожной карты может стать мягче после перегрузки или увереннее при стабильном прогрессе, но изменение по-прежнему применяется только после подтверждения пользователя.
+- **Apple Watch стала продолжением Lippi.** Новое watchOS-приложение получает заменяемый актуальный контекст через WatchConnectivity, сохраняет последний снимок локально и отправляет действия сразу либо ставит их в очередь.
+- **Камера помогает глазам отдыхать.** Локальный Vision-сценарий следит за положением лица, направлением взгляда, морганием и приблизительными признаками усталости или покраснения. Кадры не сохраняются и не покидают iPhone; функция не является медицинской диагностикой.
+- **Перерыв появляется вовремя.** После длинного фокуса и во время Pomodoro-паузы упражнение для глаз находится в одном касании; рекомендации также доступны вручную в разделе здоровья.
+- **Виджеты получили полный редизайн.** Блики, декоративные шары и лишние плашки удалены. Задачи, «План дня», фокус и помощник используют одну ясную систему; добавлены `accessoryInline`, `accessoryCircular` и `accessoryRectangular`.
+- **Live Activities говорят по делу.** На Lock Screen и в Dynamic Island отображаются время, прогресс, статус и действительно полезные действия для задачи, Pomodoro и построения умной цели.
+- **Проверено без запуска Simulator.** Основное приложение, Apple Watch companion и оба расширения виджетов собираются для generic iOS device; тестовый пакет с **89 сценариями** успешно компилируется для arm64 и x86_64.
+
+> Финальный обмен данными WatchConnectivity и фоновое обновление HealthKit требуют проверки на физической паре iPhone + Apple Watch, когда она будет доступна.
 
 ### 24 июля 2026 — спокойнее выглядит. честнее рассказывает о приватности. готова к релизу.
 
@@ -225,8 +274,10 @@ Lippi объединяет планирование, фокус и восста�
 |---|---|
 | Интерфейс | SwiftUI, собственная дизайн-система, адаптивный Liquid Glass |
 | Платформа | iOS 18.5+, Swift 5 |
-| Здоровье | HealthKit, WatchConnectivity, фоновые observer queries, Apple Watch source awareness |
-| Виджеты | WidgetKit, Live Activities, Dynamic Island |
+| Здоровье | HealthKit, фоновые observer queries, активность, сон, восстановление, вода и питание |
+| Apple Watch | watchOS-приложение, WatchConnectivity, заменяемый контекст и очередь действий |
+| Забота о глазах | AVFoundation, Vision, локальный анализ ориентиров лица, моргания, усталости и покраснения |
+| Виджеты | WidgetKit, Home Screen, Lock Screen, Live Activities и Dynamic Island |
 | Интеллект | PrismML Bonsai 4B 1-bit, thermal-aware лимиты, восстановление JSON, Foundation Models fallback и локальное дополнение |
 | Голос | Speech, AVFoundation, Supertonic 3 INT8, sherpa-onnx, ONNX Runtime и только F2/M3 |
 | Качество | Swift Testing, UI Tests, device crash diagnostics |
@@ -237,6 +288,7 @@ Lippi объединяет планирование, фокус и восста�
 Lippi/
 ├── Core/
 │   ├── AI/             # PrismML runtime, verified model storage and inference
+│   ├── Care/           # contextual care rhythm and gentle notifications
 │   ├── Goals/          # adaptive planning and gentle coaching
 │   ├── Health/         # HealthKit, diagnostics, Watch and wellbeing
 │   ├── Voice/          # verified Supertonic storage and bounded local TTS
@@ -250,6 +302,7 @@ Lippi/
 
 LippiWidgets/           # home and lock-screen widgets
 OrganizerWidget/        # organizer widget extension
+LippiWatch/              # watchOS companion and queued actions
 LippiTests/             # unit and integration coverage
 LippiUITests/           # interface scenarios
 Vendor/                 # pinned iOS inference runtimes
@@ -269,7 +322,7 @@ AppStore/               # localized metadata, review notes, export config and pr
 
 ## English
 
-Lippi is a calm productivity and wellbeing app for iPhone. It brings daily planning, Smart Goals, Pomodoro focus, HealthKit insights, Apple Watch signals, eye care, breathing practices, widgets, and voice assistance into one coherent experience.
+Lippi is a calm productivity and wellbeing app for iPhone and Apple Watch. It brings daily planning, Smart Goals, Pomodoro focus, contextual HealthKit insights, eye care, breathing practices, widgets, and voice assistance into one coherent experience.
 
 The product is designed around four promises:
 
@@ -280,11 +333,17 @@ The product is designed around four promises:
 
 ### Latest release
 
-The July 24 release gives Lippi a calmer, more coherent Liquid Glass design across light and dark appearances. Decorative card sheen is gone; depth now comes from material, edge, tint, and hierarchy. Reduce Motion, Reduce Transparency, energy, and thermal adaptations remain part of the same design system.
+The July 27 release introduces a single contextual care rhythm across iPhone and Apple Watch. Lippi combines focus duration, the current goal step, recovery state, movement, hydration, and nutrition records to choose one timely suggestion. It can recommend a smaller goal step, water, movement, rest, an eye exercise, or a cautious meal check without turning inactivity into a medical or dietary conclusion.
+
+The new watchOS companion keeps the current focus, care suggestion, and goal step close at hand, preserves its latest snapshot offline, and queues quick wellbeing actions when the phone is temporarily unreachable. The eye-comfort experience uses an on-device Vision pipeline for exercise guidance and approximate fatigue or redness cues; camera frames are never stored, and the feature is explicitly non-diagnostic.
+
+Every home-screen widget has also been rebuilt. Tasks, Day Plan, Pomodoro, and the voice assistant now share a quiet visual hierarchy without decorative glare. Native inline, circular, and rectangular Lock Screen families join redesigned Live Activities and Dynamic Island layouts. The suite now contains **89 tests**, and the app, watchOS companion, and both widget extensions compile successfully without launching Simulator.
+
+The July 24 release gave Lippi a calmer, more coherent Liquid Glass design across light and dark appearances. Decorative card sheen is gone; depth now comes from material, edge, tint, and hierarchy. Reduce Motion, Reduce Transparency, energy, and thermal adaptations remain part of the same design system.
 
 It also prepares version **1.0 (2)** for App Store submission with privacy manifests for the app and both widgets, export-compliance metadata, localized store copy, review notes, screenshot guidance, and a [public bilingual privacy policy](https://lippi.lenuma.ru/privacy). The archive is prepared and locally validated; upload remains pending Apple Developer Program activation.
 
-The voice assistant now understands rephrased requests, tolerates small recognition errors, and connects short follow-ups to recent context. Smart Goals are part of the voice experience: Lippi can open the planner, carry a spoken idea into a new goal, or show roadmap progress. Interpretation and learning stay local, and generation waits for the user to review and confirm the request. The suite now contains **85 tests**.
+The voice assistant understands rephrased requests, tolerates small recognition errors, and connects short follow-ups to recent context. Smart Goals are part of the voice experience: Lippi can open the planner, carry a spoken idea into a new goal, or show roadmap progress. Interpretation and learning stay local, and generation waits for the user to review and confirm the request.
 
 [Read the complete bilingual changelog →](CHANGELOG.md)
 

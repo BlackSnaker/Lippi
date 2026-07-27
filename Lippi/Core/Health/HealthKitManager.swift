@@ -35,8 +35,13 @@ enum HealthWellnessSignal: String, Hashable {
 struct HealthWellnessSnapshot: Hashable {
     var generatedAt: Date = .now
     var stepsToday: Double?
+    var stepsLast90Minutes: Double?
+    var lastMovementAt: Date?
     var activeEnergyToday: Double?
     var exerciseMinutesToday: Double?
+    var dietaryWaterTodayMilliliters: Double?
+    var lastHydrationAt: Date?
+    var lastNutritionAt: Date?
     var recentSleepHours: Double?
     var baselineSleepHours: Double?
     var restingHeartRate: Double?
@@ -52,6 +57,7 @@ struct HealthWellnessSnapshot: Hashable {
     var hasRecentData: Bool {
         [
             stepsToday,
+            stepsLast90Minutes,
             activeEnergyToday,
             exerciseMinutesToday,
             recentSleepHours,
@@ -384,7 +390,9 @@ private extension HealthKitManager {
             .appleExerciseTime,
             .restingHeartRate,
             .heartRateVariabilitySDNN,
-            .respiratoryRate
+            .respiratoryRate,
+            .dietaryWater,
+            .dietaryEnergyConsumed
         ]
 
         for identifier in quantityIdentifiers {
@@ -482,6 +490,10 @@ private extension HealthKitManager {
         let twentyEightDaysAgo = calendar.date(byAdding: .day, value: -28, to: reference) ?? reference.addingTimeInterval(-2_419_200)
         let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: reference) ?? reference.addingTimeInterval(-172_800)
         let recentSleepStart = calendar.date(byAdding: .hour, value: -36, to: reference) ?? reference.addingTimeInterval(-129_600)
+        let ninetyMinutesAgo = calendar.date(byAdding: .minute, value: -90, to: reference)
+            ?? reference.addingTimeInterval(-5_400)
+        let nutritionLookback = calendar.date(byAdding: .hour, value: -36, to: reference)
+            ?? reference.addingTimeInterval(-129_600)
 
         // Read each group independently. HealthKit intentionally represents a
         // denied or unavailable read as missing data, and one optional metric
@@ -489,11 +501,29 @@ private extension HealthKitManager {
         let stepsQuery = await healthQuery {
             try await sum(.stepCount, unit: .count(), start: startOfDay, end: reference)
         }
+        let recentStepsQuery = await healthQuery {
+            try await sum(.stepCount, unit: .count(), start: ninetyMinutesAgo, end: reference)
+        }
+        let movementSamplesQuery = await healthQuery {
+            guard let type = HKObjectType.quantityType(forIdentifier: .stepCount) else { return [HKSample]() }
+            return try await samples(type: type, start: startOfDay, end: reference, limit: 80)
+        }
         let activeEnergyQuery = await healthQuery {
             try await sum(.activeEnergyBurned, unit: .kilocalorie(), start: startOfDay, end: reference)
         }
         let exerciseQuery = await healthQuery {
             try await sum(.appleExerciseTime, unit: .minute(), start: startOfDay, end: reference)
+        }
+        let waterQuery = await healthQuery {
+            try await sum(.dietaryWater, unit: .literUnit(with: .milli), start: startOfDay, end: reference)
+        }
+        let hydrationSamplesQuery = await healthQuery {
+            guard let type = HKObjectType.quantityType(forIdentifier: .dietaryWater) else { return [HKSample]() }
+            return try await samples(type: type, start: startOfDay, end: reference, limit: 40)
+        }
+        let nutritionSamplesQuery = await healthQuery {
+            guard let type = HKObjectType.quantityType(forIdentifier: .dietaryEnergyConsumed) else { return [HKSample]() }
+            return try await samples(type: type, start: nutritionLookback, end: reference, limit: 40)
         }
         let recentRHRQuery = await healthQuery {
             try await average(
@@ -555,8 +585,13 @@ private extension HealthKitManager {
 
         let queryErrors = [
             stepsQuery.error,
+            recentStepsQuery.error,
+            movementSamplesQuery.error,
             activeEnergyQuery.error,
             exerciseQuery.error,
+            waterQuery.error,
+            hydrationSamplesQuery.error,
+            nutritionSamplesQuery.error,
             recentRHRQuery.error,
             baselineRHRQuery.error,
             recentHRVQuery.error,
@@ -573,8 +608,13 @@ private extension HealthKitManager {
         }
 
         let steps = stepsQuery.value ?? nil
+        let recentSteps = recentStepsQuery.value ?? nil
+        let movementSamples = movementSamplesQuery.value ?? []
         let activeEnergy = activeEnergyQuery.value ?? nil
         let exercise = exerciseQuery.value ?? nil
+        let water = waterQuery.value ?? nil
+        let hydrationSamples = hydrationSamplesQuery.value ?? []
+        let nutritionSamples = nutritionSamplesQuery.value ?? []
         let recentRHR = recentRHRQuery.value ?? nil
         let baselineRHR = baselineRHRQuery.value ?? nil
         let recentHRV = recentHRVQuery.value ?? nil
@@ -616,8 +656,22 @@ private extension HealthKitManager {
         return HealthWellnessSnapshot(
             generatedAt: reference,
             stepsToday: steps,
+            stepsLast90Minutes: recentSteps,
+            lastMovementAt: latestPositiveQuantitySampleDate(
+                in: movementSamples,
+                unit: .count()
+            ),
             activeEnergyToday: activeEnergy,
             exerciseMinutesToday: exercise,
+            dietaryWaterTodayMilliliters: water,
+            lastHydrationAt: latestPositiveQuantitySampleDate(
+                in: hydrationSamples,
+                unit: .literUnit(with: .milli)
+            ),
+            lastNutritionAt: latestPositiveQuantitySampleDate(
+                in: nutritionSamples,
+                unit: .kilocalorie()
+            ),
             recentSleepHours: recentSleep,
             baselineSleepHours: baselineSleep,
             restingHeartRate: recentRHR,
@@ -803,6 +857,14 @@ private extension HealthKitManager {
         return sourceName.contains("watch") || model.contains("watch") || name.contains("watch")
     }
 
+    func latestPositiveQuantitySampleDate(in samples: [HKSample], unit: HKUnit) -> Date? {
+        samples
+            .compactMap { $0 as? HKQuantitySample }
+            .filter { $0.quantity.doubleValue(for: unit) > 0 }
+            .map(\.endDate)
+            .max()
+    }
+
     func startBackgroundObservationIfNeeded() {
         guard isEnabled, observerQueries.isEmpty else { return }
 
@@ -810,6 +872,8 @@ private extension HealthKitManager {
             HKObjectType.quantityType(forIdentifier: .stepCount),
             HKObjectType.quantityType(forIdentifier: .restingHeartRate),
             HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN),
+            HKObjectType.quantityType(forIdentifier: .dietaryWater),
+            HKObjectType.quantityType(forIdentifier: .dietaryEnergyConsumed),
             HKObjectType.categoryType(forIdentifier: .sleepAnalysis)
         ].compactMap { $0 }
 

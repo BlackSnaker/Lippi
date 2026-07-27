@@ -170,6 +170,11 @@ struct PomodoroView: View {
                 .accessibilityValue(Text(currentTime))
 
                 cycleProgress
+
+                if pomo.phase == .shortBreak || pomo.phase == .longBreak {
+                    eyeBreakSuggestion
+                }
+
                 sessionControls
 
                 if isRunning {
@@ -184,6 +189,53 @@ struct PomodoroView: View {
             }
             .animation(reduceMotion ? nil : DS.motionState, value: pomo.phase)
         }
+    }
+
+    private var eyeBreakSuggestion: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(safeSystemName: "eye.circle.fill", fallback: "eye.fill")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(Color(hex: 0x64D2FF))
+                .frame(width: 44, height: 44)
+                .background(Color(hex: 0x64D2FF).opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(s("pomodoro.eyes.title"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                Text(s("pomodoro.eyes.subtitle"))
+                    .font(.caption)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 4)
+
+            Button {
+                NotificationCenter.default.post(name: .suggestEyeExercise, object: nil)
+            } label: {
+                Image(safeSystemName: "arrow.up.right", fallback: "play.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(width: 42, height: 42)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(DS.accent)
+            .background(DS.accent.opacity(0.11), in: Circle())
+            .lippiSystemGlass(
+                in: Circle(),
+                tint: DS.accent.opacity(0.12),
+                interactive: true,
+                forceSystemGlass: true
+            )
+            .accessibilityLabel(Text(s("pomodoro.eyes.open")))
+        }
+        .padding(12)
+        .background(DS.glassFill(0.045), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(DS.glassStroke(0.09), lineWidth: 1)
+        )
+        .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
     }
 
     private var timerHeader: some View {

@@ -22,6 +22,7 @@
 		18DE6F4D2E6DB52200319865 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A862E64A9C400EA6B1D /* WidgetKit.framework */; };
 		18DE6F4E2E6DB52200319865 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A882E64A9C400EA6B1D /* SwiftUI.framework */; };
 		18DE6F5F2E6DB52400319865 /* OrganizerWidgetExt.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		18CA01012F33000000000001 /* LippiWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 18CA01042F33000000000004 /* LippiWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,13 @@
 			remoteGlobalIDString = 18DE6F4B2E6DB52200319865;
 			remoteInfo = OrganizerWidgetExtension;
 		};
+		18CA01022F33000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 188D1A4E2E6491BA00EA6B1D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 18CA010A2F3300000000000A;
+			remoteInfo = LippiWatch;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -79,6 +87,17 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18CA01032F33000000000003 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				18CA01012F33000000000001 /* LippiWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -95,6 +114,7 @@
 		18C0A1042F22000000000004 /* sherpa-onnx.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "sherpa-onnx.xcframework"; path = "Vendor/SherpaOnnx/sherpa-onnx.xcframework"; sourceTree = SOURCE_ROOT; };
 		18C0A1052F22000000000005 /* onnxruntime.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = onnxruntime.xcframework; path = Vendor/SherpaOnnx/onnxruntime.xcframework; sourceTree = SOURCE_ROOT; };
 		18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OrganizerWidgetExt.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		18CA01042F33000000000004 /* LippiWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LippiWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -156,6 +176,11 @@
 			path = OrganizerWidget;
 			sourceTree = "<group>";
 		};
+		18CA01062F33000000000006 /* LippiWatch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LippiWatch;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -204,6 +229,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18CA01072F33000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -215,6 +247,7 @@
 				188D1A702E6491BC00EA6B1D /* LippiUITests */,
 				188D1A8A2E64A9C400EA6B1D /* LippiWidgets */,
 				18DE6F4F2E6DB52200319865 /* OrganizerWidget */,
+				18CA01062F33000000000006 /* LippiWatch */,
 				188D1A852E64A9C400EA6B1D /* Frameworks */,
 				188D1A572E6491BA00EA6B1D /* Products */,
 			);
@@ -228,6 +261,7 @@
 				188D1A6D2E6491BC00EA6B1D /* LippiUITests.xctest */,
 				188D1A842E64A9C400EA6B1D /* LippiWidgetsExtension.appex */,
 				18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */,
+				18CA01042F33000000000004 /* LippiWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -258,6 +292,7 @@
 				188D1A532E6491BA00EA6B1D /* Frameworks */,
 				18B0A1052F01000000000005 /* Embed Frameworks */,
 				188D1A542E6491BA00EA6B1D /* Resources */,
+				18CA01032F33000000000003 /* Embed Watch Content */,
 				188D1A9F2E64A9C700EA6B1D /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -265,6 +300,7 @@
 			dependencies = (
 				188D1A992E64A9C700EA6B1D /* PBXTargetDependency */,
 				18DE6F5E2E6DB52400319865 /* PBXTargetDependency */,
+				18CA010B2F3300000000000B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				188D1A582E6491BA00EA6B1D /* Lippi */,
@@ -367,6 +403,28 @@
 			productReference = 18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		18CA010A2F3300000000000A /* LippiWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 18CA010E2F3300000000000E /* Build configuration list for PBXNativeTarget "LippiWatch" */;
+			buildPhases = (
+				18CA01082F33000000000008 /* Sources */,
+				18CA01072F33000000000007 /* Frameworks */,
+				18CA01092F33000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				18CA01062F33000000000006 /* LippiWatch */,
+			);
+			name = LippiWatch;
+			packageProductDependencies = (
+			);
+			productName = LippiWatch;
+			productReference = 18CA01042F33000000000004 /* LippiWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -394,6 +452,9 @@
 					18DE6F4B2E6DB52200319865 = {
 						CreatedOnToolsVersion = 16.4;
 					};
+					18CA010A2F3300000000000A = {
+						CreatedOnToolsVersion = 16.4;
+					};
 				};
 			};
 			buildConfigurationList = 188D1A512E6491BA00EA6B1D /* Build configuration list for PBXProject "Lippi" */;
@@ -418,6 +479,7 @@
 				188D1A6C2E6491BC00EA6B1D /* LippiUITests */,
 				188D1A832E64A9C400EA6B1D /* LippiWidgetsExtension */,
 				18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */,
+				18CA010A2F3300000000000A /* LippiWatch */,
 			);
 		};
 /* End PBXProject section */
@@ -452,6 +514,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		18DE6F4A2E6DB52200319865 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		18CA01092F33000000000009 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -498,6 +567,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18CA01082F33000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -520,6 +596,11 @@
 			isa = PBXTargetDependency;
 			target = 18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */;
 			targetProxy = 18DE6F5D2E6DB52400319865 /* PBXContainerItemProxy */;
+		};
+		18CA010B2F3300000000000B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 18CA010A2F3300000000000A /* LippiWatch */;
+			targetProxy = 18CA01022F33000000000002 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -914,6 +995,67 @@
 			};
 			name = Release;
 		};
+		18CA010C2F3300000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = APX26VC984;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Lippi;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = Illumionix.Lippi;
+				INFOPLIST_KEY_WKWatchOnly = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Debug;
+		};
+		18CA010D2F3300000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Lippi;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = Illumionix.Lippi;
+				INFOPLIST_KEY_WKWatchOnly = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -967,6 +1109,15 @@
 			buildConfigurations = (
 				18DE6F602E6DB52400319865 /* Debug */,
 				18DE6F612E6DB52400319865 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		18CA010E2F3300000000000E /* Build configuration list for PBXNativeTarget "LippiWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				18CA010C2F3300000000000C /* Debug */,
+				18CA010D2F3300000000000D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

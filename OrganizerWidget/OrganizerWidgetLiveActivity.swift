@@ -18,493 +18,241 @@ struct OrganizerAttributes: ActivityAttributes {
 struct OrganizerWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: OrganizerAttributes.self) { context in
-            OrganizerLiveLockScreenView(context: context)
-                .activityBackgroundTint(Color(hex: 0x06101D))
+            OrganizerLockScreenView(state: context.state)
+                .activityBackgroundTint(Color(hex: 0x0B1422))
                 .activitySystemActionForegroundColor(.white)
-                .widgetURL(OrganizerIslandLink.openTasks.url)
+                .widgetURL(OrganizerActivityLink.openTasks.url)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    OrganizerIslandTaskBadge(state: context.state)
+                    OrganizerActivityIcon(state: context.state, size: 40)
                 }
 
                 DynamicIslandExpandedRegion(.trailing) {
-                    OrganizerIslandDueBadge(state: context.state, compact: false)
+                    OrganizerDueView(state: context.state, compact: false)
                 }
 
                 DynamicIslandExpandedRegion(.center) {
-                    OrganizerIslandHeader(state: context.state)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(context.state.taskTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text(OrganizerActivityStyle.status(for: context.state))
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(OrganizerActivityStyle.accent(for: context.state))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
-                    OrganizerIslandGlassPanel(accent: OrganizerIslandCopy.accent(for: context.state)) {
-                        OrganizerIslandProgress(state: context.state)
+                    VStack(spacing: 10) {
+                        OrganizerActivityProgress(state: context.state)
 
                         HStack(spacing: 8) {
-                            OrganizerIslandActionLink(.openTasks)
-                            OrganizerIslandActionLink(.complete(taskId: context.attributes.taskId))
-                            OrganizerIslandActionLink(.focus)
+                            OrganizerActivityAction(.openTasks)
+                            OrganizerActivityAction(.complete(taskId: context.attributes.taskId), emphasized: true)
+                            OrganizerActivityAction(.focus)
                         }
                     }
                 }
             } compactLeading: {
-                OrganizerIslandCompactOrb(state: context.state)
+                Image(systemName: context.state.isCompleted ? "checkmark" : context.state.categorySymbol)
+                    .foregroundStyle(OrganizerActivityStyle.accent(for: context.state))
             } compactTrailing: {
-                Color.clear
-                    .frame(width: 1, height: 1)
+                OrganizerDueView(state: context.state, compact: true)
             } minimal: {
-                OrganizerIslandCompactOrb(state: context.state, minimal: true)
+                Image(systemName: context.state.isCompleted ? "checkmark" : context.state.categorySymbol)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(OrganizerActivityStyle.accent(for: context.state))
             }
-            .widgetURL(OrganizerIslandLink.openTasks.url)
-            .keylineTint(OrganizerIslandCopy.accent(for: context.state))
-            .contentMargins(.all, 0, for: .compactLeading)
-            .contentMargins(.all, 0, for: .compactTrailing)
-            .contentMargins(.all, 0, for: .minimal)
+            .widgetURL(OrganizerActivityLink.openTasks.url)
+            .keylineTint(OrganizerActivityStyle.accent(for: context.state))
         }
     }
 }
-
-private struct OrganizerLiveLockScreenView: View {
-    let context: ActivityViewContext<OrganizerAttributes>
-
-    var body: some View {
-        HStack(spacing: 12) {
-            OrganizerIslandTaskBadge(state: context.state)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(context.state.taskTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-
-                Label(context.state.categoryTitle, systemImage: context.state.categorySymbol)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.74))
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-
-            OrganizerIslandDueBadge(state: context.state, compact: false)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(OrganizerIslandBackdrop(accent: OrganizerIslandCopy.accent(for: context.state)))
-    }
-}
-
-private struct OrganizerIslandHeader: View {
+private struct OrganizerLockScreenView: View {
     let state: OrganizerAttributes.ContentState
 
     var body: some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
-                    Text("Lippi")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .lineLimit(1)
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                OrganizerActivityIcon(state: state, size: 42)
 
-                    Circle()
-                        .fill(OrganizerIslandCopy.accent(for: state))
-                        .frame(width: 4, height: 4)
-
-                    Text(OrganizerIslandCopy.status(for: state))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(OrganizerIslandCopy.accent(for: state))
-                        .lineLimit(1)
-                }
-
-                Text(state.taskTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(
-            Capsule(style: .continuous)
-                .fill(.white.opacity(0.08))
-                .overlay(
-                    LinearGradient(
-                        colors: [
-                            .white.opacity(0.20),
-                            OrganizerIslandCopy.accent(for: state).opacity(0.12),
-                            .white.opacity(0.05)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .clipShape(Capsule(style: .continuous))
-                )
-        )
-        .overlay(Capsule(style: .continuous).stroke(.white.opacity(0.15), lineWidth: 1))
-    }
-}
-
-private struct OrganizerIslandTaskBadge: View {
-    let state: OrganizerAttributes.ContentState
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            .white.opacity(0.24),
-                            OrganizerIslandCopy.accent(for: state).opacity(0.36),
-                            OrganizerIslandCopy.accent(for: state).opacity(0.12)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 42, height: 42)
-                .shadow(color: OrganizerIslandCopy.accent(for: state).opacity(0.30), radius: 8, x: 0, y: 3)
-
-            Circle()
-                .stroke(.white.opacity(0.30), lineWidth: 1)
-                .frame(width: 42, height: 42)
-
-            Circle()
-                .fill(.white.opacity(0.34))
-                .frame(width: 12, height: 12)
-                .offset(x: -9, y: -10)
-                .blur(radius: 0.3)
-
-            Image(systemName: state.isCompleted ? "checkmark.circle.fill" : state.categorySymbol)
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(.white)
-        }
-    }
-}
-
-private struct OrganizerIslandCompactOrb: View {
-    let state: OrganizerAttributes.ContentState
-    var minimal = false
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(OrganizerIslandCopy.accent(for: state).opacity(0.24))
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [.white.opacity(0.28), OrganizerIslandCopy.accent(for: state).opacity(0.78)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .padding(minimal ? 3 : 2)
-            Image(systemName: state.isCompleted ? "checkmark.circle.fill" : state.categorySymbol)
-                .font(.system(size: minimal ? 8 : 9, weight: .bold))
-                .foregroundStyle(.white)
-        }
-        .frame(width: minimal ? 16 : 18, height: minimal ? 16 : 18)
-    }
-}
-
-private struct OrganizerIslandDueBadge: View {
-    let state: OrganizerAttributes.ContentState
-    var compact: Bool
-
-    var body: some View {
-        HStack(spacing: compact ? 0 : 5) {
-            if state.isCompleted {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(compact ? .caption.weight(.bold) : .title3.weight(.bold))
-                    .foregroundStyle(Color(hex: 0x30D158))
-            } else if let due = state.dueDate {
-                VStack(alignment: .trailing, spacing: compact ? 0 : 2) {
-                    Text(due, format: .dateTime.hour().minute())
-                        .font(compact ? .caption2.weight(.bold) : .system(size: 18, weight: .bold, design: .rounded))
-                        .monospacedDigit()
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(state.taskTitle)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
+                    Label(state.categoryTitle, systemImage: state.categorySymbol)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.58))
+                        .lineLimit(1)
+                }
 
-                    if !compact {
-                        Text(due, style: .relative)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(OrganizerIslandCopy.accent(for: state))
-                            .lineLimit(1)
-                    }
-                }
-            } else {
-                if !compact {
-                    Text("без срока")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.72))
-                }
-                Image(systemName: "sparkles")
-                    .font(compact ? .caption.weight(.bold) : .title3.weight(.bold))
-                    .foregroundStyle(OrganizerIslandCopy.accent(for: state))
+                Spacer(minLength: 0)
+
+                OrganizerDueView(state: state, compact: false)
             }
+
+            OrganizerActivityProgress(state: state)
         }
-        .padding(.horizontal, compact ? 0 : 9)
-        .padding(.vertical, compact ? 0 : 6)
-        .background {
-            if !compact {
-                Capsule(style: .continuous)
-                    .fill(.white.opacity(0.08))
-                    .overlay(Capsule(style: .continuous).stroke(.white.opacity(0.15), lineWidth: 1))
-            }
-        }
-        .frame(minWidth: compact ? 26 : 58, alignment: .trailing)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 }
 
-private struct OrganizerIslandProgress: View {
+private struct OrganizerActivityIcon: View {
+    let state: OrganizerAttributes.ContentState
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.31, style: .continuous)
+                .fill(OrganizerActivityStyle.accent(for: state).opacity(0.16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: size * 0.31, style: .continuous)
+                        .stroke(OrganizerActivityStyle.accent(for: state).opacity(0.28), lineWidth: 1)
+                )
+            Image(systemName: state.isCompleted ? "checkmark" : state.categorySymbol)
+                .font(.system(size: size * 0.38, weight: .semibold))
+                .foregroundStyle(OrganizerActivityStyle.accent(for: state))
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+private struct OrganizerDueView: View {
+    let state: OrganizerAttributes.ContentState
+    let compact: Bool
+
+    var body: some View {
+        Group {
+            if state.isCompleted {
+                Image(systemName: "checkmark.circle.fill")
+            } else if let due = state.dueDate {
+                Text(due, format: .dateTime.hour().minute())
+                    .monospacedDigit()
+            } else {
+                Image(systemName: "arrow.up.right")
+            }
+        }
+        .font(compact ? .caption2.weight(.bold) : .title3.weight(.bold))
+        .foregroundStyle(compact ? Color.white : OrganizerActivityStyle.accent(for: state))
+        .lineLimit(1)
+        .minimumScaleFactor(0.72)
+    }
+}
+
+private struct OrganizerActivityProgress: View {
     let state: OrganizerAttributes.ContentState
 
     private var progress: Double {
-        guard !state.isCompleted else { return 1 }
-        guard let due = state.dueDate else { return 0 }
+        if state.isCompleted { return 1 }
+        guard let due = state.dueDate else { return 0.12 }
         let total = max(due.timeIntervalSince(state.startDate), 1)
-        let done = max(Date().timeIntervalSince(state.startDate), 0)
-        return min(max(done / total, 0), 1)
+        return min(max(Date().timeIntervalSince(state.startDate) / total, 0), 1)
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            GeometryReader { proxy in
-                let width = max(7, proxy.size.width * progress)
-                ZStack(alignment: .leading) {
-                    Capsule(style: .continuous)
-                        .fill(.white.opacity(0.12))
-
-                    Capsule(style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    .white.opacity(0.82),
-                                    OrganizerIslandCopy.accent(for: state),
-                                    Color(hex: 0x64D2FF)
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: width)
-                        .shadow(color: OrganizerIslandCopy.accent(for: state).opacity(0.45), radius: 5, x: 0, y: 0)
-                }
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.white.opacity(0.10))
+                Capsule()
+                    .fill(OrganizerActivityStyle.accent(for: state))
+                    .frame(width: max(5, proxy.size.width * progress))
             }
-            .frame(height: 7)
-
-            Text(OrganizerIslandCopy.status(for: state))
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white.opacity(0.78))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
         }
+        .frame(height: 5)
+        .accessibilityLabel("Время до срока")
+        .accessibilityValue(OrganizerActivityStyle.status(for: state))
     }
 }
 
-private struct OrganizerIslandGlassPanel<Content: View>: View {
-    let accent: Color
-    let content: Content
+private struct OrganizerActivityAction: View {
+    let action: OrganizerActivityLink
+    let emphasized: Bool
 
-    init(accent: Color, @ViewBuilder content: () -> Content) {
-        self.accent = accent
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(spacing: 9) {
-            content
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.white.opacity(0.075))
-                .overlay(
-                    LinearGradient(
-                        colors: [.white.opacity(0.18), accent.opacity(0.12), .white.opacity(0.05)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.white.opacity(0.15), lineWidth: 1)
-        )
-    }
-}
-
-private struct OrganizerIslandActionLink: View {
-    let action: OrganizerIslandLink
-
-    init(_ action: OrganizerIslandLink) {
+    init(_ action: OrganizerActivityLink, emphasized: Bool = false) {
         self.action = action
+        self.emphasized = emphasized
     }
 
     var body: some View {
         Link(destination: action.url) {
-            Label(action.title, systemImage: action.symbol)
-                .font(.caption2.weight(.bold))
-                .labelStyle(.titleAndIcon)
+            Label(action.title, systemImage: action.icon)
+                .font(.caption2.weight(.semibold))
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .foregroundStyle(emphasized ? Color(hex: 0x07111F) : .white)
                 .background(
-                    Capsule(style: .continuous)
-                        .fill(Color(hex: 0x30B0FF).opacity(action.isFocus ? 0.18 : 0.14))
-                        .overlay(
-                            LinearGradient(
-                                colors: [.white.opacity(0.17), .white.opacity(0.04)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            .clipShape(Capsule(style: .continuous))
-                        )
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(.white.opacity(0.22), lineWidth: 1)
+                    Capsule()
+                        .fill(emphasized ? OrganizerActivityStyle.actionColor : .white.opacity(0.08))
                 )
         }
     }
 }
 
-private struct OrganizerIslandBackdrop: View {
-    let accent: Color
-
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(hex: 0x06101D),
-                    Color(hex: 0x0B1728),
-                    Color(hex: 0x13243B)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            RadialGradient(
-                colors: [accent.opacity(0.40), .clear],
-                center: .topLeading,
-                startRadius: 0,
-                endRadius: 190
-            )
-
-            RadialGradient(
-                colors: [Color(hex: 0xEAF8FF).opacity(0.18), .clear],
-                center: .bottomTrailing,
-                startRadius: 0,
-                endRadius: 180
-            )
-        }
-    }
-}
-
-private enum OrganizerIslandLink {
+private enum OrganizerActivityLink {
     case openTasks
     case complete(taskId: UUID)
     case focus
 
     var title: String {
         switch self {
-        case .openTasks: return "Задачи"
-        case .complete: return "Готово"
-        case .focus: return "Фокус"
+        case .openTasks: "Задачи"
+        case .complete: "Готово"
+        case .focus: "Фокус"
         }
     }
 
-    var symbol: String {
+    var icon: String {
         switch self {
-        case .openTasks: return "list.bullet"
-        case .complete: return "checkmark"
-        case .focus: return "bolt.fill"
+        case .openTasks: "list.bullet"
+        case .complete: "checkmark"
+        case .focus: "scope"
         }
-    }
-
-    var isFocus: Bool {
-        if case .focus = self { return true }
-        return false
     }
 
     var url: URL {
         switch self {
         case .openTasks:
-            return URL(string: "lippi://tasks?action=open")!
+            URL(string: "lippi://tasks?action=open")!
         case .complete(let taskId):
-            return URL(string: "lippi://task/\(taskId.uuidString)?action=done")!
+            URL(string: "lippi://task/\(taskId.uuidString)?action=done")!
         case .focus:
-            return URL(string: "lippi://pomodoro?action=start&minutes=25")!
+            URL(string: "lippi://pomodoro?action=start&minutes=25")!
         }
     }
 }
 
-private enum OrganizerIslandCopy {
+private enum OrganizerActivityStyle {
+    static let actionColor = Color(hex: 0x61BCFF)
+
     static func accent(for state: OrganizerAttributes.ContentState) -> Color {
-        if state.isCompleted { return Color(hex: 0x30D158) }
-        guard let due = state.dueDate else { return Color(hex: 0x64D2FF) }
-        if due < Date() { return Color(hex: 0xFF453A) }
-        if Calendar.current.isDateInToday(due) { return Color(hex: 0xFF9F0A) }
-        return Color(hex: 0x64D2FF)
+        if state.isCompleted { return Color(hex: 0x54D79A) }
+        guard let due = state.dueDate else { return Color(hex: 0x61BCFF) }
+        if due < .now { return Color(hex: 0xFF6B72) }
+        if Calendar.current.isDateInToday(due) { return Color(hex: 0xFFB44A) }
+        return Color(hex: 0x61BCFF)
     }
 
     static func status(for state: OrganizerAttributes.ContentState) -> String {
         if state.isCompleted { return "Выполнено" }
-        guard let due = state.dueDate else { return "Без дедлайна" }
-        if due < Date() { return "Просрочено" }
+        guard let due = state.dueDate else { return "Без срока" }
+        if due < .now { return "Требует внимания" }
         if Calendar.current.isDateInToday(due) { return "Сегодня" }
-        return "Запланировано"
+        return "В плане"
     }
-}
-
-extension OrganizerAttributes {
-    fileprivate static var preview: OrganizerAttributes {
-        OrganizerAttributes(taskId: UUID())
-    }
-}
-
-extension OrganizerAttributes.ContentState {
-    fileprivate static var todayPreview: OrganizerAttributes.ContentState {
-        OrganizerAttributes.ContentState(
-            taskTitle: "Подготовить отчёт",
-            categoryTitle: "Работа",
-            categorySymbol: "briefcase.fill",
-            startDate: .now.addingTimeInterval(-20 * 60),
-            dueDate: .now.addingTimeInterval(40 * 60),
-            isCompleted: false
-        )
-    }
-
-    fileprivate static var donePreview: OrganizerAttributes.ContentState {
-        OrganizerAttributes.ContentState(
-            taskTitle: "Проверить план дня",
-            categoryTitle: "Личное",
-            categorySymbol: "person.fill",
-            startDate: .now.addingTimeInterval(-30 * 60),
-            dueDate: .now.addingTimeInterval(10 * 60),
-            isCompleted: true
-        )
-    }
-}
-
-#Preview("Task", as: .dynamicIsland(.expanded), using: OrganizerAttributes.preview) {
-    OrganizerWidgetLiveActivity()
-} contentStates: {
-    OrganizerAttributes.ContentState.todayPreview
-    OrganizerAttributes.ContentState.donePreview
 }
 
 private extension Color {
     init(hex: UInt32) {
-        let r = Double((hex >> 16) & 0xFF) / 255.0
-        let g = Double((hex >> 8) & 0xFF) / 255.0
-        let b = Double(hex & 0xFF) / 255.0
-        self.init(red: r, green: g, blue: b)
+        self.init(
+            red: Double((hex >> 16) & 0xFF) / 255,
+            green: Double((hex >> 8) & 0xFF) / 255,
+            blue: Double(hex & 0xFF) / 255
+        )
     }
 }

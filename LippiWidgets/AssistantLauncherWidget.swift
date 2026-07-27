@@ -6,18 +6,14 @@ struct AssistantLauncherEntry: TimelineEntry {
 }
 
 struct AssistantLauncherProvider: TimelineProvider {
-    func placeholder(in context: Context) -> AssistantLauncherEntry {
-        AssistantLauncherEntry(date: .now)
-    }
+    func placeholder(in context: Context) -> AssistantLauncherEntry { .init(date: .now) }
 
     func getSnapshot(in context: Context, completion: @escaping (AssistantLauncherEntry) -> Void) {
-        completion(AssistantLauncherEntry(date: .now))
+        completion(.init(date: .now))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<AssistantLauncherEntry>) -> Void) {
-        let entry = AssistantLauncherEntry(date: .now)
-        let next = Date().addingTimeInterval(60 * 60)
-        completion(Timeline(entries: [entry], policy: .after(next)))
+        completion(Timeline(entries: [.init(date: .now)], policy: .after(.now.addingTimeInterval(60 * 60))))
     }
 }
 
@@ -25,30 +21,11 @@ private enum AssistantWidgetAction {
     case listen
     case menu
 
-    var title: String {
-        switch self {
-        case .listen: return "Слушать"
-        case .menu: return "Меню"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .listen: return "Сразу начать запись"
-        case .menu: return "Открыть полный экран"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .listen: return "waveform.and.mic"
-        case .menu: return "slider.horizontal.3"
-        }
-    }
-
+    var title: String { self == .listen ? "Говорить" : "Команды" }
+    var subtitle: String { self == .listen ? "Начать запись" : "Открыть помощника" }
+    var symbol: String { self == .listen ? "waveform.and.mic" : "square.grid.2x2" }
     var url: URL {
-        let mode = self == .listen ? "listen" : "menu"
-        return URL(string: "lippi://assistant?mode=\(mode)")!
+        URL(string: "lippi://assistant?mode=\(self == .listen ? "listen" : "menu")")!
     }
 }
 
@@ -56,192 +33,156 @@ struct AssistantLauncherWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: AssistantLauncherEntry
 
-    private let accent = Color(hex: 0x3AA8FF)
-    private let glow = Color(hex: 0x8EDEFF)
+    private let accent = Color(hex: 0x59B9FF)
 
     var body: some View {
-        WidgetSurface(accent: accent, blurAccent: glow.opacity(0.55)) {
-            switch family {
-            case .systemMedium:
-                mediumLayout
-            default:
-                smallLayout
-            }
+        switch family {
+        case .accessoryInline:
+            Label("Спросить Lippi", systemImage: "waveform.and.mic")
+                .widgetURL(AssistantWidgetAction.listen.url)
+        case .accessoryCircular:
+            circularLayout
+                .widgetURL(AssistantWidgetAction.listen.url)
+        case .accessoryRectangular:
+            rectangularLayout
+                .widgetURL(AssistantWidgetAction.listen.url)
+        case .systemMedium:
+            WidgetSurface(accent: accent) { mediumLayout }
+        default:
+            WidgetSurface(accent: accent) { smallLayout }
+                .widgetURL(AssistantWidgetAction.listen.url)
         }
-        .widgetURL(AssistantWidgetAction.listen.url)
     }
 
     private var smallLayout: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            header
+        VStack(alignment: .leading, spacing: 0) {
+            WidgetBrandMark(section: "Голосом", symbol: "mic.fill")
 
-            HStack(spacing: 10) {
-                assistantOrb
-                    .frame(width: 44, height: 44)
+            Spacer(minLength: 6)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Голосовой помощник")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.72)
+            voiceMark(size: 40)
 
-                    Text("Коснитесь, чтобы начать говорить")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.76))
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.76)
-                }
-            }
+            Spacer(minLength: 5)
 
-            calloutChip(title: AssistantWidgetAction.listen.title, symbol: AssistantWidgetAction.listen.symbol)
+            Text("Говорите —\nя рядом")
+                .font(.system(size: 19, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.78)
+
+            Spacer(minLength: 2)
+
+            Text("Коснитесь, чтобы начать")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.white.opacity(0.58))
+                .lineLimit(1)
         }
     }
 
     private var mediumLayout: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 12) {
-                header
+        HStack(spacing: 18) {
+            VStack(alignment: .leading, spacing: 0) {
+                WidgetBrandMark(section: "Голосовой помощник", symbol: "mic.fill")
 
-                HStack(spacing: 10) {
-                    assistantOrb
-                        .frame(width: 48, height: 48)
+                Spacer(minLength: 10)
+
+                HStack(spacing: 12) {
+                    voiceMark(size: 52)
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Голосовой помощник")
-                            .font(.headline.weight(.semibold))
+                        Text("Мысль — сразу в дело")
+                            .font(.system(size: 19, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.78)
-
-                        Text("Быстрый запуск без лишних экранов")
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.76))
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.78)
+                            .minimumScaleFactor(0.72)
+                        Text("Задачи, фокус и цели голосом")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.58))
+                            .lineLimit(1)
                     }
                 }
-
-                Text("Тап по виджету запускает запись сразу.")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.74))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.78)
             }
 
             Spacer(minLength: 0)
 
             VStack(spacing: 8) {
-                actionLink(.listen)
-                actionLink(.menu)
+                actionLink(.listen, emphasized: true)
+                actionLink(.menu, emphasized: false)
             }
-            .frame(width: 126)
+            .frame(width: 116)
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 8) {
-            Text("LIPPI AI")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white.opacity(0.82))
-                .tracking(0.7)
-                .lineLimit(1)
-
-            Spacer(minLength: 0)
-
-            calloutChip(title: "Voice", symbol: "sparkles")
-        }
-    }
-
-    private var assistantOrb: some View {
+    private func voiceMark(size: CGFloat) -> some View {
         ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color(hex: 0x6ED6FF), Color(hex: 0x1A8FFF), Color(hex: 0x0A64FF)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            RoundedRectangle(cornerRadius: size * 0.31, style: .continuous)
+                .fill(accent.opacity(0.16))
                 .overlay(
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [.white.opacity(0.34), .clear],
-                                center: .topLeading,
-                                startRadius: 0,
-                                endRadius: 26
-                            )
-                        )
+                    RoundedRectangle(cornerRadius: size * 0.31, style: .continuous)
+                        .stroke(accent.opacity(0.28), lineWidth: 1)
                 )
-                .overlay(
-                    Circle()
-                        .stroke(
-                            LinearGradient(
-                                colors: [.white.opacity(0.56), .white.opacity(0.18), accent.opacity(0.26)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-
-            Image(systemName: "mic.fill")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.white)
+            Image(systemName: "waveform")
+                .font(.system(size: size * 0.40, weight: .semibold))
+                .foregroundStyle(accent)
+                .widgetAccentable()
         }
-        .overlay(alignment: .topLeading) {
-            Circle()
-                .fill(.white.opacity(0.34))
-                .frame(width: 16, height: 16)
-                .blur(radius: 1)
-                .offset(x: 8, y: 7)
-                .allowsHitTesting(false)
-        }
-        .shadow(color: glow.opacity(0.42), radius: 14, x: 0, y: 7)
+        .frame(width: size, height: size)
     }
 
-    private func actionLink(_ action: AssistantWidgetAction) -> some View {
+    private func actionLink(_ action: AssistantWidgetAction, emphasized: Bool) -> some View {
         Link(destination: action.url) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Image(systemName: action.symbol)
-                        .font(.caption.weight(.semibold))
-                        .frame(width: 14)
+            HStack(spacing: 8) {
+                Image(systemName: action.symbol)
+                    .font(.caption.weight(.semibold))
+                    .frame(width: 15)
+                VStack(alignment: .leading, spacing: 1) {
                     Text(action.title)
                         .font(.caption.weight(.semibold))
+                    Text(action.subtitle)
+                        .font(.system(size: 9, weight: .medium))
+                        .opacity(0.58)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.74)
-                    Spacer(minLength: 0)
                 }
-
-                Text(action.subtitle)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.66))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.70)
+                Spacer(minLength: 0)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(emphasized ? Color(hex: 0x07111F) : .white)
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .widgetGlassPanel(RoundedRectangle(cornerRadius: 12, style: .continuous), accent: accent, intensity: 0.15)
+            .frame(height: 46)
+            .background(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(emphasized ? accent : .white.opacity(0.07))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .stroke(.white.opacity(emphasized ? 0 : 0.10), lineWidth: 0.75)
+            )
         }
         .buttonStyle(.plain)
     }
 
-    private func calloutChip(title: String, symbol: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: symbol)
-                .font(.caption2.weight(.bold))
-            Text(title)
-                .font(.caption2.weight(.bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.70)
+    private var circularLayout: some View {
+        ZStack {
+            AccessoryWidgetBackground()
+            Image(systemName: "waveform.and.mic")
+                .font(.system(size: 20, weight: .semibold))
+                .widgetAccentable()
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .widgetGlassPanel(Capsule(), accent: accent, intensity: 0.20)
+    }
+
+    private var rectangularLayout: some View {
+        HStack(spacing: 9) {
+            Image(systemName: "waveform.and.mic")
+                .font(.title2.weight(.semibold))
+                .widgetAccentable()
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Спросить Lippi")
+                    .font(.headline.weight(.semibold))
+                Text("Коснитесь и говорите")
+                    .font(.caption.weight(.medium))
+                    .opacity(0.72)
+            }
+            Spacer(minLength: 0)
+        }
     }
 }
 
@@ -250,19 +191,15 @@ struct AssistantLauncherWidget: Widget {
         StaticConfiguration(kind: "AssistantLauncherWidget", provider: AssistantLauncherProvider()) { entry in
             AssistantLauncherWidgetView(entry: entry)
         }
-        .configurationDisplayName("Голосовой помощник")
-        .description("Быстрый запуск записи голоса и открытие полного меню помощника.")
-        .supportedFamilies([.systemSmall, .systemMedium])
-        .containerBackgroundRemovable(false)
+        .configurationDisplayName("Спросить Lippi")
+        .description("Голосовой помощник на главном и заблокированном экране.")
+        .supportedFamilies([
+            .systemSmall,
+            .systemMedium,
+            .accessoryInline,
+            .accessoryCircular,
+            .accessoryRectangular
+        ])
         .contentMarginsDisabled()
-    }
-}
-
-private extension Color {
-    init(hex: UInt32) {
-        let r = Double((hex >> 16) & 0xFF) / 255
-        let g = Double((hex >> 8) & 0xFF) / 255
-        let b = Double(hex & 0xFF) / 255
-        self.init(red: r, green: g, blue: b)
     }
 }

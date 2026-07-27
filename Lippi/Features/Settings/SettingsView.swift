@@ -983,9 +983,9 @@ struct SettingsView: View {
         }
         .onChange(of: goalCareNotificationsEnabled) { _, enabled in
             if enabled {
-                refreshGoalCareAdvice()
+                NotificationCenter.default.post(name: .lippiCareDidChange, object: nil)
             } else {
-                GoalCareNotificationScheduler.cancel()
+                LippiCareNotificationScheduler.cancel()
             }
         }
     }

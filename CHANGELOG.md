@@ -12,7 +12,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2024%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2027%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=for-the-badge">
+    <img alt="Apple Watch companion" src="https://img.shields.io/badge/Apple%20Watch-Companion-30D158?style=for-the-badge">
+    <img alt="Widgets redesigned" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=for-the-badge">
     <img alt="Liquid Glass" src="https://img.shields.io/badge/Design-Liquid%20Glass-5E5CE6?style=for-the-badge">
     <img alt="App Store readiness" src="https://img.shields.io/badge/App%20Store-1.0%20(2)%20prepared-0A84FF?style=for-the-badge">
     <img alt="Privacy manifest" src="https://img.shields.io/badge/Privacy-Manifest%20ready-30D158?style=for-the-badge">
@@ -37,32 +40,75 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Glass, refined</strong><br>
-      <sub>Depth and material without decorative glare.</sub>
+      <strong>One care rhythm</strong><br>
+      <sub>One timely suggestion, shaped by the day.</sub>
       <br><br>
-      <strong>Стекло без бликов</strong><br>
-      <sub>Глубина и материал без декоративных отсветов.</sub>
+      <strong>Один ритм заботы</strong><br>
+      <sub>Одна уместная подсказка с учётом дня.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Two themes. One system.</strong><br>
-      <sub>Balanced contrast and accents in every appearance.</sub>
+      <strong>On your wrist</strong><br>
+      <sub>Focus, care, and goal context on Apple Watch.</sub>
       <br><br>
-      <strong>Две темы. Одна система.</strong><br>
-      <sub>Выверенный контраст и акценты в любом оформлении.</sub>
+      <strong>На вашем запястье</strong><br>
+      <sub>Фокус, забота и шаг к цели на Apple Watch.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Privacy, declared</strong><br>
-      <sub>Manifests, store answers, and a public policy.</sub>
+      <strong>Widgets, rebuilt</strong><br>
+      <sub>Home, Lock Screen, Live Activities, and Island.</sub>
       <br><br>
-      <strong>Приватность описана</strong><br>
-      <sub>Манифесты, ответы для Store и открытая политика.</sub>
+      <strong>Виджеты заново</strong><br>
+      <sub>Home, Lock Screen, Live Activities и Island.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>1.0 (2), prepared</strong><br>
-      <sub>A reproducible package for App Store submission.</sub>
+      <strong>Eyes, guided privately</strong><br>
+      <sub>On-device exercise guidance without stored frames.</sub>
       <br><br>
-      <strong>1.0 (2) подготовлена</strong><br>
-      <sub>Воспроизводимый комплект для отправки в App Store.</sub>
+      <strong>Глаза под локальной заботой</strong><br>
+      <sub>Контроль упражнения без сохранения кадров.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 27, 2026 — Care that follows your rhythm. / Забота, которая следует вашему ритму.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi now connects goals, focus, recovery, HealthKit, Apple Watch, and widgets into one calm loop: notice the context, suggest one useful action, and leave the final decision with the person.</strong></p>
+      <ul>
+        <li><strong>A unified care engine:</strong> focus duration, the next goal step, self-reported state, recovery guidance, recent movement, hydration, and nutrition records are evaluated together instead of producing unrelated prompts.</li>
+        <li><strong>One suggestion at a time:</strong> eye rest, recovery, a meal check, movement, water, or a goal step is prioritized with action-specific cooldowns, quiet hours, and a passive notification level.</li>
+        <li><strong>Careful meal language:</strong> prolonged sitting never becomes proof that a meal was missed. Lippi only offers a check during a relevant meal window when inactivity evidence is fresh and reliable.</li>
+        <li><strong>Explainable goal pacing:</strong> recovery and overload can soften the recommended roadmap pace, while steady progress can support the next step. Any roadmap mutation still requires explicit confirmation.</li>
+        <li><strong>A real watchOS companion:</strong> Apple Watch shows the current care suggestion, focus state, steps, pace, and nearest goal step, with quick actions for water, food, movement, rest, and eye care.</li>
+        <li><strong>Reliable WatchConnectivity semantics:</strong> replaceable context uses application context, immediate actions use messages, unavailable-phone actions fall back to queued user info, and the latest Watch snapshot remains available offline.</li>
+        <li><strong>More useful HealthKit context:</strong> recent steps, last movement, water, and nutrition now join existing activity, sleep, heart, HRV, respiratory, workout, and mindfulness signals. Background observers keep supported data fresh.</li>
+        <li><strong>Private eye-comfort guidance:</strong> a lightweight Vision pipeline tracks face alignment, gaze direction, blinking, and approximate fatigue or redness cues during an exercise. Frames are never persisted or transmitted, and the experience is not a medical diagnostic tool.</li>
+        <li><strong>Breaks at the right moment:</strong> Pomodoro rest phases surface the eye exercise in one tap, while the care engine can suggest it after a long focus session or the user can start it manually.</li>
+        <li><strong>Every widget rebuilt:</strong> Next Step, Day Plan, Pomodoro, and the voice assistant now use one restrained hierarchy without decorative glare. Inline, circular, and rectangular Lock Screen families are supported.</li>
+        <li><strong>Live information, simplified:</strong> task, focus, and Smart Goal Live Activities now emphasize time, progress, status, and relevant actions across Lock Screen and Dynamic Island.</li>
+        <li><strong>Verification:</strong> the generic iPhone build succeeds with the watchOS companion and both widget extensions embedded and validated. The **89-test** bundle compiles for arm64 and x86_64 without launching Simulator; paired-device Watch behavior remains a physical-device check.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Lippi объединила цели, фокус, восстановление, HealthKit, Apple Watch и виджеты в один спокойный цикл: заметить контекст, предложить одно полезное действие и оставить последнее слово пользователю.</strong></p>
+      <ul>
+        <li><strong>Единый движок заботы:</strong> длительность фокуса, ближайший шаг цели, отмеченное самочувствие, восстановление, недавнее движение, вода и питание оцениваются вместе, а не превращаются в поток несвязанных подсказок.</li>
+        <li><strong>Одна рекомендация за раз:</strong> отдых для глаз, восстановление, проверка приёма пищи, движение, вода или шаг к цели получают понятный приоритет, собственную паузу между повторами, тихие часы и пассивный уровень уведомления.</li>
+        <li><strong>Осторожно о питании:</strong> долгое сидение не считается доказательством пропущенной еды. Lippi лишь предлагает проверить это в подходящее время, когда данные о неподвижности свежие и достаточно надёжные.</li>
+        <li><strong>Объяснимый темп цели:</strong> усталость и перегрузка могут смягчить рекомендуемый ритм дорожной карты, а стабильный прогресс — поддержать следующий шаг. Любое изменение плана по-прежнему требует явного подтверждения.</li>
+        <li><strong>Полноценное приложение watchOS:</strong> Apple Watch показывает актуальную рекомендацию, состояние фокуса, шаги, темп и ближайший шаг цели, а также принимает быстрые отметки воды, еды, движения, отдыха и заботы о глазах.</li>
+        <li><strong>Надёжная семантика WatchConnectivity:</strong> заменяемый контекст передаётся как application context, мгновенные действия — сообщениями, а при недоступном iPhone переходят в очередь user info. Последний снимок остаётся доступен на часах офлайн.</li>
+        <li><strong>Больше полезного контекста HealthKit:</strong> недавние шаги, последнее движение, вода и питание дополняют активность, сон, пульс покоя, HRV, дыхание, тренировки и осознанность. Фоновые observer queries поддерживают доступные данные свежими.</li>
+        <li><strong>Приватная забота о глазах:</strong> облегчённый Vision-pipeline следит за положением лица, направлением взгляда, морганием и приблизительными признаками усталости или покраснения во время упражнения. Кадры не сохраняются и не передаются; функция не является медицинской диагностикой.</li>
+        <li><strong>Перерыв в нужный момент:</strong> во время отдыха Pomodoro упражнение открывается одним касанием; движок заботы может предложить его после долгого фокуса, а пользователь всегда может запустить сценарий вручную.</li>
+        <li><strong>Все виджеты собраны заново:</strong> «Следующий шаг», «План дня», Pomodoro и голосовой помощник получили одну сдержанную иерархию без декоративных бликов. Поддержаны строковый, круглый и прямоугольный форматы Lock Screen.</li>
+        <li><strong>Живая информация стала проще:</strong> Live Activities задач, фокуса и «Умных целей» теперь подчёркивают время, прогресс, статус и уместные действия на Lock Screen и в Dynamic Island.</li>
+        <li><strong>Проверка:</strong> generic iPhone-сборка успешно включает и валидирует watchOS companion и оба расширения виджетов. Пакет из <strong>89 тестов</strong> компилируется для arm64 и x86_64 без запуска Simulator; обмен на физической паре часов остаётся отдельной проверкой.</li>
+      </ul>
     </td>
   </tr>
 </table>

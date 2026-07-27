@@ -47,9 +47,11 @@
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Lippi uses the local network only when you enable the optional neural voice provider on your Mac.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Lippi uses your activity, sleep, and Apple Watch wellness data to suggest gentler focus plans, breathing practices, and eye breaks.</string>
+	<string>Lippi uses activity, sleep, hydration and nutrition entries, and Apple Watch wellness data to suggest gentler focus plans, recovery, movement, eye breaks, and optional meal or water check-ins.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Lippi saves completed breathing practices as mindful sessions in Apple Health.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Lippi uses the front camera during an eye exercise to follow eye movements and estimate visible signs of strain. Frames are processed on this iPhone and are never saved or sent.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Speech recognition is used to process voice assistant commands.</string>
 	<key>NSSupportsLiveActivities</key>

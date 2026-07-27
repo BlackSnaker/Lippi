@@ -2,9 +2,9 @@ import WidgetKit
 import AppIntents
 
 struct ConfigurationAppIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource { "Настройка виджета" }
-    static var description: IntentDescription { "Выберите эмодзи, который будет использоваться в виджете." }
+    static var title: LocalizedStringResource { "План дня" }
+    static var description: IntentDescription { "Выберите личный знак для ближайшей задачи." }
 
-    @Parameter(title: "Эмодзи", default: "📌")
+    @Parameter(title: "Личный знак", default: "📌")
     var favoriteEmoji: String
 }
