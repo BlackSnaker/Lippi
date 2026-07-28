@@ -11,6 +11,8 @@ struct BonsaiGenerationSafetyTests {
             requested: 640,
             thermalLevel: .fair
         ) == 480)
+        #expect(BonsaiGenerationSafetyPolicy.personalRecommendationMaximumDuration == 24)
+        #expect(BonsaiGenerationSafetyPolicy.eyeHealthMaximumDuration == 18)
     }
 
     @Test("Stops before heavy work in low power or serious thermal states")

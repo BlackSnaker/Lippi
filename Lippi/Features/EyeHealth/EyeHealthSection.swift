@@ -1062,6 +1062,29 @@ struct EyeStatsView: View {
                 sessionMetric(title: s("eye.stats.misses"), value: "\(session.misses)")
                 sessionMetric(title: s("eye.stats.avg_reaction"), value: milliseconds(session.avgReaction))
             }
+
+            if let report = session.healthAnalysis {
+                HStack(alignment: .top, spacing: 9) {
+                    Image(safeSystemName: report.source == .bonsai ? "sparkles" : "eye.fill", fallback: "eye")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(analysisTone(report.level))
+
+                    Text(report.title)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 6)
+
+                    Text(L10n.fmt("eye.analysis.rest", lang, report.restMinutes))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DS.textTertiary)
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(10)
+                .background(DS.glassFill(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
@@ -1087,6 +1110,15 @@ struct EyeStatsView: View {
         if progress >= 0.85 { return Color(hex: 0x30D158) }
         if progress >= 0.60 { return Color(hex: 0xFF9F0A) }
         return Color(hex: 0xFF453A)
+    }
+
+    private func analysisTone(_ level: EyeHealthComfortLevel) -> Color {
+        switch level {
+        case .comfortable: return Color(hex: 0x30D158)
+        case .gentleRest: return Color(hex: 0xFF9F0A)
+        case .extendedRest: return Color(hex: 0xFF453A)
+        case .limitedReading: return Color(hex: 0x64D2FF)
+        }
     }
 
     private func modeIcon(_ mode: EyeGameMode) -> String {

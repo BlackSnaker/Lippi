@@ -1819,71 +1819,104 @@ struct PomodoroConfig: Codable, Hashable {
     var roundsBeforeLongBreak: Int = 4
 }
 
+@MainActor
 final class PomodoroManager: ObservableObject {
+    static let configStorageKey = "pomodoro.config.v2"
+    static let rhythmHistoryStorageKey = "pomodoro.rhythm.history.v1"
+
     @Published private(set) var phase: PomodoroPhase = .stopped
     @Published private(set) var round: Int = 0
     @Published private(set) var startDate: Date?
     @Published private(set) var endDate: Date?
     @Published private(set) var sessionTotalDuration: TimeInterval?
-    @Published var config = PomodoroConfig()
+    @Published private(set) var rhythmHistory: PomodoroRhythmHistory
+    @Published private(set) var lastSessionRecord: PomodoroSessionRecord?
+    @Published var config: PomodoroConfig {
+        didSet { persistConfig() }
+    }
 
     weak var stats: StatsStore?
 
+    private let defaults: UserDefaults
     private var notifIds: [String] = []
     private var pausedRemaining: TimeInterval?
     private var pausedPhase: PomodoroPhase?
     private var movementScheduledAt: Date?
-    private var accumulatedFocusSeconds: TimeInterval = 0
+    private var accumulatedSessionSeconds: TimeInterval = 0
+    private let movementNotificationID = "pomodoro-movement-safety"
 
     var pausedSessionRemaining: TimeInterval? { pausedRemaining }
 
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        if let data = defaults.data(forKey: Self.configStorageKey),
+           let saved = try? JSONDecoder().decode(PomodoroConfig.self, from: data) {
+            config = saved
+        } else {
+            config = PomodoroConfig()
+        }
+        if let data = defaults.data(forKey: Self.rhythmHistoryStorageKey),
+           let saved = try? JSONDecoder().decode(PomodoroRhythmHistory.self, from: data) {
+            rhythmHistory = saved
+        } else {
+            rhythmHistory = PomodoroRhythmHistory()
+        }
         WidgetUpdater.clearPomodoro()
     }
 
     func startFocus(customMinutes: Int? = nil) {
-        logFocusIfNeeded()
-        accumulatedFocusSeconds = 0
+        _ = finalizeCurrentSession(reason: .replaced)
+        beginFocus(minutes: customMinutes ?? config.focusMinutes)
+    }
+
+    func startShortBreak() {
+        _ = finalizeCurrentSession(reason: .replaced)
+        beginBreak(long: false)
+    }
+
+    func startLongBreak() {
+        _ = finalizeCurrentSession(reason: .replaced)
+        beginBreak(long: true)
+    }
+
+    func applyRecommendation(_ recommendation: AdaptivePomodoroRecommendation) {
+        config = recommendation.config
+    }
+
+    private func beginFocus(minutes: Int) {
+        accumulatedSessionSeconds = 0
         phase = .focus
         start(
-            for: customMinutes ?? config.focusMinutes,
+            for: min(max(minutes, 1), 180),
             title: L10n.trCurrent("pomodoro.phase.focus"),
             notifBody: L10n.trCurrent("pomodoro.notification.focus_body")
         )
         scheduleMovementIfNeeded()
     }
-    func startShortBreak() {
-        logFocusIfNeeded()
-        phase = .shortBreak
+
+    private func beginBreak(long: Bool) {
+        accumulatedSessionSeconds = 0
+        phase = long ? .longBreak : .shortBreak
         start(
-            for: config.shortBreakMinutes,
-            title: L10n.trCurrent("pomodoro.phase.short_break"),
-            notifBody: L10n.trCurrent("pomodoro.notification.short_break_body")
+            for: long ? config.longBreakMinutes : config.shortBreakMinutes,
+            title: L10n.trCurrent(long ? "pomodoro.phase.long_break" : "pomodoro.phase.short_break"),
+            notifBody: L10n.trCurrent(long ? "pomodoro.notification.long_break_body" : "pomodoro.notification.short_break_body")
         )
-        movementScheduledAt = nil
-    }
-    func startLongBreak() {
-        logFocusIfNeeded()
-        phase = .longBreak
-        start(
-            for: config.longBreakMinutes,
-            title: L10n.trCurrent("pomodoro.phase.long_break"),
-            notifBody: L10n.trCurrent("pomodoro.notification.long_break_body")
-        )
-        movementScheduledAt = nil
+        cancelMovementNotification()
     }
 
     func pause() {
         guard phase != .paused, phase != .stopped, let end = endDate else { return }
         let activePhase = phase
-        if activePhase == .focus, let startDate {
-            accumulatedFocusSeconds += max(Date.now.timeIntervalSince(startDate), 0)
+        if let startDate {
+            accumulatedSessionSeconds += max(Date.now.timeIntervalSince(startDate), 0)
         }
         pausedPhase = activePhase
         pausedRemaining = max(end.timeIntervalSinceNow, 0)
         endDate = nil
         phase = .paused
         cancelTimerNotifications()
+        cancelMovementNotification()
         syncPomodoroWidget()
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *) {
@@ -1912,7 +1945,7 @@ final class PomodoroManager: ObservableObject {
         }
 
         if restorePhase == .focus {
-            scheduleMovementIfNeeded(resume: true)
+            scheduleMovementIfNeeded()
         }
         syncPomodoroWidget()
 
@@ -1931,16 +1964,17 @@ final class PomodoroManager: ObservableObject {
     }
 
     func stop() {
-        logFocusIfNeeded()
+        _ = finalizeCurrentSession(reason: .stopped)
         phase = .stopped
+        round = 0
         startDate = nil
         endDate = nil
         pausedRemaining = nil
         pausedPhase = nil
-        movementScheduledAt = nil
-        accumulatedFocusSeconds = 0
+        accumulatedSessionSeconds = 0
         sessionTotalDuration = nil
         cancelTimerNotifications()
+        cancelMovementNotification()
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *) { Task { await PomodoroLiveManager.endAll() } }
         #endif
@@ -1968,14 +2002,19 @@ final class PomodoroManager: ObservableObject {
         syncPomodoroWidget()
     }
 
-    func advance() {
-        switch phase {
+    func advance(reason: PomodoroTransitionReason = .skipped) {
+        let completedPhase = phase == .paused ? pausedPhase : phase
+        let record = finalizeCurrentSession(reason: reason)
+
+        switch completedPhase {
         case .focus:
-            round += 1
-            if round % config.roundsBeforeLongBreak == 0 { startLongBreak() } else { startShortBreak() }
+            if record?.wasCompleted == true { round += 1 }
+            let cycleLength = max(config.roundsBeforeLongBreak, 1)
+            let needsLongBreak = record?.wasCompleted == true && round > 0 && round % cycleLength == 0
+            beginBreak(long: needsLongBreak)
         case .shortBreak, .longBreak:
-            startFocus()
-        case .paused, .stopped:
+            beginFocus(minutes: config.focusMinutes)
+        case .paused, .stopped, .none:
             break
         }
         #if canImport(ActivityKit)
@@ -1986,23 +2025,42 @@ final class PomodoroManager: ObservableObject {
         syncPomodoroWidget()
     }
 
-    private func logFocusIfNeeded() {
-        let pausedFocus = phase == .paused && pausedPhase == .focus
-        guard phase == .focus || pausedFocus else { return }
+    @discardableResult
+    private func finalizeCurrentSession(reason: PomodoroTransitionReason) -> PomodoroSessionRecord? {
+        guard let activePhase = phase == .paused ? pausedPhase : Optional(phase),
+              activePhase == .focus || activePhase == .shortBreak || activePhase == .longBreak,
+              let planned = sessionTotalDuration else { return nil }
 
-        var secs = accumulatedFocusSeconds
-        if phase == .focus, let startDate {
-            secs += max(0, Date.now.timeIntervalSince(startDate))
+        var active = accumulatedSessionSeconds
+        if phase != .paused, let startDate {
+            active += max(0, Date.now.timeIntervalSince(startDate))
         }
-        accumulatedFocusSeconds = 0
-        guard secs > 0 else { return }
+        if reason == .timerCompleted {
+            active = max(active, planned)
+        }
+        active = min(max(active, 0), planned)
+        accumulatedSessionSeconds = 0
+        guard active >= 1 else { return nil }
 
-        stats?.recordFocus(seconds: secs, on: Date())
+        let record = PomodoroSessionRecord(
+            phase: activePhase,
+            plannedSeconds: planned,
+            activeSeconds: active,
+            transitionReason: reason
+        )
+        rhythmHistory.append(record)
+        lastSessionRecord = record
+        persistRhythmHistory()
 
-        // NEW: сообщаем системе, сколько подряд отработано — для автопредложения гимнастики глаз
-        NotificationCenter.default.post(name: .focusWorkLogged,
-                                        object: nil,
-                                        userInfo: ["seconds": secs])
+        if activePhase == .focus {
+            stats?.recordFocus(seconds: active, on: record.endedAt)
+            NotificationCenter.default.post(
+                name: .focusWorkLogged,
+                object: nil,
+                userInfo: ["seconds": active]
+            )
+        }
+        return record
     }
 
     private func scheduleTimerNotification(title: String, body: String, at date: Date) {
@@ -2040,20 +2098,38 @@ final class PomodoroManager: ObservableObject {
         }
     }
 
-    private func scheduleMovementIfNeeded(resume: Bool = false) {
-        // если уже назначали — ничего не делаем (в т.ч. при resume)
-        if movementScheduledAt != nil { return }
+    private func scheduleMovementIfNeeded() {
+        guard phase == .focus,
+              let total = sessionTotalDuration,
+              total > 50 * 60,
+              movementScheduledAt == nil else { return }
 
-        let when = Date().addingTimeInterval(60 * 60)
+        let remainingUntilMovement = max(50 * 60 - accumulatedSessionSeconds, 60)
+        let when = Date().addingTimeInterval(remainingUntilMovement)
         movementScheduledAt = when
         let tip = MovementTips.randomTip()
 
         NotificationManager.shared.schedule(
-            id: "move-\(UUID().uuidString)",
+            id: movementNotificationID,
             title: L10n.trCurrent("movement.notification.title"),
             body: tip,
             at: when
         )
+    }
+
+    private func cancelMovementNotification() {
+        NotificationManager.shared.cancel(ids: [movementNotificationID])
+        movementScheduledAt = nil
+    }
+
+    private func persistConfig() {
+        guard let data = try? JSONEncoder().encode(config) else { return }
+        defaults.set(data, forKey: Self.configStorageKey)
+    }
+
+    private func persistRhythmHistory() {
+        guard let data = try? JSONEncoder().encode(rhythmHistory) else { return }
+        defaults.set(data, forKey: Self.rhythmHistoryStorageKey)
     }
 
     private func syncPomodoroWidget() {
@@ -2245,6 +2321,7 @@ struct ContentView: View {
     @StateObject private var store = TaskStore()
     @StateObject private var stats = StatsStore()
     @StateObject private var pomo = PomodoroManager()
+    @StateObject private var pomodoroCoach = AdaptivePomodoroCoach()
     @StateObject private var pomodoroAlarm = PomodoroAlarmCenter.shared
     @StateObject private var voiceAssistant = AppVoiceAssistantCenter()
     @StateObject private var countdown = CountdownStore()
@@ -2834,6 +2911,7 @@ struct ContentView: View {
         .environmentObject(store)
         .environmentObject(stats)
         .environmentObject(pomo)
+        .environmentObject(pomodoroCoach)
         .environmentObject(countdown)
         .environmentObject(dailyReminder)
         .environmentObject(scrollPerformance)

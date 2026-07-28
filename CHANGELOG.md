@@ -12,7 +12,11 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2027%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2028%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Adaptive Pomodoro" src="https://img.shields.io/badge/Pomodoro-Adaptive-0A84FF?style=for-the-badge">
+    <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=for-the-badge">
+    <img alt="Complete app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=for-the-badge">
+    <img alt="Tests" src="https://img.shields.io/badge/Tests-99-30D158?style=for-the-badge">
     <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=for-the-badge">
     <img alt="Apple Watch companion" src="https://img.shields.io/badge/Apple%20Watch-Companion-30D158?style=for-the-badge">
     <img alt="Widgets redesigned" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=for-the-badge">
@@ -40,32 +44,79 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>One care rhythm</strong><br>
-      <sub>One timely suggestion, shaped by the day.</sub>
+      <strong>Focus that fits</strong><br>
+      <sub>One explainable rhythm for this moment.</sub>
       <br><br>
-      <strong>Один ритм заботы</strong><br>
-      <sub>Одна уместная подсказка с учётом дня.</sub>
+      <strong>Фокус, который подходит</strong><br>
+      <sub>Объяснимый ритм именно для этого момента.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>On your wrist</strong><br>
-      <sub>Focus, care, and goal context on Apple Watch.</sub>
+      <strong>Recovery that counts</strong><br>
+      <sub>Breaks learn from how sessions really end.</sub>
       <br><br>
-      <strong>На вашем запястье</strong><br>
-      <sub>Фокус, забота и шаг к цели на Apple Watch.</sub>
+      <strong>Отдых, который учитывается</strong><br>
+      <sub>Паузы помнят, как на самом деле проходят сессии.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Widgets, rebuilt</strong><br>
-      <sub>Home, Lock Screen, Live Activities, and Island.</sub>
+      <strong>Eyes, understood privately</strong><br>
+      <sub>Aggregate signals in. Safe guidance out.</sub>
       <br><br>
-      <strong>Виджеты заново</strong><br>
-      <sub>Home, Lock Screen, Live Activities и Island.</sub>
+      <strong>Глаза — приватно и бережно</strong><br>
+      <sub>Только агрегаты на входе. Безопасная подсказка на выходе.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Eyes, guided privately</strong><br>
-      <sub>On-device exercise guidance without stored frames.</sub>
+      <strong>Recognizably Lippi</strong><br>
+      <sub>The website mark now lives across iPhone and Watch.</sub>
       <br><br>
-      <strong>Глаза под локальной заботой</strong><br>
-      <sub>Контроль упражнения без сохранения кадров.</sub>
+      <strong>Теперь узнаваемая Lippi</strong><br>
+      <sub>Знак с сайта появился на iPhone и Apple Watch.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 28, 2026 — Your rhythm. Your signals. Recognizably Lippi. / Ваш ритм. Ваши сигналы. Узнаваемая Lippi.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Focus now begins with what fits this moment: a personal rhythm shaped by recent sessions, recovery, and the next meaningful step — with Bonsai adding clarity inside strict on-device safety boundaries.</strong></p>
+      <ul>
+        <li><strong>An adaptive Pomodoro coach:</strong> Lippi combines recent focus and break completion, the current Smart Goal audit, an explicit wellbeing state, and permitted HealthKit recovery guidance to propose focus, short-break, long-break, and round values together.</li>
+        <li><strong>Local guidance appears first:</strong> a deterministic recommendation is available immediately and remains fully usable when Bonsai is disabled, missing, interrupted, or unable to return valid JSON.</li>
+        <li><strong>Bonsai cannot increase the load:</strong> generated values may only shorten focus, lengthen breaks, or make long rest arrive sooner. The exact goal step and recovery safeguards remain authoritative local values.</li>
+        <li><strong>The timer remembers real behavior:</strong> completed, skipped, stopped, and replaced phases are recorded locally. Active time survives pause/resume, recent history is bounded, and both the chosen configuration and rhythm history persist across launches.</li>
+        <li><strong>Safer transitions:</strong> moving to another phase finalizes the current record exactly once, focus statistics use real active time, and movement reminders are cancelled or restored with the timer instead of lingering after a stop.</li>
+        <li><strong>The goal stays visible:</strong> the next active roadmap action appears during focus, while a compact recommendation card explains the suggested rhythm before the user chooses whether to apply it.</li>
+        <li><strong>Breaks become useful recovery:</strong> depending on the available context, Lippi chooses movement, water, eye rest, breathing, or a posture reset. A relevant eye exercise opens directly from the break.</li>
+        <li><strong>Bonsai joins the eye trainer:</strong> the completed camera exercise contributes aggregate blink count, gaze execution, lighting quality, relative eyelid and eye-area bands, and up to four personal trend points. Images and video are never supplied to the model.</li>
+        <li><strong>A report without a diagnosis:</strong> poor lighting produces an explicitly limited local result. Generated medical claims are discarded, exercise speed is never treated as health evidence, rest cannot become shorter, and the low-risk action always comes from local policy.</li>
+        <li><strong>Results that remain useful:</strong> a new Liquid Glass card shows observations, the minimum screen-free rest, the analysis source, and a clear non-diagnostic note. The report is saved with the exercise session and shown in history.</li>
+        <li><strong>Bounded local inference:</strong> Pomodoro personalization has a 24-second ceiling and eye-comfort analysis an 18-second ceiling, while malformed or constrained runs return to their deterministic local result.</li>
+        <li><strong>A complete Lippi icon:</strong> the waveform mark from the official website is now the iOS app icon, with dedicated Default, Dark, and Tinted 1024×1024 opaque assets. The same identity now appears in the watchOS companion.</li>
+        <li><strong>Localized throughout:</strong> all new explanations, actions, safety notes, metrics, and fallback states are available in Russian, English, German, and Spanish.</li>
+        <li><strong>Verification:</strong> the generic iPhone device build succeeds with iOS and watchOS icon catalogs compiled and embedded. The <strong>99-test</strong> bundle compiles for arm64 and x86_64 without launching Simulator; camera behavior remains a physical-iPhone check.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Фокус теперь начинается с того ритма, который подходит этому моменту: Lippi учитывает недавние сессии, восстановление и ближайший значимый шаг, а Bonsai добавляет ясность внутри строгих локальных границ безопасности.</strong></p>
+      <ul>
+        <li><strong>Адаптивный помощник Pomodoro:</strong> Lippi сопоставляет завершение недавних фокусов и перерывов, аудит текущей умной цели, явно отмеченное состояние и разрешённые рекомендации HealthKit, чтобы вместе предложить длительность фокуса, короткой и длинной паузы и число раундов.</li>
+        <li><strong>Сначала локальная рекомендация:</strong> детерминированный результат появляется сразу и остаётся полностью рабочим, если Bonsai выключен, не установлен, прерван или не вернул корректный JSON.</li>
+        <li><strong>Bonsai не может увеличить нагрузку:</strong> сгенерированные значения вправе только сократить фокус, продлить паузы или приблизить длинный отдых. Точный шаг цели и защитные ограничения восстановления остаются авторитетными локальными значениями.</li>
+        <li><strong>Таймер помнит реальное поведение:</strong> завершённые, пропущенные, остановленные и заменённые фазы записываются локально. Активное время сохраняется при паузе и продолжении, история ограничена разумным объёмом, а выбранная конфигурация и ритм переживают перезапуск приложения.</li>
+        <li><strong>Надёжнее переходы:</strong> смена фазы завершает текущую запись ровно один раз, статистика фокуса использует реальное активное время, а напоминания о движении отменяются и восстанавливаются вместе с таймером, не оставаясь после остановки.</li>
+        <li><strong>Цель остаётся перед глазами:</strong> ближайшее активное действие дорожной карты показывается во время фокуса, а компактная карточка объясняет предложенный ритм до того, как пользователь решит его применить.</li>
+        <li><strong>Перерыв становится полезным восстановлением:</strong> по доступному контексту Lippi выбирает движение, воду, отдых для глаз, дыхание или спокойную смену позы. Уместное упражнение для глаз открывается прямо из паузы.</li>
+        <li><strong>Bonsai подключён к тренажёру для глаз:</strong> завершённая камерная сессия передаёт только агрегаты морганий, выполнения движений взгляда, качества света, относительных диапазонов век и области вокруг глаз и до четырёх точек личной динамики. Изображения и видео модель не получает.</li>
+        <li><strong>Отчёт без диагноза:</strong> плохое освещение даёт явно ограниченный локальный результат. Медицинские утверждения модели отбрасываются, скорость упражнения не считается показателем здоровья, отдых нельзя сократить, а безопасное действие всегда выбирает локальная политика.</li>
+        <li><strong>Результат остаётся полезным:</strong> новая Liquid Glass-карточка показывает наблюдения, минимальный отдых от экрана, источник анализа и ясное немедицинское пояснение. Отчёт сохраняется вместе с тренировкой и виден в истории.</li>
+        <li><strong>Ограниченный локальный инференс:</strong> персонализация Pomodoro ограничена 24 секундами, анализ комфорта глаз — 18 секундами; некорректный или остановленный запуск возвращается к детерминированному локальному результату.</li>
+        <li><strong>Полноценная иконка Lippi:</strong> звуковая волна с официального сайта стала иконкой iOS-приложения. Подготовлены непрозрачные ассеты 1024×1024 для Default, Dark и Tinted, а тот же знак появился в watchOS companion.</li>
+        <li><strong>Полная локализация:</strong> новые объяснения, действия, заметки безопасности, показатели и fallback-состояния доступны на русском, английском, немецком и испанском.</li>
+        <li><strong>Проверка:</strong> generic iPhone device build успешно компилирует и встраивает каталоги иконок iOS и watchOS. Пакет из <strong>99 тестов</strong> компилируется для arm64 и x86_64 без запуска Simulator; работа камеры остаётся проверкой на физическом iPhone.</li>
+      </ul>
     </td>
   </tr>
 </table>

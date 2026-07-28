@@ -9,16 +9,42 @@ import UIKit
 struct PomodoroView: View {
     @EnvironmentObject private var pomo: PomodoroManager
     @EnvironmentObject private var healthKit: HealthKitManager
+    @EnvironmentObject private var store: TaskStore
+    @EnvironmentObject private var coach: AdaptivePomodoroCoach
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
+    @AppStorage(GoalProgressNotificationScheduler.roadmapStorageKey) private var savedRoadmap: String = ""
+    @AppStorage("goal.progress.userState") private var userStateRaw: String = GoalUserState.calm.rawValue
 
     @State private var showCustomDuration = false
     @State private var lastHandledTimerEnd: Date?
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
+
+    private var roadmap: GoalRoadmap? {
+        guard let data = savedRoadmap.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(GoalRoadmap.self, from: data)
+    }
+
+    private var coachContext: AdaptivePomodoroContext {
+        let currentRoadmap = roadmap
+        let audit = currentRoadmap.flatMap { GoalPlanProgressAudit.make(roadmap: $0, tasks: store.tasks) }
+        return AdaptivePomodoroContext(
+            healthSnapshot: healthKit.isEnabled ? healthKit.snapshot : nil,
+            healthRecommendation: healthKit.isEnabled ? healthKit.recommendation : nil,
+            goalTitle: currentRoadmap?.title,
+            goalAudit: audit,
+            fallbackGoalStep: audit?.nextActiveTask ?? currentRoadmap?.firstActions.first,
+            userState: GoalUserState(rawValue: userStateRaw) ?? .calm,
+            rhythmHistory: pomo.rhythmHistory,
+            lang: lang
+        )
+    }
+
+    private var coachRefreshID: String { coachContext.fingerprint }
 
     private var isRunning: Bool {
         pomo.phase != .stopped && pomo.phase != .paused && pomo.startDate != nil
@@ -120,10 +146,16 @@ struct PomodoroView: View {
                        lastHandledTimerEnd != end {
                         lastHandledTimerEnd = end
                         PomodoroAlarmCenter.shared.start(phaseTitle: phaseTitle)
-                        pomo.advance()
+                        pomo.advance(reason: .timerCompleted)
                     }
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
                 }
+            }
+            .task(id: coachRefreshID) {
+                let context = coachContext
+                coach.refreshLocal(for: context)
+                guard !hasActiveSession else { return }
+                await coach.personalizeIfNeeded(for: context)
             }
         }
     }
@@ -171,15 +203,19 @@ struct PomodoroView: View {
 
                 cycleProgress
 
+                if pomo.phase == .focus, let nextStep = coach.recommendation?.nextGoalStep {
+                    focusGoalStep(nextStep)
+                }
+
                 if pomo.phase == .shortBreak || pomo.phase == .longBreak {
-                    eyeBreakSuggestion
+                    breakRecoverySuggestion
                 }
 
                 sessionControls
 
                 if isRunning {
                     Button {
-                        pomo.advance()
+                        pomo.advance(reason: .skipped)
                     } label: {
                         Label(s("pomodoro.action.next"), systemImage: "forward.end.fill")
                             .labelStyle(PomodoroActionLabelStyle())
@@ -191,19 +227,19 @@ struct PomodoroView: View {
         }
     }
 
-    private var eyeBreakSuggestion: some View {
+    private var breakRecoverySuggestion: some View {
         HStack(alignment: .center, spacing: 12) {
-            Image(safeSystemName: "eye.circle.fill", fallback: "eye.fill")
+            Image(safeSystemName: "figure.cooldown", fallback: "heart.fill")
                 .font(.system(size: 19, weight: .semibold))
                 .foregroundStyle(Color(hex: 0x64D2FF))
                 .frame(width: 44, height: 44)
                 .background(Color(hex: 0x64D2FF).opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(s("pomodoro.eyes.title"))
+                Text(s("pomodoro.coach.break.title"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(DS.textPrimary)
-                Text(s("pomodoro.eyes.subtitle"))
+                Text(coach.recommendation?.recoveryAction ?? s("pomodoro.coach.recovery.reset"))
                     .font(.caption)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -211,23 +247,32 @@ struct PomodoroView: View {
 
             Spacer(minLength: 4)
 
-            Button {
-                NotificationCenter.default.post(name: .suggestEyeExercise, object: nil)
-            } label: {
-                Image(safeSystemName: "arrow.up.right", fallback: "play.fill")
-                    .font(.system(size: 14, weight: .bold))
+            if coach.recommendation?.recoveryKind == .eyes {
+                Button {
+                    NotificationCenter.default.post(name: .suggestEyeExercise, object: nil)
+                } label: {
+                    Image(safeSystemName: "arrow.up.right", fallback: "play.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(width: 42, height: 42)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(DS.accent)
+                .background(DS.accent.opacity(0.11), in: Circle())
+                .lippiSystemGlass(
+                    in: Circle(),
+                    tint: DS.accent.opacity(0.12),
+                    interactive: true,
+                    forceSystemGlass: true
+                )
+                .accessibilityLabel(Text(s("pomodoro.eyes.open")))
+            } else {
+                Image(safeSystemName: coach.recommendation?.recoveryKind.systemImage ?? "figure.cooldown", fallback: "heart.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x64D2FF))
                     .frame(width: 42, height: 42)
+                    .background(Color(hex: 0x64D2FF).opacity(0.10), in: Circle())
+                    .accessibilityHidden(true)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(DS.accent)
-            .background(DS.accent.opacity(0.11), in: Circle())
-            .lippiSystemGlass(
-                in: Circle(),
-                tint: DS.accent.opacity(0.12),
-                interactive: true,
-                forceSystemGlass: true
-            )
-            .accessibilityLabel(Text(s("pomodoro.eyes.open")))
         }
         .padding(12)
         .background(DS.glassFill(0.045), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -236,6 +281,35 @@ struct PomodoroView: View {
                 .stroke(DS.glassStroke(0.09), lineWidth: 1)
         )
         .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
+    }
+
+    private func focusGoalStep(_ nextStep: String) -> some View {
+        HStack(alignment: .top, spacing: 11) {
+            Image(safeSystemName: "scope", fallback: "flag.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(DS.accent)
+                .frame(width: 36, height: 36)
+                .background(DS.accent.opacity(0.11), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(s("pomodoro.coach.next_step"))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(DS.textTertiary)
+                Text(nextStep)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(11)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.glassFill(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(DS.glassStroke(0.09), lineWidth: 1)
+        )
     }
 
     private var timerHeader: some View {
@@ -444,9 +518,7 @@ struct PomodoroView: View {
                     accent: Color(hex: 0x64D2FF)
                 )
 
-                if let recommendation = healthFocusRecommendation {
-                    healthFocusSuggestion(recommendation)
-                }
+                adaptiveCoachCard
 
                 durationChoices
 
@@ -464,60 +536,126 @@ struct PomodoroView: View {
         .animation(reduceMotion ? nil : DS.motionState, value: showCustomDuration)
     }
 
-    private var healthFocusRecommendation: HealthWellnessRecommendation? {
-        guard healthKit.isEnabled,
-              let recommendation = healthKit.recommendation,
-              recommendation.band == .recovery
-                || recommendation.band == .light
-                || recommendation.band == .ready else { return nil }
-        return recommendation
-    }
+    private var adaptiveCoachCard: some View {
+        let recommendation = coach.recommendation ?? AdaptivePomodoroPolicy.fallback(for: coachContext)
 
-    private func healthFocusSuggestion(_ recommendation: HealthWellnessRecommendation) -> some View {
-        HStack(alignment: .center, spacing: 11) {
-            Image(safeSystemName: "heart.text.square.fill", fallback: "heart.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Color(hex: 0xFF375F))
-                .frame(width: 38, height: 38)
-                .background(Color(hex: 0xFF375F).opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 11) {
+                Image(safeSystemName: "sparkles", fallback: "leaf.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(DS.accent)
+                    .frame(width: 38, height: 38)
+                    .background(DS.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(s("healthkit.pomodoro.title"))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(DS.textPrimary)
-                Text(s("healthkit.band.\(recommendation.band.rawValue).description"))
-                    .font(.caption)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(recommendation.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DS.textPrimary)
+                    Text(recommendation.summary)
+                        .font(.caption)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 4)
+
+                if coach.state == .analyzing {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(DS.accent)
+                } else {
+                    Text(s(recommendation.source == .bonsai ? "pomodoro.coach.source.bonsai" : "pomodoro.coach.source.local"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DS.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(DS.accent.opacity(0.10), in: Capsule())
+                }
+            }
+
+            HStack(spacing: 8) {
+                coachMetric(value: "\(recommendation.focusMinutes)", label: s("pomodoro.coach.metric.focus"), tone: DS.accent)
+                coachMetric(value: "\(recommendation.shortBreakMinutes)", label: s("pomodoro.coach.metric.break"), tone: Color(hex: 0x30D158))
+                coachMetric(value: "\(recommendation.longBreakMinutes)", label: s("pomodoro.coach.metric.recovery"), tone: Color(hex: 0x64D2FF))
+            }
+
+            ForEach(recommendation.reasons.prefix(2), id: \.self) { reason in
+                Label(reason, systemImage: "checkmark.circle.fill")
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer(minLength: 4)
-
-            Button {
-                withAnimation(reduceMotion ? nil : DS.motionState) {
-                    pomo.config.focusMinutes = recommendation.suggestedFocusMinutes
-                    showCustomDuration = ![25, 50].contains(recommendation.suggestedFocusMinutes)
+            if let nextStep = recommendation.nextGoalStep {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(s("pomodoro.coach.next_step"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DS.textTertiary)
+                    Text(nextStep)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                selectionHaptic()
-            } label: {
-                Text(L10n.fmt("healthkit.pomodoro.use", lang, recommendation.suggestedFocusMinutes))
-                    .font(.caption.weight(.semibold))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(DS.accent)
-            .background(DS.accent.opacity(0.12), in: Capsule())
-            .overlay(Capsule().stroke(DS.accent.opacity(0.22), lineWidth: 1))
+
+            if case .unavailable(let message) = coach.state {
+                Text(message)
+                    .font(.caption2)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 9) {
+                Button {
+                    withAnimation(reduceMotion ? nil : DS.motionState) {
+                        pomo.applyRecommendation(recommendation)
+                        showCustomDuration = ![25, 50].contains(recommendation.focusMinutes)
+                    }
+                    selectionHaptic()
+                } label: {
+                    Text(s("pomodoro.coach.apply"))
+                        .font(.caption.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true, allowsMultiline: true))
+
+                Button {
+                    Task { await coach.personalize(for: coachContext) }
+                } label: {
+                    Label(s("pomodoro.coach.refresh"), systemImage: "sparkles")
+                        .font(.caption.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .ghost, compact: true, allowsMultiline: true))
+                .disabled(coach.state == .analyzing)
+            }
         }
-        .padding(11)
-        .background(DS.glassFill(0.045), in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+        .padding(12)
+        .background(DS.glassFill(0.045), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 19, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(DS.glassStroke(0.09), lineWidth: 1)
         )
+    }
+
+    private func coachMetric(value: String, label: String, tone: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(tone)
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(tone.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
     }
 
     private var durationChoices: some View {

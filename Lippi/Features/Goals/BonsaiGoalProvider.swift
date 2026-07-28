@@ -98,6 +98,40 @@ struct BonsaiGoalProvider {
         )
     }
 
+    func generatePersonalRecommendation(prompt: String, configuration: BonsaiConfiguration) async throws -> String {
+        try ensureReady(configuration: configuration)
+        let request = """
+        \(prompt)
+
+        Required JSON contract:
+        \(BonsaiResponseContract.personalRecommendation)
+        Return one JSON object only. Do not wrap it in Markdown.
+        """
+        return try await run(
+            systemPrompt: BonsaiSystemPrompt.personalRecommendation,
+            userPrompt: request,
+            maximumOutputTokens: 240,
+            maximumDuration: BonsaiGenerationSafetyPolicy.personalRecommendationMaximumDuration
+        )
+    }
+
+    func generateEyeHealthAnalysis(prompt: String, configuration: BonsaiConfiguration) async throws -> String {
+        try ensureReady(configuration: configuration)
+        let request = """
+        \(prompt)
+
+        Required JSON contract:
+        \(BonsaiResponseContract.eyeHealthAnalysis)
+        Return one JSON object only. Do not wrap it in Markdown.
+        """
+        return try await run(
+            systemPrompt: BonsaiSystemPrompt.eyeHealthAnalysis,
+            userPrompt: request,
+            maximumOutputTokens: 210,
+            maximumDuration: BonsaiGenerationSafetyPolicy.eyeHealthMaximumDuration
+        )
+    }
+
     func check(configuration: BonsaiConfiguration) async throws {
         try ensureReady(configuration: configuration)
         let response = try await run(
@@ -174,6 +208,21 @@ private enum BonsaiSystemPrompt {
     If the user reports fatigue or overload, reduce pressure and make the next action smaller. Start with wins, then risks, then a gentle next step.
     Write every human-readable JSON value in the requested language. Return valid JSON matching the requested contract and nothing else.
     """
+
+    static let personalRecommendation = """
+    You are Lippi's private on-device focus and recovery coach. Use only the supplied aggregate signals, session history, user state, and exact goal step.
+    Never diagnose health, infer hidden causes, invent measurements, rewrite the goal step, or promise an outcome.
+    The local safety ceiling is authoritative: focus may only become shorter, breaks may only become longer, and long breaks may only become more frequent.
+    Make the recommendation specific, kind, practical, and concise. Write every human-readable value in the requested language.
+    Return valid JSON matching the requested contract and nothing else.
+    """
+
+    static let eyeHealthAnalysis = """
+    You are Lippi's private on-device eye comfort coach. You receive only coarse aggregate signals from a short guided exercise, never images or video.
+    Describe observable signals carefully. Never diagnose, name a condition, confirm redness or fatigue medically, infer a cause, or use exercise speed as evidence of eye health.
+    Preserve the authoritative local comfort level and never shorten its screen-rest recommendation. Prefer simple low-risk actions: a screen pause, relaxed blinking, distance viewing, and comfortable lighting.
+    Write every human-readable value in the requested language. Return valid JSON matching the requested contract and nothing else.
+    """
 }
 
 private enum BonsaiResponseContract {
@@ -213,5 +262,31 @@ private enum BonsaiResponseContract {
       "confidence": 0.0
     }
     progressScore and confidence are between 0 and 1. Keep every string under 16 words.
+    """
+
+    static let personalRecommendation = """
+    {
+      "title": "string",
+      "summary": "one concise sentence",
+      "focusMinutes": 25,
+      "shortBreakMinutes": 5,
+      "longBreakMinutes": 15,
+      "roundsBeforeLongBreak": 4,
+      "recoveryKind": "move|water|eyes|breathe|reset",
+      "recoveryAction": "one concrete safe action",
+      "confidence": 0.0
+    }
+    Keep title under 7 words and summary and recoveryAction under 18 words. confidence is between 0 and 1.
+    """
+
+    static let eyeHealthAnalysis = """
+    {
+      "title": "string",
+      "summary": "one careful sentence about observed signals",
+      "action": "one concrete low-risk comfort action",
+      "restMinutes": 10,
+      "confidence": 0.0
+    }
+    Keep title under 7 words and summary and action under 20 words. restMinutes is between the supplied minimum and 30. confidence is between 0 and 1.
     """
 }

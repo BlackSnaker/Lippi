@@ -1,5 +1,7 @@
 <div align="center">
 
+<img alt="Lippi app icon" src="AppStore/PrivacySite/public/favicon.svg" width="112" height="112">
+
 # Lippi
 
 ### Focus deeply. Recover gently. Reach meaningful goals without overload.
@@ -39,8 +41,11 @@
   <img alt="Privacy manifest" src="https://img.shields.io/badge/Privacy-Manifest%20ready-30D158?style=flat-square">
   <img alt="Local model storage" src="https://img.shields.io/badge/Local%20models-~684%20MiB-30D158?style=flat-square">
   <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=flat-square">
+  <img alt="Adaptive Pomodoro" src="https://img.shields.io/badge/Pomodoro-Adaptive-0A84FF?style=flat-square">
+  <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=flat-square">
+  <img alt="Lippi app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-89-30D158?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-99-30D158?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
@@ -88,10 +93,10 @@ Lippi объединяет планирование, фокус и восста�
 |---|---|
 | **Сегодня** | Спокойный обзор дня, главный фокус и «Ритм заботы», который выбирает один уместный следующий шаг. |
 | **Умные цели** | Пожелания, исходная точка, ресурсы и явные ограничения превращаются в предметную дорожную карту с объяснимой последовательностью, измеримыми этапами и адаптивным ритмом. |
-| **Задачи и Pomodoro** | Контекстные действия, гибкие фокус-сессии, надёжные пауза и продолжение, статистика без визуального шума. |
+| **Задачи и Pomodoro** | Персональный ритм фокуса и отдыха учитывает историю сессий, ближайший шаг умной цели, отмеченное состояние и доступные сигналы восстановления. |
 | **Здоровье** | Разрешённые показатели активности, сна, восстановления, воды и питания из HealthKit превращаются в осторожные и объяснимые рекомендации. |
 | **Apple Watch** | Отдельное приложение показывает текущую рекомендацию, фокус, шаг к цели и принимает быстрые отметки воды, еды, движения и отдыха. |
-| **Восстановление** | Дыхательные практики и упражнения для глаз; камера может локально следить за выполнением, морганием и приблизительными признаками усталости — без сохранения кадров и медицинских диагнозов. |
+| **Восстановление** | Дыхательные практики и упражнения для глаз; камера локально сопровождает выполнение, а Bonsai объясняет только агрегированные сигналы — без кадров, медицинских диагнозов и ослабления безопасной рекомендации. |
 | **Голосовой помощник** | Контекстные просьбы и перефразировки, голосовой доступ к «Умным целям», локальные естественные голоса F2 и M3 и отдельные действия VoiceOver. |
 | **Знакомство с Lippi** | Четыре интерактивных шага, осмысленный выбор темпа и видимая автоматическая подготовка локальной модели уже при первом запуске. |
 | **Виджеты** | Единый новый дизайн задач, плана дня, Pomodoro и помощника на Home Screen, Lock Screen, в Live Activities и Dynamic Island. |
@@ -107,6 +112,56 @@ Lippi объединяет планирование, фокус и восста�
 [Политика конфиденциальности Lippi →](https://lippi.lenuma.ru/privacy)
 
 ## Последнее обновление · Latest release
+
+### 28 июля 2026 — ваш ритм. ваши сигналы. узнаваемая Lippi.
+
+Pomodoro теперь начинается не с универсального числа, а с ритма, который подходит именно этому моменту. Lippi сопоставляет недавние фокус-сессии и перерывы, ближайший шаг умной цели, выбранное самочувствие и разрешённые сигналы восстановления — затем предлагает ясный цикл и объясняет, почему он выглядит уместно.
+
+<table>
+  <tr>
+    <td width="37%" valign="top">
+      <img alt="Персональный Pomodoro в Lippi" src="AppStore/PrivacySite/public/showcase/pomodoro.jpg">
+    </td>
+    <td width="37%" valign="top">
+      <img alt="Локальный интеллект Bonsai" src="AppStore/PrivacySite/public/showcase/local-intelligence.jpg">
+    </td>
+    <td width="26%" align="center" valign="middle">
+      <img alt="Новая иконка Lippi" src="AppStore/PrivacySite/public/favicon.svg" width="72%">
+      <br><br>
+      <strong>Один знак.<br>Везде Lippi.</strong>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="33%" align="center" valign="top">
+      <strong>◴ Фокус знает контекст</strong><br><br>
+      Длительность работы и пауз подстраивается под реальный ритм, цель и восстановление.<br><br>
+      <sub>Personal, explainable, optional.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>◉ Глаза под локальной заботой</strong><br><br>
+      Bonsai видит только агрегированные сигналы тренажёра и помогает выбрать безопасный отдых.<br><br>
+      <sub>No frames. No diagnosis.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>▥ Теперь узнаваема</strong><br><br>
+      Новый знак Lippi появился на iPhone и Apple Watch, включая Dark и Tinted оформления.<br><br>
+      <sub>Distinct in every appearance.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Pomodoro стал персональным.** История завершённых, пропущенных и остановленных сессий сохраняется локально. Если фокус часто заканчивается раньше, следующий цикл становится короче; если перерывы сокращаются, Lippi бережнее защищает восстановление.
+- **Умная цель остаётся в центре.** Во время фокуса виден ближайший конкретный шаг дорожной карты, а Bonsai может уточнить рекомендацию, не меняя саму цель.
+- **Безопасные границы сильнее модели.** Bonsai может сократить фокус или увеличить отдых, но не наоборот. При недоступной модели локальный анализ сразу оставляет полностью рабочую рекомендацию.
+- **Перерыв стал полезным действием.** Lippi выбирает движение, воду, отдых для глаз, дыхание или спокойную смену позы по доступному контексту; упражнение для глаз открывается прямо из подходящей паузы.
+- **Тренажёр для глаз связан с Bonsai.** После камерной сессии учитываются моргания, устойчивость взгляда, условия света, относительные сигналы комфорта и личная история. В модель передаются только грубые диапазоны и агрегаты — никогда не изображения или видео.
+- **Никаких медицинских обещаний.** При недостаточном свете результат остаётся ограниченным, диагностические формулировки отбрасываются, рекомендуемый отдых нельзя сократить, а действие всегда выбирает локальная безопасная политика.
+- **Результат не исчезает.** Новая Liquid Glass-карточка объясняет наблюдения и длительность отдыха; отчёт сохраняется рядом с сессией и остаётся видимым в истории тренировок.
+- **Lippi получила собственное лицо.** Фирменная звуковая волна с сайта стала полноценной иконкой приложения. Подготовлены основной, тёмный и тонированный варианты без альфа-канала, а тот же знак добавлен в watchOS companion.
+- **Проверено без запуска Simulator.** Generic iPhone-сборка успешно включает и валидирует иконки iOS/watchOS; тестовый пакет из **99 сценариев** компилируется для arm64 и x86_64.
 
 ### 27 июля 2026 — рядом с вашим ритмом. на iPhone, Apple Watch и экране блокировки.
 
@@ -333,11 +388,17 @@ The product is designed around four promises:
 
 ### Latest release
 
-The July 27 release introduces a single contextual care rhythm across iPhone and Apple Watch. Lippi combines focus duration, the current goal step, recovery state, movement, hydration, and nutrition records to choose one timely suggestion. It can recommend a smaller goal step, water, movement, rest, an eye exercise, or a cautious meal check without turning inactivity into a medical or dietary conclusion.
+The July 28 release makes focus personal. Lippi combines recent focus and break completion, the next Smart Goal step, an explicit wellbeing check-in, and permitted recovery signals to suggest an explainable Pomodoro rhythm. Bonsai may shorten focus or extend rest, but local safety rules never allow the model to increase load, reduce recovery, or rewrite the goal.
+
+The camera-guided eye exercise now produces a private Bonsai-assisted comfort report from aggregate blink, gaze, lighting, and relative appearance bands. Camera frames and video never enter the model, poor lighting stays explicitly inconclusive, medical claims are discarded, and a deterministic on-device recommendation remains available immediately. Reports persist with session history.
+
+Lippi also has a complete app icon for the first time: the waveform mark from the official website now appears across iPhone and Apple Watch, with dedicated Default, Dark, and Tinted appearances. All delivery assets are opaque 1024×1024 images and pass the asset-catalog build.
+
+The July 27 release introduced a single contextual care rhythm across iPhone and Apple Watch. Lippi combines focus duration, the current goal step, recovery state, movement, hydration, and nutrition records to choose one timely suggestion. It can recommend a smaller goal step, water, movement, rest, an eye exercise, or a cautious meal check without turning inactivity into a medical or dietary conclusion.
 
 The new watchOS companion keeps the current focus, care suggestion, and goal step close at hand, preserves its latest snapshot offline, and queues quick wellbeing actions when the phone is temporarily unreachable. The eye-comfort experience uses an on-device Vision pipeline for exercise guidance and approximate fatigue or redness cues; camera frames are never stored, and the feature is explicitly non-diagnostic.
 
-Every home-screen widget has also been rebuilt. Tasks, Day Plan, Pomodoro, and the voice assistant now share a quiet visual hierarchy without decorative glare. Native inline, circular, and rectangular Lock Screen families join redesigned Live Activities and Dynamic Island layouts. The suite now contains **89 tests**, and the app, watchOS companion, and both widget extensions compile successfully without launching Simulator.
+Every home-screen widget has also been rebuilt. Tasks, Day Plan, Pomodoro, and the voice assistant now share a quiet visual hierarchy without decorative glare. Native inline, circular, and rectangular Lock Screen families join redesigned Live Activities and Dynamic Island layouts. The suite now contains **99 tests**, and the app, watchOS companion, and both widget extensions compile successfully without launching Simulator.
 
 The July 24 release gave Lippi a calmer, more coherent Liquid Glass design across light and dark appearances. Decorative card sheen is gone; depth now comes from material, edge, tint, and hierarchy. Reduce Motion, Reduce Transparency, energy, and thermal adaptations remain part of the same design system.
 

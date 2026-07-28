@@ -78,6 +78,11 @@ struct EyeSessionHistory: Codable, Identifiable {
     var avgReaction: Double?
     var bestReaction: Double?
     var bestStreak: Int
+    var cameraFatigueEstimate: Double? = nil
+    var cameraAppearanceEstimate: Double? = nil
+    var cameraLightLevel: Double? = nil
+    var detectedBlinks: Int? = nil
+    var healthAnalysis: EyeHealthAnalysisReport? = nil
 }
 
 enum EyeAchievement: String, Codable, CaseIterable, Identifiable {
@@ -150,6 +155,12 @@ final class EyeExerciseStore: ObservableObject {
         history.insert(s, at: 0)
         saveHistory()
         evaluateAchievements(for: s)
+    }
+
+    func updateHealthAnalysis(_ report: EyeHealthAnalysisReport, for sessionID: UUID) {
+        guard let index = history.firstIndex(where: { $0.id == sessionID }) else { return }
+        history[index].healthAnalysis = report
+        saveHistory()
     }
 
     var dayStreak: Int {

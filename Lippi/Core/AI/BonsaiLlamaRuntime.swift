@@ -34,6 +34,8 @@ enum BonsaiGenerationSafetyStopReason: Equatable, Sendable {
 enum BonsaiGenerationSafetyPolicy {
     static let roadmapMaximumDuration: TimeInterval = 80
     static let progressMaximumDuration: TimeInterval = 45
+    static let personalRecommendationMaximumDuration: TimeInterval = 24
+    static let eyeHealthMaximumDuration: TimeInterval = 18
     static let minimumUsefulPartialTokens = 24
 
     static func roadmapOutputTokenBudget(forWeeks weeks: Int) -> Int32 {

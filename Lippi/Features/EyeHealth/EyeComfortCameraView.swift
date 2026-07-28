@@ -543,6 +543,7 @@ struct EyeComfortCameraView: View {
     @AppStorage(L10n.storageKey) private var langRaw = AppLang.fallback.rawValue
 
     @StateObject private var analyzer = EyeCameraAnalyzer()
+    @StateObject private var eyeHealthCoach = BonsaiEyeHealthCoach()
     @State private var stage: Stage = .welcome
     @State private var calibrationProgress = 0.0
     @State private var blinkBaseline = 0
@@ -553,6 +554,7 @@ struct EyeComfortCameraView: View {
     @State private var missedTargets = 0
     @State private var targetTimes: [Double] = []
     @State private var didSaveSession = false
+    @State private var analysisInput: EyeHealthAnalysisInput?
 
     private let targetPoints: [CGPoint] = [
         CGPoint(x: 0.50, y: 0.50),
@@ -988,6 +990,10 @@ struct EyeComfortCameraView: View {
                     }
                 }
 
+                if analysisInput != nil {
+                    eyeHealthAnalysisCard
+                }
+
                 disclaimerCard
                 Color.clear.frame(height: 24)
             }
@@ -1015,6 +1021,98 @@ struct EyeComfortCameraView: View {
         .frame(maxWidth: .infinity, minHeight: 86)
         .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(DS.glassStroke(0.10), lineWidth: 1))
+    }
+
+    private var eyeHealthAnalysisCard: some View {
+        let report = eyeHealthCoach.report
+            ?? analysisInput.map { EyeHealthAnalysisPolicy.fallback(for: $0) }
+
+        return GlassCard(padding: 17, cornerRadius: 28, style: .lightweight, forceSystemGlass: false) {
+            VStack(alignment: .leading, spacing: 13) {
+                HStack(spacing: 11) {
+                    Image(safeSystemName: "sparkles", fallback: "eye.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(DS.accent)
+                        .frame(width: 40, height: 40)
+                        .background(DS.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(s("eye.analysis.card.title"))
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(DS.textPrimary)
+                        Text(s("eye.analysis.card.private"))
+                            .font(.caption)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+
+                    Spacer(minLength: 4)
+
+                    if eyeHealthCoach.state == .analyzing {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(DS.accent)
+                    } else if let report {
+                        Text(s(report.source == .bonsai ? "eye.analysis.source.bonsai" : "eye.analysis.source.local"))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(DS.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(DS.accent.opacity(0.10), in: Capsule())
+                    }
+                }
+
+                if let report {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(report.title)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(DS.textPrimary)
+                        Text(report.summary)
+                            .font(.subheadline)
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    ForEach(report.observations.prefix(2), id: \.self) { observation in
+                        Label(observation, systemImage: "waveform.path.ecg")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(safeSystemName: "timer", fallback: "clock.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color(hex: 0x30D158))
+                            .frame(width: 32, height: 32)
+                            .background(Color(hex: 0x30D158).opacity(0.11), in: Circle())
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(L10n.fmt("eye.analysis.rest", lang, report.restMinutes))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(DS.textPrimary)
+                            Text(report.action)
+                                .font(.caption)
+                                .foregroundStyle(DS.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(11)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+
+                    Text(report.safetyNote)
+                        .font(.caption2)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if case .localFallback = eyeHealthCoach.state {
+                    Text(s("eye.analysis.local_fallback"))
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+        }
     }
 
     private func advanceExercise() {
@@ -1088,19 +1186,50 @@ struct EyeComfortCameraView: View {
         guard !didSaveSession else { return }
         didSaveSession = true
         let average = targetTimes.isEmpty ? nil : targetTimes.reduce(0, +) / Double(targetTimes.count)
-        store.addSession(
-            EyeSessionHistory(
-                mode: .tracking,
-                hits: completedTargets,
-                misses: missedTargets,
-                total: targetPoints.count,
-                avgReaction: average,
-                bestReaction: targetTimes.min(),
-                bestStreak: completedTargets
-            )
+        let snapshot = analyzer.snapshot
+        let input = EyeHealthAnalysisInput(
+            completedTargets: completedTargets,
+            missedTargets: missedTargets,
+            totalTargets: targetPoints.count,
+            averageTargetTime: average,
+            detectedBlinks: max(snapshot.blinkCount - blinkBaseline, 0),
+            fatigueEstimate: snapshot.fatigueScore,
+            appearanceEstimate: snapshot.rednessScore,
+            lightLevel: snapshot.lightLevel,
+            hasUsableLight: snapshot.hasUsableLight,
+            recentSessions: store.history.prefix(4).compactMap { session in
+                guard let fatigue = session.cameraFatigueEstimate else { return nil }
+                return EyeHealthTrendPoint(
+                    fatigueEstimate: fatigue,
+                    appearanceEstimate: session.cameraAppearanceEstimate,
+                    exerciseCompletion: session.total > 0 ? Double(session.hits) / Double(session.total) : 0
+                )
+            },
+            lang: lang
         )
+        analysisInput = input
+        let fallback = EyeHealthAnalysisPolicy.fallback(for: input)
+        let session = EyeSessionHistory(
+            mode: .tracking,
+            hits: completedTargets,
+            misses: missedTargets,
+            total: targetPoints.count,
+            avgReaction: average,
+            bestReaction: targetTimes.min(),
+            bestStreak: completedTargets,
+            cameraFatigueEstimate: snapshot.fatigueScore,
+            cameraAppearanceEstimate: snapshot.rednessScore,
+            cameraLightLevel: snapshot.lightLevel,
+            detectedBlinks: input.detectedBlinks,
+            healthAnalysis: fallback
+        )
+        store.addSession(session)
         analyzer.stop()
         withAnimation(reduceMotion ? nil : DS.motionState) { stage = .summary }
+        Task {
+            let report = await eyeHealthCoach.analyze(input)
+            store.updateHealthAnalysis(report, for: session.id)
+        }
     }
 
     private var currentTarget: CGPoint {
