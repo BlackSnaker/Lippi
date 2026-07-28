@@ -11,7 +11,14 @@ export const metadata: Metadata = {
     description:
       "Фокус, умные цели, голосовой помощник и бережная продуктивность на iPhone.",
     type: "website",
-    images: ["/showcase/introducing-lippi.jpg"],
+    images: [
+      {
+        url: "/showcase/introducing-lippi.jpg",
+        width: 3072,
+        height: 2048,
+        alt: "Представляем Lippi — помощника для продуктивности, концентрации и заботы о себе",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -356,9 +363,11 @@ export default function Home() {
           <Image
             src="/showcase/introducing-lippi.jpg"
             alt="Представляем Lippi — помощника для продуктивности, концентрации и заботы о себе"
-            width={1536}
-            height={1024}
+            width={3072}
+            height={2048}
             sizes="(max-width: 900px) 100vw, 1200px"
+            quality={100}
+            unoptimized
           />
         </div>
         <div className="release-copy liquid-glass glass-interactive">
