@@ -2331,6 +2331,7 @@ struct ContentView: View {
     @StateObject private var watchDiscovery = AppleWatchDiscovery.shared
     @State private var tab: AppTab = .today
     @State private var showGoalPlanner = false
+    @State private var showAssistantCalendar = false
     @State private var openGoalProgressSummary = false
     @State private var assistantGoalDraft: String?
     @State private var showVoiceAssistant = false
@@ -2451,6 +2452,14 @@ struct ContentView: View {
         // This keeps voice commands reliable when they originate inside the sheet.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
             showGoalPlanner = true
+        }
+    }
+
+    private func presentCalendarFromAssistant() {
+        showVoiceAssistant = false
+        switchTab(to: .today)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+            showAssistantCalendar = true
         }
     }
 
@@ -2603,6 +2612,13 @@ struct ContentView: View {
         L10n.fmt("health.analytics.minutes_value", lang, max(0, minutes))
     }
 
+    private func assistantDateText(_ date: Date) -> String {
+        date.formatted(
+            Date.FormatStyle(date: .abbreviated, time: .shortened)
+                .locale(Locale(identifier: lang.localeIdentifier))
+        )
+    }
+
     private func assistantMetricsSummary(for period: AppVoiceMetricsPeriod) -> String {
         let todayStats = stats.today
         let weekStats = stats.last7Days
@@ -2672,138 +2688,195 @@ struct ContentView: View {
     }
 
     private func handleAssistantCommand(_ command: AppVoiceCommandEnvelope) {
-        let response: String
-        var didHandleSuccessfully = false
+        var responses: [String] = []
+        for intent in command.intents {
+            let result = executeAssistantIntent(intent)
+            responses.append(result.response)
+            voiceAssistant.recordCommandOutcome(
+                intent: intent,
+                transcript: command.transcript,
+                wasSuccessful: result.wasSuccessful,
+                lang: lang
+            )
+        }
 
-        switch command.intent {
+        voiceAssistant.completePendingCommand(
+            response: responses.joined(separator: " "),
+            lang: lang
+        )
+    }
+
+    private func executeAssistantIntent(
+        _ intent: AppVoiceCommandIntent
+    ) -> (response: String, wasSuccessful: Bool) {
+        switch intent {
         case .addTask(let rawTitle, let category):
             let title = sanitizeVoiceTaskTitle(rawTitle)
             guard !title.isEmpty else {
-                response = L10n.tr("assistant.response.unknown", lang)
-                break
+                return (L10n.tr("assistant.response.unknown", lang), false)
             }
             store.add(TaskItem(title: title, category: category))
             switchTab(to: .tasks)
-            response = L10n.fmt("assistant.response.task_added", lang, title)
-            didHandleSuccessfully = true
+            return (L10n.fmt("assistant.response.task_added", lang, title), true)
+
+        case .addScheduledTask(let rawTitle, let category, let dueDate):
+            let title = sanitizeVoiceTaskTitle(rawTitle)
+            guard !title.isEmpty else {
+                return (L10n.tr("assistant.response.unknown", lang), false)
+            }
+            store.add(TaskItem(title: title, dueDate: dueDate, category: category))
+            switchTab(to: .tasks)
+            return (
+                L10n.fmt(
+                    "assistant.response.task_scheduled",
+                    lang,
+                    title,
+                    assistantDateText(dueDate)
+                ),
+                true
+            )
 
         case .completeTask(let requestedTitle):
             if let task = resolveTaskForVoice(title: requestedTitle, includeCompleted: false) {
                 store.toggle(task.id, stats: stats)
                 switchTab(to: .tasks)
-                response = L10n.fmt("assistant.response.task_completed", lang, task.title)
-                didHandleSuccessfully = true
-            } else {
-                response = L10n.tr("assistant.response.task_not_found", lang)
+                return (L10n.fmt("assistant.response.task_completed", lang, task.title), true)
             }
+            return (L10n.tr("assistant.response.task_not_found", lang), false)
+
+        case .reopenTask(let requestedTitle):
+            if let task = resolveTaskForVoice(title: requestedTitle, includeCompleted: true) {
+                if task.isCompleted { store.toggle(task.id, stats: stats) }
+                switchTab(to: .tasks)
+                return (L10n.fmt("assistant.response.task_reopened", lang, task.title), true)
+            }
+            return (L10n.tr("assistant.response.task_not_found", lang), false)
 
         case .deleteTask(let requestedTitle):
             if let task = resolveTaskForVoice(title: requestedTitle, includeCompleted: true) {
                 store.remove(task.id)
                 switchTab(to: .tasks)
-                response = L10n.fmt("assistant.response.task_deleted", lang, task.title)
-                didHandleSuccessfully = true
-            } else {
-                response = L10n.tr("assistant.response.task_not_found", lang)
+                return (L10n.fmt("assistant.response.task_deleted", lang, task.title), true)
             }
+            return (L10n.tr("assistant.response.task_not_found", lang), false)
+
+        case .rescheduleTask(let requestedTitle, let dueDate):
+            guard var task = resolveTaskForVoice(title: requestedTitle, includeCompleted: false) else {
+                return (L10n.tr("assistant.response.task_not_found", lang), false)
+            }
+            task.dueDate = dueDate
+            store.update(task)
+            switchTab(to: .tasks)
+            return (
+                L10n.fmt(
+                    "assistant.response.task_rescheduled",
+                    lang,
+                    task.title,
+                    assistantDateText(dueDate)
+                ),
+                true
+            )
 
         case .openTab(let requestedTab):
             switchTab(to: requestedTab)
-            response = L10n.fmt("assistant.response.tab_opened", lang, localizedTabTitle(requestedTab))
-            didHandleSuccessfully = true
+            return (L10n.fmt("assistant.response.tab_opened", lang, localizedTabTitle(requestedTab)), true)
+
+        case .openCalendar:
+            presentCalendarFromAssistant()
+            return (L10n.tr("assistant.response.calendar_opened", lang), true)
 
         case .startPomodoro(let requestedMinutes):
             let minutes = max(5, min(120, requestedMinutes ?? pomo.config.focusMinutes))
             switchTab(to: .pomodoro)
             pomo.startFocus(customMinutes: minutes)
-            response = L10n.fmt("assistant.response.pomodoro_started", lang, minutes)
-            didHandleSuccessfully = true
+            return (L10n.fmt("assistant.response.pomodoro_started", lang, minutes), true)
 
         case .pausePomodoro:
             switchTab(to: .pomodoro)
             pomo.pause()
-            response = L10n.tr("assistant.response.pomodoro_paused", lang)
-            didHandleSuccessfully = true
+            return (L10n.tr("assistant.response.pomodoro_paused", lang), true)
 
         case .resumePomodoro:
             switchTab(to: .pomodoro)
             pomo.resume()
-            response = L10n.tr("assistant.response.pomodoro_resumed", lang)
-            didHandleSuccessfully = true
+            return (L10n.tr("assistant.response.pomodoro_resumed", lang), true)
 
         case .startShortBreak:
             switchTab(to: .pomodoro)
             pomo.startShortBreak()
-            response = L10n.tr("assistant.response.short_break_started", lang)
-            didHandleSuccessfully = true
+            return (L10n.tr("assistant.response.short_break_started", lang), true)
 
         case .startLongBreak:
             switchTab(to: .pomodoro)
             pomo.startLongBreak()
-            response = L10n.tr("assistant.response.long_break_started", lang)
-            didHandleSuccessfully = true
+            return (L10n.tr("assistant.response.long_break_started", lang), true)
 
         case .stopPomodoro:
             pomo.stop()
-            response = L10n.tr("assistant.response.pomodoro_stopped", lang)
-            didHandleSuccessfully = true
+            return (L10n.tr("assistant.response.pomodoro_stopped", lang), true)
 
         case .openEyeExercise:
             switchTab(to: .eye)
             showEyes = true
-            response = L10n.tr("assistant.response.eye_opened", lang)
-            didHandleSuccessfully = true
+            return (L10n.tr("assistant.response.eye_opened", lang), true)
 
         case .summarizeMetrics(let period):
-            response = assistantMetricsSummary(for: period)
-            didHandleSuccessfully = true
+            return (assistantMetricsSummary(for: period), true)
 
         case .openSmartGoals:
             presentGoalPlannerFromAssistant()
-            response = L10n.tr("assistant.response.smart_goals_opened", lang)
-            didHandleSuccessfully = true
+            return (L10n.tr("assistant.response.smart_goals_opened", lang), true)
 
         case .createSmartGoal(let description):
             let prepared = sanitizeVoiceGoalDescription(description)
             presentGoalPlannerFromAssistant(initialGoal: prepared)
             if let prepared {
-                response = L10n.fmt(
-                    "assistant.response.smart_goal_prepared",
-                    lang,
-                    prepared
+                return (
+                    L10n.fmt("assistant.response.smart_goal_prepared", lang, prepared),
+                    true
                 )
-            } else {
-                response = L10n.tr("assistant.response.smart_goal_ready", lang)
             }
-            didHandleSuccessfully = true
+            return (L10n.tr("assistant.response.smart_goal_ready", lang), true)
 
         case .showSmartGoalProgress:
             if hasSavedSmartGoal {
                 presentGoalPlannerFromAssistant(showProgress: true)
-                response = L10n.tr(
-                    "assistant.response.goal_progress_opened",
-                    lang
-                )
-            } else {
-                presentGoalPlannerFromAssistant()
-                response = L10n.tr(
-                    "assistant.response.goal_progress_missing",
-                    lang
-                )
+                return (L10n.tr("assistant.response.goal_progress_opened", lang), true)
             }
-            didHandleSuccessfully = true
+            presentGoalPlannerFromAssistant()
+            return (L10n.tr("assistant.response.goal_progress_missing", lang), true)
+
+        case .showCareRecommendation:
+            refreshGoalCareNotifications()
+            if let suggestion = careCenter.primarySuggestion {
+                return ("\(suggestion.title). \(suggestion.body)", true)
+            }
+            return (L10n.tr("assistant.response.care_balanced", lang), true)
+
+        case .logCareAction(let action):
+            guard action == .logWater || action == .logMeal || action == .logMovement else {
+                return (L10n.tr("assistant.response.unknown", lang), false)
+            }
+            careCenter.record(action)
+            refreshGoalCareNotifications()
+            let key: String
+            switch action {
+            case .logWater: key = "assistant.response.water_logged"
+            case .logMeal: key = "assistant.response.meal_logged"
+            case .logMovement: key = "assistant.response.movement_logged"
+            default: key = "assistant.response.unknown"
+            }
+            return (L10n.tr(key, lang), true)
+
+        case .showCapabilities:
+            return (L10n.tr("assistant.response.capabilities", lang), true)
+
+        case .clarifyAction(let topic):
+            return (L10n.fmt("assistant.response.clarify_action", lang, topic), true)
 
         case .unknown:
-            response = L10n.tr("assistant.response.unknown", lang)
+            return (L10n.tr("assistant.response.unknown", lang), false)
         }
-
-        voiceAssistant.recordCommandOutcome(
-            intent: command.intent,
-            transcript: command.transcript,
-            wasSuccessful: didHandleSuccessfully,
-            lang: lang
-        )
-        voiceAssistant.completePendingCommand(response: response, lang: lang)
     }
 
     private var bottomToolbarOverlay: some View {
@@ -2955,6 +3028,20 @@ struct ContentView: View {
             AppVoiceAssistantSheet(assistant: voiceAssistant, lang: lang)
                 .presentationDetents([.fraction(0.72), .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showAssistantCalendar) {
+            LippiCalendarView {
+                showAssistantCalendar = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                    showGoalPlanner = true
+                }
+            }
+            .environmentObject(store)
+            .environmentObject(stats)
+            .environmentObject(healthKit)
+            .environmentObject(careCenter)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showGoalPlanner, onDismiss: {
             openGoalProgressSummary = false

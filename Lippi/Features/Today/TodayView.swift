@@ -15,6 +15,7 @@ struct TodayView: View {
     @State private var showAdd = false
     @State private var showImportantNow = false
     @State private var showStats = false
+    @State private var showCalendar = false
     @Binding var showGoalPlanner: Bool
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
@@ -102,6 +103,9 @@ struct TodayView: View {
             .toolbar {
                 if #available(iOS 26.0, *) {
                     ToolbarItemGroup(placement: .topBarTrailing) {
+                        calendarToolbarButton
+                            .buttonStyle(.glass)
+
                         smartGoalsToolbarButton
                             .buttonStyle(.glass)
 
@@ -111,6 +115,7 @@ struct TodayView: View {
                     .sharedBackgroundVisibility(.visible)
                 } else {
                     ToolbarItemGroup(placement: .topBarTrailing) {
+                        calendarToolbarButton
                         smartGoalsToolbarButton
                         addTaskToolbarButton
                     }
@@ -134,12 +139,30 @@ struct TodayView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $showCalendar) {
+                LippiCalendarView {
+                    showCalendar = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                        showGoalPlanner = true
+                    }
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
         }
         // ✅ Убираем системный фон NavigationStack “на всякий”
         .background(Color.clear)
     }
 
     // MARK: - Subviews
+    private var calendarToolbarButton: some View {
+        Button { showCalendar = true } label: {
+            Image(safeSystemName: "calendar", fallback: "calendar.circle")
+        }
+        .accessibilityLabel(s("calendar.open"))
+        .accessibilityHint(s("calendar.open_hint"))
+    }
+
     private var smartGoalsToolbarButton: some View {
         Button { showGoalPlanner = true } label: {
             Image(safeSystemName: "wand.and.stars", fallback: "sparkles")

@@ -35,6 +35,68 @@ struct NeuralVoiceConfigurationTests {
         )
     }
 
+    @Test("Russian speech expands time, percentages, identifiers, and counters")
+    func normalizesRussianSpeechValues() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "В 15:30 готово 64%, профиль F2, осталось 3 задачи.",
+            language: .ru
+        )
+
+        #expect(
+            spoken
+                == "В пятнадцать часов тридцать минут готово шестьдесят четыре процента, профиль эф два, осталось три задачи."
+        )
+    }
+
+    @Test("English speech handles leading-zero time and progress")
+    func normalizesEnglishSpeechValues() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "At 9:05, progress is 27% and 2 tasks remain.",
+            language: .en
+        )
+
+        #expect(spoken == "At nine oh five, progress is twenty seven percent and two tasks remain.")
+    }
+
+    @Test("Russian product names and dates become pronounceable")
+    func normalizesRussianProductNamesAndDates() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Lippi на iPhone: встреча 30.07.2026, версия R1.",
+            language: .ru
+        )
+
+        #expect(spoken.contains("Липпи на айфон"))
+        #expect(spoken.contains("тридцатое июля две тысячи двадцать шестого года"))
+        #expect(spoken.contains("ар один"))
+        let containsNumber = spoken.contains(where: { $0.isNumber })
+        #expect(!containsNumber)
+    }
+
+    @Test("Health measurements are expanded with natural Russian forms")
+    func normalizesHealthMeasurements() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Пройдено 4,8 км и 572 шага за 25 мин. Пульс — 64 BPM.",
+            language: .ru
+        )
+
+        #expect(spoken.contains("четыре целых восемь километра"))
+        #expect(spoken.contains("пятьсот семьдесят два шага"))
+        #expect(spoken.contains("двадцать пять минут"))
+        #expect(spoken.contains("шестьдесят четыре ударов в минуту"))
+    }
+
+    @Test("Phone numbers are spoken digit by digit")
+    func normalizesPhoneNumberDigitByDigit() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Позвони +7 901 205-04-03.",
+            language: .ru
+        )
+
+        #expect(spoken.contains("плюс, семь, девять, ноль, один"))
+        let containsNumber = spoken.contains(where: { $0.isNumber })
+        #expect(!containsNumber)
+    }
+
     @Test("Voice archive metadata stays pinned")
     func pinsVoiceArchive() {
         let descriptor = LocalVoiceModelDescriptor.recommended

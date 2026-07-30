@@ -22,9 +22,13 @@ enum AppVoiceMetricsPeriod: Equatable {
 
 enum AppVoiceCommandIntent: Equatable {
     case addTask(title: String, category: TaskCategory)
+    case addScheduledTask(title: String, category: TaskCategory, dueDate: Date)
     case completeTask(title: String?)
+    case reopenTask(title: String?)
     case deleteTask(title: String?)
+    case rescheduleTask(title: String?, dueDate: Date)
     case openTab(AppTab)
+    case openCalendar
     case startPomodoro(minutes: Int?)
     case pausePomodoro
     case resumePomodoro
@@ -36,13 +40,20 @@ enum AppVoiceCommandIntent: Equatable {
     case openSmartGoals
     case createSmartGoal(description: String?)
     case showSmartGoalProgress
+    case showCareRecommendation
+    case logCareAction(LippiCareAction)
+    case showCapabilities
+    case clarifyAction(topic: String)
     case unknown
 }
 
 private enum AppVoiceIntentKind: String, Codable, CaseIterable {
     case addTask
+    case addScheduledTask
     case completeTask
+    case reopenTask
     case deleteTask
+    case rescheduleTask
     case openTabToday
     case openTabTasks
     case openTabPomodoro
@@ -50,6 +61,7 @@ private enum AppVoiceIntentKind: String, Codable, CaseIterable {
     case openTabHealth
     case openTabEye
     case openTabSettings
+    case openCalendar
     case startPomodoro
     case pausePomodoro
     case resumePomodoro
@@ -62,16 +74,28 @@ private enum AppVoiceIntentKind: String, Codable, CaseIterable {
     case openSmartGoals
     case createSmartGoal
     case showSmartGoalProgress
+    case showCareRecommendation
+    case logMeal
+    case logMovement
+    case logWater
+    case showCapabilities
+    case clarifyAction
     case unknown
 
     init(intent: AppVoiceCommandIntent) {
         switch intent {
         case .addTask:
             self = .addTask
+        case .addScheduledTask:
+            self = .addScheduledTask
         case .completeTask:
             self = .completeTask
+        case .reopenTask:
+            self = .reopenTask
         case .deleteTask:
             self = .deleteTask
+        case .rescheduleTask:
+            self = .rescheduleTask
         case .openTab(let tab):
             switch tab {
             case .today: self = .openTabToday
@@ -82,6 +106,8 @@ private enum AppVoiceIntentKind: String, Codable, CaseIterable {
             case .eye: self = .openTabEye
             case .settings: self = .openTabSettings
             }
+        case .openCalendar:
+            self = .openCalendar
         case .startPomodoro:
             self = .startPomodoro
         case .pausePomodoro:
@@ -107,6 +133,22 @@ private enum AppVoiceIntentKind: String, Codable, CaseIterable {
             self = .createSmartGoal
         case .showSmartGoalProgress:
             self = .showSmartGoalProgress
+        case .showCareRecommendation:
+            self = .showCareRecommendation
+        case .logCareAction(let action):
+            switch action {
+            case .logMeal: self = .logMeal
+            case .logMovement: self = .logMovement
+            case .logWater: self = .logWater
+            case .openEyes: self = .openEyeExercise
+            case .openRecovery: self = .openTabBreak
+            case .openGoal: self = .openSmartGoals
+            case .none: self = .unknown
+            }
+        case .showCapabilities:
+            self = .showCapabilities
+        case .clarifyAction:
+            self = .clarifyAction
         case .unknown:
             self = .unknown
         }
@@ -116,13 +158,92 @@ private enum AppVoiceIntentKind: String, Codable, CaseIterable {
 struct AppVoiceCommandEnvelope: Identifiable, Equatable {
     let id = UUID()
     let transcript: String
-    let intent: AppVoiceCommandIntent
+    let intents: [AppVoiceCommandIntent]
+
+    var intent: AppVoiceCommandIntent { intents.first ?? .unknown }
+
+    init(transcript: String, intent: AppVoiceCommandIntent) {
+        self.transcript = transcript
+        self.intents = [intent]
+    }
+
+    init(transcript: String, intents: [AppVoiceCommandIntent]) {
+        self.transcript = transcript
+        self.intents = intents.isEmpty ? [.unknown] : intents
+    }
 }
 
 enum AppVoiceCommandParser {
-    static func parse(_ text: String, lang: AppLang, context: AppVoiceCommandIntent? = nil) -> AppVoiceCommandIntent {
+    static func parse(
+        _ text: String,
+        lang: AppLang,
+        context: AppVoiceCommandIntent? = nil,
+        now: Date = .now,
+        calendar: Calendar = .current
+    ) -> AppVoiceCommandIntent {
         let normalized = normalize(text)
         guard !normalized.isEmpty else { return .unknown }
+
+        return parseSingle(
+            normalized,
+            lang: lang,
+            contextHistory: context.map { [$0] } ?? [],
+            now: now,
+            calendar: calendar
+        )
+    }
+
+    static func parseAll(
+        _ text: String,
+        lang: AppLang,
+        contextHistory: [AppVoiceCommandIntent] = [],
+        now: Date = .now,
+        calendar: Calendar = .current
+    ) -> [AppVoiceCommandIntent] {
+        let parts = splitCompoundRequest(text)
+        guard !parts.isEmpty else { return [.unknown] }
+
+        var rollingContext = contextHistory
+        var intents: [AppVoiceCommandIntent] = []
+        for part in parts {
+            let normalized = normalize(part)
+            guard !normalized.isEmpty else { continue }
+            let intent = parseSingle(
+                normalized,
+                lang: lang,
+                contextHistory: rollingContext,
+                now: now,
+                calendar: calendar
+            )
+            intents.append(intent)
+            if intent != .unknown {
+                rollingContext.append(intent)
+                if rollingContext.count > 8 {
+                    rollingContext.removeFirst(rollingContext.count - 8)
+                }
+            }
+        }
+        return intents.isEmpty ? [.unknown] : intents
+    }
+
+    private static func parseSingle(
+        _ normalized: String,
+        lang: AppLang,
+        contextHistory: [AppVoiceCommandIntent],
+        now: Date,
+        calendar: Calendar
+    ) -> AppVoiceCommandIntent {
+        let context = contextHistory.last
+
+        if let referenceIntent = resolveConversationReference(
+            in: normalized,
+            lang: lang,
+            contextHistory: contextHistory,
+            now: now,
+            calendar: calendar
+        ) {
+            return referenceIntent
+        }
 
         if let contextualIntent = resolveContextualIntent(
             in: normalized,
@@ -130,6 +251,44 @@ enum AppVoiceCommandParser {
             context: context
         ) {
             return contextualIntent
+        }
+
+        if isCapabilitiesRequest(normalized) {
+            return .showCapabilities
+        }
+
+        if let careAction = detectCareLogAction(in: normalized) {
+            return .logCareAction(careAction)
+        }
+
+        if isCareRecommendationRequest(normalized) {
+            return .showCareRecommendation
+        }
+
+        if isOpenCalendarRequest(normalized) {
+            return .openCalendar
+        }
+
+        if isRescheduleTask(normalized),
+           let temporal = AppVoiceTemporalParser.resolve(
+                in: normalized,
+                lang: lang,
+                now: now,
+                calendar: calendar
+            ) {
+            return .rescheduleTask(
+                title: extractRescheduledTaskTitle(from: normalized, lang: lang),
+                dueDate: temporal.dueDate
+            )
+        }
+
+        if isReopenTask(normalized) {
+            return .reopenTask(
+                title: extractFlexibleTaskTitle(
+                    from: normalized,
+                    actionStems: reopenTaskActionStems
+                )
+            )
         }
 
         if isPausePomodoro(normalized) {
@@ -163,16 +322,26 @@ enum AppVoiceCommandParser {
         }
 
         if let taskTitle = extractSuffix(in: normalized, prefixes: addTaskPrefixes) {
-            let category = detectCategory(in: normalized, lang: lang)
-            return .addTask(title: taskTitle, category: category)
+            return taskCreationIntent(
+                title: taskTitle,
+                sourceText: normalized,
+                lang: lang,
+                now: now,
+                calendar: calendar
+            )
         }
 
         if let taskTitle = extractFlexibleTaskTitle(
             from: normalized,
             actionStems: addTaskActionStems
         ) {
-            let category = detectCategory(in: taskTitle, lang: lang)
-            return .addTask(title: taskTitle, category: category)
+            return taskCreationIntent(
+                title: taskTitle,
+                sourceText: normalized,
+                lang: lang,
+                now: now,
+                calendar: calendar
+            )
         }
 
         if isCompleteTask(normalized) {
@@ -219,7 +388,14 @@ enum AppVoiceCommandParser {
             return aiIntent
         }
 
-        return .unknown
+        if let goal = implicitSmartGoalDescription(from: normalized) {
+            return .createSmartGoal(description: goal)
+        }
+
+        let topic = cleanActionPayload(normalized)
+        return topic.split(separator: " ").count >= 2
+            ? .clarifyAction(topic: topic)
+            : .unknown
     }
 
     private static func normalize(_ text: String) -> String {
@@ -233,6 +409,202 @@ enum AppVoiceCommandParser {
 
     private static func containsAny(_ source: String, keywords: [String]) -> Bool {
         keywords.contains { source.contains(normalize($0)) }
+    }
+
+    private static func splitCompoundRequest(_ text: String) -> [String] {
+        var prepared = text
+        let marker = " __lippi_next_command__ "
+        let boundaryPatterns = [
+            #"\s*;\s*"#,
+            #"\s+а\s+потом\s+"#,
+            #"\s+и\s+потом\s+"#,
+            #"\s+после\s+этого\s+"#,
+            #"\s+затем\s+"#,
+            #"\s+and\s+then\s+"#,
+            #"\s+after\s+that\s+"#,
+            #"\s+then\s+"#,
+            #"\s+und\s+dann\s+"#,
+            #"\s+danach\s+"#,
+            #"\s+anschliessend\s+"#,
+            #"\s+y\s+luego\s+"#,
+            #"\s+despues\s+"#
+        ]
+        for pattern in boundaryPatterns {
+            prepared = prepared.replacingOccurrences(
+                of: pattern,
+                with: marker,
+                options: [.regularExpression, .caseInsensitive]
+            )
+        }
+
+        let actionBoundary = #"\s+(?:и|а|and|und|y)\s+(?=(?:добав|созд|запиш|откро|покаж|запуст|начн|постав|продолж|останов|удал|заверш|выполн|перенес|перен|отмет|add|create|open|show|start|pause|resume|stop|delete|complete|move|reschedule|offne|zeig|starte|losch|abre|muestra|inicia|elimina))"#
+        prepared = prepared.replacingOccurrences(
+            of: actionBoundary,
+            with: marker,
+            options: [.regularExpression, .caseInsensitive]
+        )
+
+        return prepared
+            .components(separatedBy: marker)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private static func taskCreationIntent(
+        title: String,
+        sourceText: String,
+        lang: AppLang,
+        now: Date,
+        calendar: Calendar
+    ) -> AppVoiceCommandIntent {
+        let temporal = AppVoiceTemporalParser.resolve(
+            in: sourceText,
+            lang: lang,
+            now: now,
+            calendar: calendar
+        )
+        let preparedTitle = temporal.map { _ in
+            AppVoiceTemporalParser.removingTemporalPhrases(from: title, lang: lang)
+        } ?? title
+        let cleanedTitle = cleanActionPayload(preparedTitle)
+        let category = detectCategory(in: cleanedTitle, lang: lang)
+
+        guard let temporal else {
+            return .addTask(title: cleanedTitle, category: category)
+        }
+        return .addScheduledTask(
+            title: cleanedTitle,
+            category: category,
+            dueDate: temporal.dueDate
+        )
+    }
+
+    private static func isCapabilitiesRequest(_ text: String) -> Bool {
+        containsAny(
+            text,
+            keywords: [
+                "что ты умеешь", "чем ты можешь помочь", "какие команды", "твои возможности",
+                "what can you do", "how can you help", "commands", "capabilities",
+                "was kannst du", "welche befehle", "funktionen",
+                "que puedes hacer", "como puedes ayudar", "comandos"
+            ]
+        )
+    }
+
+    private static func detectCareLogAction(in text: String) -> LippiCareAction? {
+        let logWords = [
+            "отмет", "запиш", "зафикс", "я выпил", "я попил", "я поел", "я перекусил",
+            "я прошелся", "я прогулялся", "я размялся", "готово",
+            "log", "record", "i drank", "i had water", "i ate", "i walked", "done",
+            "eintragen", "getrunken", "gegessen", "gegangen",
+            "registr", "bebi", "comi", "camine", "hecho"
+        ]
+        guard containsAny(text, keywords: logWords) else { return nil }
+
+        // «Запиши задачу купить воду» — это задача, а не отметка о выпитом стакане.
+        // Действие заботы считаем выполненным только без явной сущности задачи либо
+        // когда пользователь прямо сообщает о совершённом действии.
+        let explicitSelfReport = containsAny(text, keywords: [
+            "я выпил", "я попил", "я поел", "я перекусил", "я прошелся", "я прогулялся", "я размялся",
+            "i drank", "i had water", "i ate", "i walked",
+            "ich habe getrunken", "ich habe gegessen", "ich bin gegangen",
+            "he bebido", "he comido", "he caminado"
+        ])
+        guard !containsAny(text, keywords: taskEntityStems) || explicitSelfReport else { return nil }
+
+        if containsAny(text, keywords: [
+            "вод", "пить", "стакан", "water", "drink", "wasser", "trink", "agua", "bebi"
+        ]) {
+            return .logWater
+        }
+        if containsAny(text, keywords: [
+            "поел", "еда", "прием пищи", "завтрак", "обед", "ужин", "перекус",
+            "ate", "meal", "breakfast", "lunch", "dinner",
+            "gegessen", "mahlzeit", "comi", "comida"
+        ]) {
+            return .logMeal
+        }
+        if containsAny(text, keywords: [
+            "прошелся", "прогуля", "размял", "движен", "шаг",
+            "walk", "movement", "stretch", "gegangen", "beweg", "camine", "movimiento"
+        ]) {
+            return .logMovement
+        }
+        return nil
+    }
+
+    private static func isCareRecommendationRequest(_ text: String) -> Bool {
+        let question = containsAny(
+            text,
+            keywords: [
+                "что мне сейчас", "что лучше сделать", "что посоветуешь", "как мое состояние",
+                "как я себя чувствую", "нужен ли отдых", "мне нужен отдых", "я устал",
+                "what should i do", "what do you recommend", "how am i doing", "i am tired",
+                "was soll ich", "was empfiehlst du", "ich bin mude",
+                "que debo hacer", "que recomiendas", "estoy cansado", "estoy cansada"
+            ]
+        )
+        let excludesGoal = containsAny(text, keywords: strongSmartGoalEntityWords)
+        return question && !excludesGoal
+    }
+
+    private static func isOpenCalendarRequest(_ text: String) -> Bool {
+        let calendarWords = [
+            "календар", "расписан", "планы на", "мой день", "что у меня сегодня",
+            "calendar", "schedule", "plans for", "my day",
+            "kalender", "zeitplan", "mein tag",
+            "calendario", "agenda", "mi dia"
+        ]
+        let openWords = [
+            "откро", "покаж", "что у меня", "посмотр", "open", "show", "what is",
+            "offne", "zeig", "abre", "muestra"
+        ]
+        let clearlyAboutGoal = containsAny(text, keywords: [
+            "достижен", "дорожн", "умн цель", "goal roadmap", "smart goal",
+            "zielplan", "objetivo inteligente"
+        ])
+        return !clearlyAboutGoal
+            && containsAny(text, keywords: calendarWords)
+            && (containsAny(text, keywords: openWords) || text.split(separator: " ").count <= 3)
+    }
+
+    private static let rescheduleTaskActionStems = [
+        "перенес", "перенеси", "перен", "сдвин", "передвин", "назнач",
+        "reschedule", "move", "postpone",
+        "verschieb", "verleg",
+        "reprogram", "mueve", "pospon"
+    ]
+
+    private static func isRescheduleTask(_ text: String) -> Bool {
+        containsAny(text, keywords: rescheduleTaskActionStems)
+            && (containsAny(text, keywords: taskEntityStems)
+                || containsAny(text, keywords: ["ее", "её", "его", "эту", "ту", "it", "this one", "sie", "es", "la", "lo"])
+                || text.split(separator: " ").count >= 3)
+    }
+
+    private static func extractRescheduledTaskTitle(
+        from text: String,
+        lang: AppLang
+    ) -> String? {
+        var payload = AppVoiceTemporalParser.removingTemporalPhrases(from: text, lang: lang)
+        payload = removingFirstKeyword(from: payload, keywords: rescheduleTaskActionStems)
+        payload = removingFirstKeyword(from: payload, keywords: taskEntityStems)
+        let cleaned = cleanActionPayload(payload)
+        let references = ["ее", "её", "его", "эту", "ту", "it", "this one", "sie", "es", "la", "lo"]
+        if cleaned.isEmpty || references.contains(cleaned) { return nil }
+        return cleaned
+    }
+
+    private static let reopenTaskActionStems = [
+        "верни", "вернуть", "возобнови", "снова актив", "отмени выполнение",
+        "reopen", "restore", "mark incomplete", "undo completion",
+        "wieder offnen", "wiederherstell", "reaktivier",
+        "reabrir", "restaur", "marcar pendiente"
+    ]
+
+    private static func isReopenTask(_ text: String) -> Bool {
+        containsAny(text, keywords: reopenTaskActionStems)
+            && containsAny(text, keywords: taskEntityStems + ["ее", "её", "it", "sie", "la"])
     }
 
     private static let addTaskPrefixes = [
@@ -390,10 +762,10 @@ enum AppVoiceCommandParser {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         let leadingFillers = [
-            "пожалуйста", "мне", "для меня", "еще", "ещё", "и еще", "и ещё",
+            "пожалуйста", "мне нужно", "мне надо", "нужно", "надо", "мне", "для меня", "еще", "ещё", "и еще", "и ещё",
             "что", "чтобы", "по", "для", "в", "идею",
             "добавь", "добавить", "создай", "создать", "запиши", "задачу",
-            "please", "for me", "also", "and another", "to", "that",
+            "please", "i need to", "i should", "for me", "also", "and another", "to", "that",
             "add", "create", "task",
             "bitte", "fur mich", "noch", "zu", "dass",
             "hinzufugen", "erstellen", "aufgabe",
@@ -646,6 +1018,104 @@ enum AppVoiceCommandParser {
         return containsAny(text, keywords: summaryWords)
     }
 
+    private static func resolveConversationReference(
+        in text: String,
+        lang: AppLang,
+        contextHistory: [AppVoiceCommandIntent],
+        now: Date,
+        calendar: Calendar
+    ) -> AppVoiceCommandIntent? {
+        guard !contextHistory.isEmpty else { return nil }
+
+        if let clarification = contextHistory.reversed().compactMap({ intent -> String? in
+            if case .clarifyAction(let topic) = intent { return topic }
+            return nil
+        }).first {
+            if containsAny(text, keywords: [
+                "как задачу", "в задачи", "сделай задачей", "task", "as a task",
+                "als aufgabe", "como tarea"
+            ]) {
+                return taskCreationIntent(
+                    title: clarification,
+                    sourceText: text,
+                    lang: lang,
+                    now: now,
+                    calendar: calendar
+                )
+            }
+            if containsAny(text, keywords: [
+                "как цель", "в умную цель", "дорожную карту", "smart goal", "roadmap",
+                "als ziel", "fahrplan", "como meta", "hoja de ruta"
+            ]) {
+                return .createSmartGoal(description: clarification)
+            }
+        }
+
+        let lastTaskContext = contextHistory.reversed().compactMap { intent -> (title: String?, dueDate: Date?)? in
+            switch intent {
+            case .addTask(let title, _):
+                return (title, nil)
+            case .addScheduledTask(let title, _, let dueDate):
+                return (title, dueDate)
+            case .completeTask(let title), .reopenTask(let title):
+                return (title, nil)
+            case .rescheduleTask(let title, let dueDate):
+                return (title, dueDate)
+            default:
+                return nil
+            }
+        }.first
+
+        let hasReference = containsAny(
+            text,
+            keywords: [
+                "ее", "её", "его", "эту", "ту задачу", "предыдущую", "последнюю",
+                "it", "that task", "the previous one", "last one",
+                "sie", "diese aufgabe", "letzte aufgabe",
+                "la", "esa tarea", "la anterior", "ultima tarea"
+            ]
+        )
+
+        if let lastTaskContext, hasReference {
+            if containsAny(text, keywords: completeTaskActionStems) {
+                return .completeTask(title: lastTaskContext.title)
+            }
+            if containsAny(text, keywords: reopenTaskActionStems) {
+                return .reopenTask(title: lastTaskContext.title)
+            }
+            if containsAny(text, keywords: deleteTaskActionStems) {
+                return .deleteTask(title: lastTaskContext.title)
+            }
+            if containsAny(text, keywords: rescheduleTaskActionStems),
+               let temporal = AppVoiceTemporalParser.resolve(
+                    in: text,
+                    lang: lang,
+                    now: now,
+                    calendar: calendar
+               ) {
+                return .rescheduleTask(title: lastTaskContext.title, dueDate: temporal.dueDate)
+            }
+        }
+
+        if let lastTaskContext,
+           let inheritedDate = lastTaskContext.dueDate,
+           containsAny(text, keywords: [
+                "туда же", "на это же время", "в тот же день",
+                "same time", "same day", "there too",
+                "zur gleichen zeit", "am selben tag",
+                "a la misma hora", "el mismo dia"
+           ]),
+           let title = contextualTaskTitle(from: text, actionStems: addTaskActionStems) {
+            return .addScheduledTask(
+                title: AppVoiceTemporalParser.removingReferencePhrases(from: title),
+                category: detectCategory(in: title, lang: lang),
+                dueDate: inheritedDate
+            )
+        }
+
+        return nil
+    }
+
     private static func resolveContextualIntent(
         in text: String,
         lang: AppLang,
@@ -710,7 +1180,7 @@ enum AppVoiceCommandParser {
             }
             return nil
 
-        case .addTask, .openTab(.tasks):
+        case .addTask, .addScheduledTask, .openTab(.tasks):
             if containsAny(text, keywords: completeTaskActionStems) {
                 return .completeTask(
                     title: contextualTaskTitle(
@@ -738,7 +1208,10 @@ enum AppVoiceCommandParser {
             }
             return nil
 
-        case .completeTask, .deleteTask, .openTab, .openEyeExercise, .unknown:
+        case .completeTask, .reopenTask, .deleteTask,
+             .rescheduleTask, .openTab, .openCalendar, .openEyeExercise,
+             .showCareRecommendation, .logCareAction, .showCapabilities,
+             .clarifyAction, .unknown:
             return nil
         }
     }
@@ -788,6 +1261,24 @@ enum AppVoiceCommandParser {
         return cleaned.isEmpty ? nil : cleaned
     }
 
+    private static func implicitSmartGoalDescription(from text: String) -> String? {
+        let prefixes = [
+            "помоги мне спланировать", "помоги спланировать", "как мне добиться",
+            "как мне достичь", "разбей на шаги", "построй маршрут к",
+            "help me plan", "how can i achieve", "break down", "map out",
+            "hilf mir planen", "wie erreiche ich", "teile in schritte",
+            "ayudame a planificar", "como puedo lograr", "divide en pasos"
+        ]
+        guard containsAny(text, keywords: prefixes) else { return nil }
+        if let extracted = extractSuffix(in: text, prefixes: prefixes) {
+            return extracted
+        }
+        let cleaned = cleanActionPayload(
+            removingFirstKeyword(from: text, keywords: prefixes)
+        )
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
     private static func extractMinutes(from text: String) -> Int? {
         guard let match = text.range(of: "\\b\\d{1,3}\\b", options: .regularExpression),
               let number = Int(text[match]) else {
@@ -809,7 +1300,7 @@ enum AppVoiceCommandParser {
 
     private static func detectCategory(in text: String, lang: AppLang) -> TaskCategory {
         let rules: [(TaskCategory, [String])] = [
-            (.work, ["работ", "проект", "клиент", "work", "job", "arbeit", "trabajo"]),
+            (.work, ["работ", "проект", "клиент", "презентац", "work", "job", "presentation", "arbeit", "prasentation", "trabajo", "presentacion"]),
             (.study, ["учеб", "урок", "экзам", "study", "learn", "lernen", "estudio"]),
             (.health, ["здоров", "спорт", "трен", "дыхан", "health", "workout", "gesund", "salud"]),
             (.rest, ["отдых", "перерыв", "сон", "rest", "break", "ruhe", "descanso"]),
@@ -1083,10 +1574,13 @@ private final class AppVoiceBehaviorModel {
 
     private func quickCommandKey(for kind: AppVoiceIntentKind) -> String? {
         switch kind {
-        case .addTask:
+        case .addTask, .addScheduledTask:
             return "assistant.quick.add"
-        case .openTabToday, .openTabTasks:
+        case .openTabToday, .openTabTasks, .completeTask, .reopenTask,
+             .deleteTask, .rescheduleTask:
             return "assistant.quick.tasks"
+        case .openCalendar:
+            return "assistant.quick.calendar"
         case .summarizeMetricsToday, .summarizeMetricsWeek:
             return "assistant.quick.summary"
         case .openSmartGoals, .createSmartGoal:
@@ -1103,8 +1597,10 @@ private final class AppVoiceBehaviorModel {
             return "assistant.quick.break"
         case .openEyeExercise, .openTabEye:
             return "assistant.quick.eye"
-        case .deleteTask, .completeTask, .openTabPomodoro, .openTabHealth,
-             .openTabSettings, .stopPomodoro, .unknown:
+        case .showCareRecommendation, .logMeal, .logMovement, .logWater:
+            return "assistant.quick.care"
+        case .openTabPomodoro, .openTabHealth, .openTabSettings,
+             .stopPomodoro, .showCapabilities, .clarifyAction, .unknown:
             return nil
         }
     }
@@ -1330,6 +1826,19 @@ private final class AppEmbeddedAIInterpreter {
         let longBreakWords = ["длин", "больш", "long", "lange", "largo"]
         let breakWords = ["перерыв", "break", "pause", "descanso"]
         let eyeWords = ["глаз", "eyes", "eye", "augen", "ojos"]
+        let calendarWords = [
+            "календар", "расписан", "планы", "calendar", "schedule",
+            "kalender", "zeitplan", "calendario", "agenda"
+        ]
+        let careWords = [
+            "состояни", "самочувств", "отдых", "совет", "рекоменд", "устал",
+            "wellbeing", "recovery", "recommend", "tired",
+            "erholung", "empfehl", "mude", "descanso", "recomiend", "cansad"
+        ]
+        let capabilityWords = [
+            "умеешь", "возможност", "команд", "capabilities", "commands", "help",
+            "funktionen", "befehle", "comandos", "ayuda"
+        ]
         let summaryWords = [
             "сводк",
             "итог",
@@ -1375,6 +1884,24 @@ private final class AppEmbeddedAIInterpreter {
 
             let score = 0.55 + (0.30 * features.score(stems: summaryWords))
             candidates.append(.init(intent: .summarizeMetrics(period: period), score: score))
+        }
+
+        if features.containsAny(stems: calendarWords),
+           features.containsAny(stems: openWords + ["сегодня", "today", "heute", "hoy"]) {
+            let score = 0.66
+                + (0.14 * features.score(stems: calendarWords))
+                + (0.08 * features.score(stems: openWords))
+            candidates.append(.init(intent: .openCalendar, score: score))
+        }
+
+        if features.containsAny(stems: careWords) {
+            let score = 0.63 + (0.18 * features.score(stems: careWords))
+            candidates.append(.init(intent: .showCareRecommendation, score: score))
+        }
+
+        if features.containsAny(stems: capabilityWords) {
+            let score = 0.64 + (0.18 * features.score(stems: capabilityWords))
+            candidates.append(.init(intent: .showCapabilities, score: score))
         }
 
         if features.containsAny(stems: smartGoalWords),
@@ -1595,7 +2122,7 @@ private final class AppEmbeddedAIInterpreter {
 
     private func detectCategory(in text: String, lang: AppLang) -> TaskCategory {
         let rules: [(TaskCategory, [String])] = [
-            (.work, ["работ", "проект", "клиент", "work", "job", "arbeit", "trabajo"]),
+            (.work, ["работ", "проект", "клиент", "презентац", "work", "job", "presentation", "arbeit", "prasentation", "trabajo", "presentacion"]),
             (.study, ["учеб", "урок", "экзам", "study", "learn", "lernen", "estudio"]),
             (.health, ["здоров", "спорт", "трен", "дыхан", "health", "workout", "gesund", "salud"]),
             (.rest, ["отдых", "перерыв", "сон", "rest", "break", "ruhe", "descanso"]),
@@ -1744,11 +2271,14 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
     private var audioSessionDeactivateTask: Task<Void, Never>?
     private var silenceCommitTask: Task<Void, Never>?
     private var lastPartialTranscript = ""
-    private var lastResolvedIntent: AppVoiceCommandIntent?
-    private var lastResolvedAt: Date?
+    private struct ConversationTurn {
+        let intent: AppVoiceCommandIntent
+        let resolvedAt: Date
+    }
+    private var conversationHistory: [ConversationTurn] = []
 
     private let silenceCommitDelay: UInt64 = 1_150_000_000
-    private let conversationContextLifetime: TimeInterval = 6 * 60
+    private let conversationContextLifetime: TimeInterval = 12 * 60
 
     private var neuralVoicePlayer: AVAudioPlayer?
     private var neuralSpeechTask: Task<Void, Never>?
@@ -1759,6 +2289,8 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
         "assistant.quick.smart_goal",
         "assistant.quick.goal_progress",
         "assistant.quick.tasks",
+        "assistant.quick.calendar",
+        "assistant.quick.care",
         "assistant.quick.summary",
         "assistant.quick.pomodoro",
         "assistant.quick.pause",
@@ -1880,8 +2412,10 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
             context: previousContext,
             lang: lang
         )
-        lastResolvedIntent = intent
-        lastResolvedAt = .now
+        conversationHistory.append(.init(intent: intent, resolvedAt: .now))
+        if conversationHistory.count > 8 {
+            conversationHistory.removeFirst(conversationHistory.count - 8)
+        }
         refreshSuggestions(lang: lang)
     }
 
@@ -1895,23 +2429,26 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
         }
 
         state = .processing
-        let intent = AppVoiceCommandParser.parse(
+        let intents = AppVoiceCommandParser.parseAll(
             prepared,
             lang: lang,
-            context: activeConversationContext
+            contextHistory: activeConversationHistory
         )
         pendingCommand = AppVoiceCommandEnvelope(
             transcript: prepared,
-            intent: intent
+            intents: intents
         )
     }
 
     private var activeConversationContext: AppVoiceCommandIntent? {
-        guard let lastResolvedIntent, let lastResolvedAt else { return nil }
-        guard Date().timeIntervalSince(lastResolvedAt) <= conversationContextLifetime else {
-            return nil
-        }
-        return lastResolvedIntent
+        activeConversationHistory.last
+    }
+
+    private var activeConversationHistory: [AppVoiceCommandIntent] {
+        let cutoff = Date().addingTimeInterval(-conversationContextLifetime)
+        return conversationHistory
+            .filter { $0.resolvedAt >= cutoff }
+            .map(\.intent)
     }
 
     private func ensurePermissions(lang: AppLang) async -> Bool {
@@ -2282,6 +2819,8 @@ struct AppVoiceAssistantSheet: View {
             .init(key: "assistant.quick.smart_goal", icon: "target", tone: Color(hex: 0xBF5AF2)),
             .init(key: "assistant.quick.goal_progress", icon: "chart.line.uptrend.xyaxis", tone: Color(hex: 0x30D158)),
             .init(key: "assistant.quick.tasks", icon: "checklist", tone: Color(hex: 0x64D2FF)),
+            .init(key: "assistant.quick.calendar", icon: "calendar", tone: Color(hex: 0x0A84FF)),
+            .init(key: "assistant.quick.care", icon: "heart.text.square.fill", tone: Color(hex: 0xFF6482)),
             .init(key: "assistant.quick.summary", icon: "chart.bar.xaxis", tone: Color(hex: 0x5AC8FA)),
             .init(key: "assistant.quick.pomodoro", icon: "timer", tone: Color(hex: 0x30B0FF)),
             .init(key: "assistant.quick.pause", icon: "pause.circle.fill", tone: Color(hex: 0xFF9F0A)),

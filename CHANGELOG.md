@@ -12,18 +12,20 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2028%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2030%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Adaptive calendar" src="https://img.shields.io/badge/Calendar-Adaptive-64D2FF?style=for-the-badge">
+    <img alt="Conversational assistant" src="https://img.shields.io/badge/Assistant-Conversational-5E5CE6?style=for-the-badge">
+    <img alt="Natural speech" src="https://img.shields.io/badge/Speech-Natural-30D158?style=for-the-badge">
     <img alt="Adaptive Pomodoro" src="https://img.shields.io/badge/Pomodoro-Adaptive-0A84FF?style=for-the-badge">
     <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=for-the-badge">
     <img alt="Complete app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=for-the-badge">
-    <img alt="Tests" src="https://img.shields.io/badge/Tests-99-30D158?style=for-the-badge">
+    <img alt="Tests" src="https://img.shields.io/badge/Tests-116-30D158?style=for-the-badge">
     <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=for-the-badge">
     <img alt="Apple Watch companion" src="https://img.shields.io/badge/Apple%20Watch-Companion-30D158?style=for-the-badge">
     <img alt="Widgets redesigned" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=for-the-badge">
     <img alt="Liquid Glass" src="https://img.shields.io/badge/Design-Liquid%20Glass-5E5CE6?style=for-the-badge">
     <img alt="App Store readiness" src="https://img.shields.io/badge/App%20Store-1.0%20(2)%20prepared-0A84FF?style=for-the-badge">
     <img alt="Privacy manifest" src="https://img.shields.io/badge/Privacy-Manifest%20ready-30D158?style=for-the-badge">
-    <img alt="Context-aware assistant" src="https://img.shields.io/badge/Assistant-Context%20aware-5E5CE6?style=for-the-badge">
     <img alt="Voice Smart Goals" src="https://img.shields.io/badge/Smart%20Goals-Voice%20ready-BF5AF2?style=for-the-badge">
     <img alt="Local voices" src="https://img.shields.io/badge/Voice-F2%20·%20M3-BF5AF2?style=for-the-badge">
     <img alt="On-device speech" src="https://img.shields.io/badge/TTS-On--device-30D158?style=for-the-badge">
@@ -44,32 +46,81 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Focus that fits</strong><br>
-      <sub>One explainable rhythm for this moment.</sub>
+      <strong>A day with perspective</strong><br>
+      <sub>Month, plans, and roadmap in one calm view.</sub>
       <br><br>
-      <strong>Фокус, который подходит</strong><br>
-      <sub>Объяснимый ритм именно для этого момента.</sub>
+      <strong>День — в перспективе</strong><br>
+      <sub>Месяц, планы и маршрут в одном спокойном экране.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Recovery that counts</strong><br>
-      <sub>Breaks learn from how sessions really end.</sub>
+      <strong>A plan that can breathe</strong><br>
+      <sub>Capacity-aware suggestions, always confirmed.</sub>
       <br><br>
-      <strong>Отдых, который учитывается</strong><br>
-      <sub>Паузы помнят, как на самом деле проходят сессии.</sub>
+      <strong>План, в котором есть воздух</strong><br>
+      <sub>Бережные предложения — только с подтверждением.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Eyes, understood privately</strong><br>
-      <sub>Aggregate signals in. Safe guidance out.</sub>
+      <strong>A request, understood together</strong><br>
+      <sub>Several actions and natural follow-ups.</sub>
       <br><br>
-      <strong>Глаза — приватно и бережно</strong><br>
-      <sub>Только агрегаты на входе. Безопасная подсказка на выходе.</sub>
+      <strong>Просьба понята целиком</strong><br>
+      <sub>Несколько действий и естественные продолжения.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Recognizably Lippi</strong><br>
-      <sub>The website mark now lives across iPhone and Watch.</sub>
+      <strong>Numbers sound human</strong><br>
+      <sub>Speech receives meaning, not raw symbols.</sub>
       <br><br>
-      <strong>Теперь узнаваемая Lippi</strong><br>
-      <sub>Знак с сайта появился на iPhone и Apple Watch.</sub>
+      <strong>Цифры звучат по-человечески</strong><br>
+      <sub>Голос получает смысл, а не набор символов.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 30, 2026 — A day that understands you. A voice that sounds natural. / День, который понимает вас. Голос, который звучит естественно.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi now sees plans as one living route and treats every voice request as part of a conversation — while keeping planning decisions, interpretation, and speech preparation on the device.</strong></p>
+      <ul>
+        <li><strong>A calendar made for Lippi:</strong> a compact control on Today opens a polished Liquid Glass experience with month navigation, a selected-day timeline, tasks, and linked Smart Goal roadmap steps.</li>
+        <li><strong>Useful context, not decorative data:</strong> the calendar combines goal pace, completed work, focus minutes, explicit wellbeing, current care guidance, and permitted Apple Health signals into a concise explanation of the day.</li>
+        <li><strong>Capacity-aware planning:</strong> overdue work and days above the recommended step limit produce a bounded set of gentle rescheduling suggestions. Exact task content and useful times are preserved.</li>
+        <li><strong>The person keeps the final word:</strong> no task is moved automatically. Every proposed date remains visible and requires explicit confirmation before the task store changes.</li>
+        <li><strong>Several actions in one request:</strong> phrases such as “add a call for tomorrow at 15:30 and start a 30-minute focus” are split, understood, executed in order, and answered as one coherent result.</li>
+        <li><strong>Real conversational memory:</strong> up to eight recent actions remain available for 12 minutes. References such as “it,” “that one,” “there too,” and a clarification on the next turn can resolve against the relevant task, date, or topic.</li>
+        <li><strong>Natural scheduling language:</strong> today, tomorrow, the day after tomorrow, weekdays, day parts, explicit dates, and times work across Russian, English, German, and Spanish.</li>
+        <li><strong>More of Lippi is voice-accessible:</strong> task creation, completion, reopening, deletion and rescheduling now join Calendar, Today, focus and breaks, Smart Goals, roadmap progress, eye exercise, metrics, care recommendations, hydration, meals, and movement.</li>
+        <li><strong>Clarification instead of a dead end:</strong> when an action is genuinely ambiguous, Lippi preserves the topic and asks whether it should become a task or a Smart Goal rather than discarding the request.</li>
+        <li><strong>Speech receives natural language:</strong> time, dates, percentages, ranges, temperatures, phone numbers, ordinals, measurements, initials, and alphanumeric identifiers are expanded before local synthesis.</li>
+        <li><strong>Product and health terms sound intentional:</strong> dedicated pronunciation covers Lippi, iPhone, iOS, Apple Watch, HealthKit, Bonsai, Pomodoro, HRV, SpO₂, VO₂ max, ECG, and common measurement abbreviations.</li>
+        <li><strong>Four-language number engines:</strong> whole and decimal numbers are rendered as words in Russian, English, German, and Spanish, including Russian count forms for minutes, hours, days, steps, distance, volume, weight, and calories.</li>
+        <li><strong>Cleaner long responses:</strong> the private speech copy removes links, respects punctuation, and truncates only at a sentence or word boundary. The text shown on screen is never rewritten.</li>
+        <li><strong>Fast and private by design:</strong> ordinary commands use deterministic routing, Natural Language interpretation, bounded local memory, and local behavior ranking without waking the heavier Bonsai generation path.</li>
+        <li><strong>Verification:</strong> the suite now contains <strong>116 tests</strong>, and the app plus test bundle compile for arm64 and x86_64. The complete experience has also been confirmed by the user in Simulator and on a physical iPhone.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Lippi теперь видит планы как один живой маршрут, а каждую голосовую просьбу — как часть разговора. Решения о расписании, понимание команды и подготовка речи по-прежнему остаются на устройстве.</strong></p>
+      <ul>
+        <li><strong>Календарь, созданный для Lippi:</strong> компактная кнопка на главной открывает цельный Liquid Glass-сценарий с навигацией по месяцам, лентой выбранного дня, задачами и связанными шагами дорожной карты.</li>
+        <li><strong>Контекст, который действительно помогает:</strong> календарь соединяет темп цели, выполненное, минуты фокуса, явно выбранное самочувствие, текущую рекомендацию заботы и разрешённые сигналы Apple Здоровья в короткое объяснение дня.</li>
+        <li><strong>Планирование учитывает ёмкость:</strong> просроченные задачи и дни выше рекомендуемого лимита получают ограниченный набор бережных предложений переноса. Точный текст задачи и полезное время сохраняются.</li>
+        <li><strong>Последнее слово остаётся человеку:</strong> Lippi ничего не переносит автоматически. Каждая новая дата видна заранее и применяется только после явного подтверждения.</li>
+        <li><strong>Несколько действий в одной просьбе:</strong> фраза «добавь звонок завтра на 15:30 и запусти фокус на 30 минут» разделяется на действия, выполняется по порядку и получает один связный ответ.</li>
+        <li><strong>Настоящая память разговора:</strong> до восьми последних действий остаются контекстом 12 минут. Слова «её», «это», «туда же» и уточнение следующим сообщением связываются с подходящей задачей, датой или темой.</li>
+        <li><strong>Естественный язык расписания:</strong> сегодня, завтра, послезавтра, дни недели, части дня, явные даты и время поддерживаются на русском, английском, немецком и испанском.</li>
+        <li><strong>Больше Lippi доступно голосом:</strong> создание, завершение, возвращение, удаление и перенос задач дополнены календарём, главной, фокусом и перерывами, умными целями, прогрессом маршрута, упражнением для глаз, показателями и отметками воды, еды и движения.</li>
+        <li><strong>Уточнение вместо тупика:</strong> если действие действительно неоднозначно, Lippi сохраняет тему и предлагает оформить её как задачу или умную цель вместо того, чтобы выбросить просьбу.</li>
+        <li><strong>Голос получает естественную фразу:</strong> время, даты, проценты, диапазоны, температура, телефоны, порядковые номера, единицы измерения, инициалы и буквенно-цифровые обозначения раскрываются до локального синтеза.</li>
+        <li><strong>Названия и показатели звучат осмысленно:</strong> добавлены произношения Lippi, iPhone, iOS, Apple Watch, HealthKit, Bonsai, Pomodoro, HRV, SpO₂, VO₂ max, ECG и частых сокращений единиц.</li>
+        <li><strong>Числа на четырёх языках:</strong> целые и десятичные значения превращаются в слова на русском, английском, немецком и испанском; для русского учитываются формы минут, часов, дней, шагов, расстояния, объёма, веса и калорий.</li>
+        <li><strong>Аккуратнее длинные ответы:</strong> приватная копия для озвучки очищается от ссылок, сохраняет пунктуационные паузы и обрезается только по границе предложения или слова. Текст на экране не меняется.</li>
+        <li><strong>Быстро и приватно по замыслу:</strong> обычные команды используют детерминированную маршрутизацию, Natural Language, ограниченную локальную память и локальное ранжирование привычек, не запуская тяжёлую генерацию Bonsai.</li>
+        <li><strong>Проверка:</strong> набор вырос до <strong>116 тестов</strong>, приложение и тестовый bundle компилируются для arm64 и x86_64. Пользователь также подтвердил полный сценарий на Simulator и физическом iPhone.</li>
+      </ul>
     </td>
   </tr>
 </table>

@@ -35,7 +35,9 @@
   <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=flat-square">
   <img alt="Bonsai thermal protection" src="https://img.shields.io/badge/Bonsai-Guarded-FF375F?style=flat-square">
   <img alt="Local voices" src="https://img.shields.io/badge/Voice-F2%20·%20M3-BF5AF2?style=flat-square">
-  <img alt="Context-aware assistant" src="https://img.shields.io/badge/Assistant-Context%20aware-0A84FF?style=flat-square">
+  <img alt="Context-aware assistant" src="https://img.shields.io/badge/Assistant-Conversational-0A84FF?style=flat-square">
+  <img alt="Adaptive calendar" src="https://img.shields.io/badge/Calendar-Adaptive-64D2FF?style=flat-square">
+  <img alt="Natural speech formatting" src="https://img.shields.io/badge/Speech-Natural%20numbers-30D158?style=flat-square">
   <img alt="Liquid Glass themes" src="https://img.shields.io/badge/Design-Liquid%20Glass-5E5CE6?style=flat-square">
   <img alt="App Store readiness" src="https://img.shields.io/badge/App%20Store-1.0%20(2)%20prepared-0A84FF?style=flat-square">
   <img alt="Privacy manifest" src="https://img.shields.io/badge/Privacy-Manifest%20ready-30D158?style=flat-square">
@@ -45,7 +47,7 @@
   <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=flat-square">
   <img alt="Lippi app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-99-30D158?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-116-30D158?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
@@ -92,12 +94,13 @@ Lippi объединяет планирование, фокус и восста�
 | Раздел | Что получает пользователь |
 |---|---|
 | **Сегодня** | Спокойный обзор дня, главный фокус и «Ритм заботы», который выбирает один уместный следующий шаг. |
+| **Календарь** | Планы, задачи и шаги дорожной карты складываются в наглядный месяц и ленту дня; Lippi замечает перегрузку и предлагает бережное расписание только с подтверждения пользователя. |
 | **Умные цели** | Пожелания, исходная точка, ресурсы и явные ограничения превращаются в предметную дорожную карту с объяснимой последовательностью, измеримыми этапами и адаптивным ритмом. |
 | **Задачи и Pomodoro** | Персональный ритм фокуса и отдыха учитывает историю сессий, ближайший шаг умной цели, отмеченное состояние и доступные сигналы восстановления. |
 | **Здоровье** | Разрешённые показатели активности, сна, восстановления, воды и питания из HealthKit превращаются в осторожные и объяснимые рекомендации. |
 | **Apple Watch** | Отдельное приложение показывает текущую рекомендацию, фокус, шаг к цели и принимает быстрые отметки воды, еды, движения и отдыха. |
 | **Восстановление** | Дыхательные практики и упражнения для глаз; камера локально сопровождает выполнение, а Bonsai объясняет только агрегированные сигналы — без кадров, медицинских диагнозов и ослабления безопасной рекомендации. |
-| **Голосовой помощник** | Контекстные просьбы и перефразировки, голосовой доступ к «Умным целям», локальные естественные голоса F2 и M3 и отдельные действия VoiceOver. |
+| **Голосовой помощник** | Составные просьбы, даты, продолжения разговора и естественный доступ к задачам, календарю, фокусу, заботе и «Умным целям»; локальные голоса F2 и M3 произносят числа и обозначения разговорно. |
 | **Знакомство с Lippi** | Четыре интерактивных шага, осмысленный выбор темпа и видимая автоматическая подготовка локальной модели уже при первом запуске. |
 | **Виджеты** | Единый новый дизайн задач, плана дня, Pomodoro и помощника на Home Screen, Lock Screen, в Live Activities и Dynamic Island. |
 
@@ -112,6 +115,39 @@ Lippi объединяет планирование, фокус и восста�
 [Политика конфиденциальности Lippi →](https://lippi.lenuma.ru/privacy)
 
 ## Последнее обновление · Latest release
+
+### 30 июля 2026 — день, который понимает вас. голос, который звучит естественно.
+
+Lippi теперь видит планы как цельный маршрут, а просьбу — как часть живого разговора. Новый календарь соединяет задачи, дорожную карту, фокус и разрешённые сигналы состояния; помощник удерживает недавний контекст, выполняет несколько действий за одну фразу и говорит яснее даже там, где интерфейс использует цифры и сокращения.
+
+<table>
+  <tr>
+    <td width="33%" align="center" valign="top">
+      <strong>▦ День — в перспективе</strong><br><br>
+      Красивый календарь показывает месяц, выбранный день и последовательность шагов к цели без ощущения перегруженного списка.<br><br>
+      <sub>Your plans, seen as one journey.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>✦ Просьба — с контекстом</strong><br><br>
+      «Добавь встречу завтра и запусти фокус» становится двумя понятными действиями, а «перенеси её» продолжает тот же разговор.<br><br>
+      <sub>One request. Several useful actions.</sub>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <strong>◖ Голос — без спотыканий</strong><br><br>
+      Время, проценты, даты, номера и показатели здоровья заранее превращаются в естественную речь.<br><br>
+      <sub>Numbers sound like language.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Календарь находится рядом.** Небольшая кнопка на главном экране открывает полноценный Liquid Glass-календарь с обзором месяца, лентой выбранного дня, задачами и связанными шагами дорожной карты.
+- **План учитывает реальную ёмкость дня.** Локальный движок сопоставляет темп умной цели, выполненное, фокус, состояние пользователя, рекомендации восстановления и доступные сигналы Apple Здоровья. Просроченные и перегруженные дни получают объяснимые предложения, но ничего не переносится без подтверждения.
+- **Помощник понимает несколько действий сразу.** В одной просьбе можно создать задачу на конкретную дату, открыть календарь, запустить Pomodoro или отметить действие заботы — Lippi выполнит их последовательно и ответит одной связной фразой.
+- **Разговор действительно продолжается.** До восьми последних действий остаются доступным контекстом в течение 12 минут. Помощник понимает ссылки вроде «её», «это», «туда же» и может превратить уточнённую тему в задачу или умную цель.
+- **Меньше тупиков.** Если намерение нельзя определить уверенно, Lippi сохраняет тему и предлагает конкретный выбор вместо безличного «не удалось понять».
+- **Голос произносит смысл, а не символы.** Перед локальным синтезом числа, время, даты, проценты, интервалы, телефоны, единицы измерения и буквенно-цифровые обозначения преобразуются в разговорную форму. Добавлены произношения Lippi, iPhone, iOS, Apple Watch, Bonsai, HRV, SpO₂, VO₂ max и ECG.
+- **Всё остаётся локальным и быстрым.** Маршрутизация команды, память разговора и подготовка речи выполняются на устройстве; тяжёлая генерация Bonsai не запускается ради обычной команды.
+- **Проверено там, где это важно.** Набор вырос до **116 тестов**; сборка и тестовый bundle проходят для arm64 и x86_64. Пользователь подтвердил работу обновления и на Simulator, и на физическом iPhone.
 
 ### 28 июля 2026 — ваш ритм. ваши сигналы. узнаваемая Lippi.
 
@@ -387,6 +423,12 @@ The product is designed around four promises:
 - **Responsive interaction** that scales visual effects down before they can affect scrolling or battery life.
 
 ### Latest release
+
+The July 30 release turns planning into a coherent journey. A new Liquid Glass calendar brings the month, each selected day, ordinary tasks, and Smart Goal roadmap steps into one calm view. Its on-device intelligence compares daily capacity with goal pace, focus history, explicit wellbeing, care guidance, and permitted Apple Health signals. Overdue or overloaded plans become transparent suggestions; Lippi never moves them without confirmation.
+
+The voice assistant now treats a request as part of a conversation. It can execute several actions from one sentence, understand natural dates and times, resolve references such as “it” or “move that one,” and retain up to eight recent actions for 12 minutes. Tasks, calendar, focus and breaks, Smart Goals, eye exercises, metrics, and care actions are connected through the same local command path. Ambiguous requests keep their topic and receive a useful clarification instead of a dead end.
+
+Local speech is clearer, too. Before Supertonic synthesis, Lippi expands time, dates, percentages, ranges, phone numbers, measurements, initials, and common health abbreviations into natural language in Russian, English, German, and Spanish. The visible response is unchanged, and long speech is cut only at a word boundary. The suite now contains **116 tests**; the update has been successfully verified in Simulator and on a physical iPhone.
 
 The July 28 release makes focus personal. Lippi combines recent focus and break completion, the next Smart Goal step, an explicit wellbeing check-in, and permitted recovery signals to suggest an explainable Pomodoro rhythm. Bonsai may shorten focus or extend rest, but local safety rules never allow the model to increase load, reduce recovery, or rewrite the goal.
 

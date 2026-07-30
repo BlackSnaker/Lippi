@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Lippi
 
@@ -232,10 +233,140 @@ struct AppVoiceAssistantParserTests {
         }
     }
 
-    @Test("Falls back to unknown intent")
-    func parsesUnknown() {
+    @Test("Keeps an unsupported topic and asks for the desired action")
+    func preservesUnknownTopicForClarification() {
         let intent = AppVoiceCommandParser.parse("квантовая бабочка", lang: .ru)
-        #expect(intent == .unknown)
+        #expect(intent == .clarifyAction(topic: "квантовая бабочка"))
+    }
+
+    @Test("Schedules a task from natural relative date and time")
+    func parsesScheduledTask() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 7, day: 30, hour: 10))!
+
+        let intent = AppVoiceCommandParser.parse(
+            "Добавь задачу позвонить врачу завтра в 15:30",
+            lang: .ru,
+            now: now,
+            calendar: calendar
+        )
+
+        switch intent {
+        case .addScheduledTask(let title, let category, let dueDate):
+            #expect(title == "позвонить врачу")
+            #expect(category == .other)
+            let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
+            #expect(components == DateComponents(year: 2026, month: 7, day: 31, hour: 15, minute: 30))
+        default:
+            Issue.record("Expected addScheduledTask intent")
+        }
+    }
+
+    @Test("Resolves a task pronoun from conversation context")
+    func resolvesTaskPronoun() {
+        let intent = AppVoiceCommandParser.parse(
+            "Отметь её выполненной",
+            lang: .ru,
+            context: .addTask(title: "позвонить врачу", category: .other)
+        )
+        #expect(intent == .completeTask(title: "позвонить врачу"))
+    }
+
+    @Test("Reschedules the referenced task with a natural date")
+    func reschedulesReferencedTask() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 7, day: 30, hour: 10))!
+
+        let intent = AppVoiceCommandParser.parse(
+            "Перенеси её на послезавтра утром",
+            lang: .ru,
+            context: .addTask(title: "встреча с командой", category: .work),
+            now: now,
+            calendar: calendar
+        )
+
+        switch intent {
+        case .rescheduleTask(let title, let dueDate):
+            #expect(title == "встреча с командой")
+            let components = calendar.dateComponents([.day, .hour, .minute], from: dueDate)
+            #expect(components == DateComponents(day: 1, hour: 9, minute: 0))
+        default:
+            Issue.record("Expected rescheduleTask intent")
+        }
+    }
+
+    @Test("Understands several actions in one request")
+    func parsesCompoundRequest() {
+        let intents = AppVoiceCommandParser.parseAll(
+            "Добавь задачу купить воду, а потом запусти помодоро на 30 минут",
+            lang: .ru
+        )
+
+        #expect(intents.count == 2)
+        if case .addTask(let title, _) = intents[0] {
+            #expect(title == "купить воду")
+        } else {
+            Issue.record("Expected addTask as the first command")
+        }
+        #expect(intents[1] == .startPomodoro(minutes: 30))
+    }
+
+    @Test("Opens the new calendar from a natural plan question")
+    func opensCalendarFromPlanQuestion() {
+        let intent = AppVoiceCommandParser.parse("Покажи, что у меня сегодня по плану", lang: .ru)
+        #expect(intent == .openCalendar)
+    }
+
+    @Test("Logs care actions without confusing them with reminders")
+    func logsWater() {
+        let intent = AppVoiceCommandParser.parse("Отметь, что я выпил воды", lang: .ru)
+        #expect(intent == .logCareAction(.logWater))
+    }
+
+    @Test("A water reminder remains a task")
+    func waterReminderIsTask() {
+        let intent = AppVoiceCommandParser.parse("Запиши задачу купить воду", lang: .ru)
+
+        if case .addTask(let title, _) = intent {
+            #expect(title == "купить воду")
+        } else {
+            Issue.record("Expected addTask intent")
+        }
+    }
+
+    @Test("Reschedules a naturally named task without requiring the word task")
+    func reschedulesNamedTaskNaturally() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 7, day: 30, hour: 10))!
+
+        let intent = AppVoiceCommandParser.parse(
+            "Перенеси встречу с командой на завтра",
+            lang: .ru,
+            now: now,
+            calendar: calendar
+        )
+
+        switch intent {
+        case .rescheduleTask(let title, let dueDate):
+            #expect(title == "встречу с командой")
+            let components = calendar.dateComponents([.day, .hour, .minute], from: dueDate)
+            #expect(components == DateComponents(day: 31, hour: 18, minute: 0))
+        default:
+            Issue.record("Expected rescheduleTask intent")
+        }
+    }
+
+    @Test("A clarification can become a task on the next turn")
+    func resolvesClarificationFollowUp() {
+        let intent = AppVoiceCommandParser.parse(
+            "Оформи как задачу",
+            lang: .ru,
+            context: .clarifyAction(topic: "подготовить идеи для презентации")
+        )
+        #expect(intent == .addTask(title: "подготовить идеи для презентации", category: .work))
     }
 
     @Test("Assistant localization keys resolve for all languages")
@@ -258,6 +389,8 @@ struct AppVoiceAssistantParserTests {
             "assistant.quick.smart_goal",
             "assistant.quick.goal_progress",
             "assistant.quick.tasks",
+            "assistant.quick.calendar",
+            "assistant.quick.care",
             "assistant.quick.pomodoro",
             "assistant.quick.pause",
             "assistant.quick.resume",
@@ -271,10 +404,14 @@ struct AppVoiceAssistantParserTests {
             "assistant.permission.mic",
             "assistant.permission.unavailable",
             "assistant.response.task_added",
+            "assistant.response.task_scheduled",
             "assistant.response.task_completed",
+            "assistant.response.task_reopened",
             "assistant.response.task_deleted",
+            "assistant.response.task_rescheduled",
             "assistant.response.task_not_found",
             "assistant.response.tab_opened",
+            "assistant.response.calendar_opened",
             "assistant.response.pomodoro_started",
             "assistant.response.pomodoro_paused",
             "assistant.response.pomodoro_resumed",
@@ -286,7 +423,13 @@ struct AppVoiceAssistantParserTests {
             "assistant.response.smart_goal_ready",
             "assistant.response.smart_goal_prepared",
             "assistant.response.goal_progress_opened",
-            "assistant.response.goal_progress_missing"
+            "assistant.response.goal_progress_missing",
+            "assistant.response.care_balanced",
+            "assistant.response.water_logged",
+            "assistant.response.meal_logged",
+            "assistant.response.movement_logged",
+            "assistant.response.capabilities",
+            "assistant.response.clarify_action"
         ]
 
         for lang in AppLang.allCases {

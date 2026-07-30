@@ -28,7 +28,7 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
         }
         try Self.checkPowerPolicy()
 
-        let preparedText = Self.preparedText(text)
+        let preparedText = Self.preparedText(text, language: language)
         guard !preparedText.isEmpty else {
             throw NeuralVoiceProviderError.generation
         }
@@ -114,11 +114,8 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
         }
     }
 
-    private static func preparedText(_ text: String) -> String {
-        let normalized = text
-            .replacingOccurrences(of: #"https?://\S+"#, with: "", options: .regularExpression)
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+    private static func preparedText(_ text: String, language: AppLang) -> String {
+        let normalized = LocalVoiceTextNormalizer.normalize(text, language: language)
         guard normalized.count > 480 else { return normalized }
 
         let end = normalized.index(normalized.startIndex, offsetBy: 480)
@@ -126,6 +123,9 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
         if let sentenceEnd = prefix.lastIndex(where: { ".!?…".contains($0) }),
            prefix.distance(from: sentenceEnd, to: prefix.endIndex) < 140 {
             return String(prefix[...sentenceEnd])
+        }
+        if let wordEnd = prefix.lastIndex(where: \.isWhitespace) {
+            return String(prefix[..<wordEnd]).trimmingCharacters(in: .whitespaces) + "…"
         }
         return prefix + "…"
     }
