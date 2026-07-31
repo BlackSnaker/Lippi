@@ -47,7 +47,7 @@
   <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=flat-square">
   <img alt="Lippi app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-116-30D158?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-122-30D158?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
@@ -109,12 +109,68 @@ Lippi объединяет планирование, фокус и восста�
 - **Спокойствие по умолчанию.** Один главный акцент на экран, короткие подписи и постепенное раскрытие деталей.
 - **Пользователь управляет планом.** Lippi предлагает изменения, объясняет причины и применяет их только после подтверждения.
 - **Приватность HealthKit.** Показатели обрабатываются на устройстве и не добавляются в запросы к внешним AI-провайдерам.
-- **Плавность важнее декора.** Стекло, тени и анимации упрощаются во время прокрутки, энергосбережения и нагрева.
+- **Плавность важнее декора.** При прокрутке качество материалов остаётся неизменным, а нагрузка снижается за счёт частоты непрерывных анимаций — без заметной подмены интерфейса.
 - **Доступность встроена.** Dynamic Type, VoiceOver, Reduce Motion и Reduce Transparency учитываются общей дизайн-системой.
 
 [Политика конфиденциальности Lippi →](https://lippi.lenuma.ru/privacy)
 
 ## Последнее обновление · Latest release
+
+### 31 июля 2026 — Lippi оживает, когда вы говорите.
+
+Голосовой помощник стал отдельным пространством для разговора — цельным, живым и мгновенно узнаваемым. Новая световая сфера показывает не декоративную заставку, а состояние Lippi: она спокойно ждёт, внимательнее движется во время прослушивания, собирается в более сложный ритм при обработке и раскрывается цветом, когда отвечает.
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img alt="Новый голосовой помощник Lippi готов к командам" src="AppStore/PrivacySite/public/showcase/assistant-golden-gate-ready.jpg">
+      <br><br>
+      <strong>Готова понять</strong><br>
+      <sub>Команды, рекомендации и контекст — в одном спокойном пространстве.</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img alt="Новый голосовой помощник Lippi отвечает локальным голосом" src="AppStore/PrivacySite/public/showcase/assistant-golden-gate-response.jpg">
+      <br><br>
+      <strong>Готова продолжить</strong><br>
+      <sub>Ответ не завершает разговор: просьбу можно сразу уточнить.</sub>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="25%" align="center" valign="top">
+      <strong>✦ Живой интеллект</strong><br><br>
+      Пять текучих цветовых слоёв и собственный характер движения для каждого состояния.<br><br>
+      <sub>Motion with meaning.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>⌁ Всё под рукой</strong><br><br>
+      Голос, клавиатура, быстрые команды и персональные рекомендации собраны в одном экране.<br><br>
+      <sub>Speak, type, continue.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>◖ Русский звучит естественно</strong><br><br>
+      Числа согласуются с родом и падежом, дроби и диапазоны произносятся как живая речь.<br><br>
+      <sub>Grammar before synthesis.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>▱ Чёткость без скачков</strong><br><br>
+      Тёмная тема больше не меняет материалы, тени и фон во время прокрутки.<br><br>
+      <sub>One quality, at rest or in motion.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Новый полноэкранный помощник.** Вместо компактного листа Lippi открывает отдельное пространство с ясной иерархией: состояние, живая сфера, текущая мысль, рекомендации и центр управления.
+- **Анимация говорит о состоянии.** Ожидание, прослушивание, обработка, ответ и ошибка получили собственную палитру, амплитуду и скорость движения. Компактная капсула сверху повторяет состояние и остаётся читаемой поверх фона.
+- **Красота остаётся бережной к устройству.** Основная аура ограничена 30 кадрами в секунду, мини-индикатор — 20; Reduce Motion и ограничение ресурсов переводят композицию в аккуратное статичное состояние.
+- **Векторная чёткость во время прокрутки.** Движущиеся цветовые слои построены на SwiftUI-градиентах без растрового Canvas и тяжёлого размытия, поэтому после остановки не возникает резкой перерисовки.
+- **Тёмная тема больше не «проседает».** Глобальный режим прокрутки перестал подменять Liquid Glass упрощёнными заливками, убирать тени и отключать части фонового света. Оптимизация теперь влияет на вычисления анимации, а не на качество интерфейса.
+- **Русская речь учитывает грамматику.** «Одна минута», «две задачи», «одно действие», родительный падеж после предлогов, диапазоны, дроби и десятичные части формируются до передачи в локальную голосовую модель.
+- **Спокойнее темп — яснее дикция.** Для русского голоса выбрана чуть более размеренная скорость, добавлены естественные паузы и восстановление частых слов с «ё» там, где это помогает произношению.
+- **Локализовано целиком.** Заголовки состояний, клавиатурный ввод, каталог команд и подсказки доступны на русском, английском, немецком и испанском.
+- **Проверено сборкой.** Приложение, Apple Watch, оба расширения виджетов и тестовый bundle успешно проходят test-build; набор содержит **122 теста**.
 
 ### 30 июля 2026 — день, который понимает вас. голос, который звучит естественно.
 
@@ -420,9 +476,17 @@ The product is designed around four promises:
 - **A clear next step** instead of an intimidating backlog.
 - **Explainable adaptation** that never changes a plan without confirmation.
 - **Private wellness processing** on the device.
-- **Responsive interaction** that scales visual effects down before they can affect scrolling or battery life.
+- **Responsive interaction** that preserves visual quality while throttling continuous motion when resources are constrained.
 
 ### Latest release
+
+The July 31 release gives Lippi a voice interface with a presence of its own. A full-screen conversation space brings together a living multicolor intelligence sphere, clear state language, personalized recommendations, quick commands, typed input, and immediate follow-up. Listening, thinking, speaking, idle, and recovery states each have a distinct motion character without imitating a system assistant.
+
+The animation is designed to remain beautiful under real device constraints. The main aura is capped at 30 FPS, its compact indicator at 20 FPS, and both become composed static artwork for Reduce Motion or constrained runtime conditions. Vector SwiftUI gradients replace the moving raster canvas, keeping the sphere crisp while the surrounding interface scrolls.
+
+The same quality guarantee now applies across the dark appearance. Scrolling no longer swaps Liquid Glass for simplified fills, removes shadows, or drops background lighting before restoring it with a visible snap. Content cards use stable vector surfaces, while performance adaptation is limited to animation work rather than presentation quality.
+
+Russian local speech now prepares grammar before synthesis: gender agreement, common cases, ranges, fractions, decimals, time forms, punctuation pauses, and frequent «ё» restorations are resolved into natural phrases. A slightly calmer Russian playback rate further improves articulation. The suite now contains **122 tests**, and the app, watchOS companion, both widget extensions, and test bundle complete a successful test-build.
 
 The July 30 release turns planning into a coherent journey. A new Liquid Glass calendar brings the month, each selected day, ordinary tasks, and Smart Goal roadmap steps into one calm view. Its on-device intelligence compares daily capacity with goal pace, focus history, explicit wellbeing, care guidance, and permitted Apple Health signals. Overdue or overloaded plans become transparent suggestions; Lippi never moves them without confirmation.
 

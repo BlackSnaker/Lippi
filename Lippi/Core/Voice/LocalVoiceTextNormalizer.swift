@@ -9,14 +9,26 @@ enum LocalVoiceTextNormalizer {
             .replacingOccurrences(of: #"https?://\S+"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: "\n", with: ". ")
 
+        text = replacingTypography(in: text)
         text = replacingAliases(in: text, language: language)
+        if language == .ru {
+            text = replacingRussianPronunciationHints(in: text)
+        }
         text = replacingDates(in: text, language: language)
         text = replacingPhoneNumbers(in: text, language: language)
         text = replacingTimes(in: text, language: language)
         text = replacingFractions(in: text, language: language)
+        if language == .ru {
+            text = replacingRussianPartitiveCounts(in: text)
+            text = replacingRussianCountedRanges(in: text)
+        }
         text = replacingRanges(in: text, language: language)
         text = replacingTemperatures(in: text, language: language)
         text = replacingPercentages(in: text, language: language)
+        if language == .ru {
+            text = replacingRussianAdjectiveCounters(in: text)
+            text = replacingRussianCounters(in: text)
+        }
         text = replacingMeasurements(in: text, language: language)
         text = replacingOrdinals(in: text, language: language)
         text = replacingIdentifiers(in: text, language: language)
@@ -24,12 +36,53 @@ enum LocalVoiceTextNormalizer {
         text = replacingDecimals(in: text, language: language)
         text = replacingIntegers(in: text, language: language)
         text = replacingSymbols(in: text, language: language)
+        text = removingUnsupportedSpeechCharacters(in: text)
 
         return text
+            .replacingOccurrences(of: #"\.{2,}"#, with: ".", options: .regularExpression)
+            .replacingOccurrences(of: #",\s*([,.!?;:])"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"\s+([,.!?;:])"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"([,.!?;:])(?=[\p{L}\p{N}])"#, with: "$1 ", options: .regularExpression)
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Speech-safe typography
+
+    private static func replacingTypography(in source: String) -> String {
+        var text = source
+        let pauses = ["•", "·", "▪", "◦", "→", "⇒"]
+        for marker in pauses {
+            text = text.replacingOccurrences(of: marker, with: ". ")
+        }
+
+        let removable = ["«", "»", "“", "”", "„", "\"", "`", "*", "_"]
+        for marker in removable {
+            text = text.replacingOccurrences(of: marker, with: "")
+        }
+
+        text = text
+            .replacingOccurrences(of: "’", with: "'")
+            .replacingOccurrences(of: "(", with: ", ")
+            .replacingOccurrences(of: ")", with: ", ")
+            .replacingOccurrences(of: "[", with: ", ")
+            .replacingOccurrences(of: "]", with: ", ")
+
+        return text
+    }
+
+    private static func removingUnsupportedSpeechCharacters(in source: String) -> String {
+        source
+            .replacingOccurrences(
+                of: #"\s*[—–]\s*"#,
+                with: ". ",
+                options: .regularExpression
+            )
+            .replacingOccurrences(
+                of: #"[^\p{L}\p{N}\s,.!?;:…'\-]"#,
+                with: " ",
+                options: .regularExpression
+            )
     }
 
     // MARK: - Structured values
@@ -91,7 +144,9 @@ enum LocalVoiceTextNormalizer {
                   let minute = Int(groups[1]) else { return groups.joined(separator: " ") }
 
             let hourWords = integerWords(hour, language: language)
-            let minuteWords = integerWords(minute, language: language)
+            let minuteWords = language == .ru
+                ? russianInteger(minute, gender: .feminine)
+                : integerWords(minute, language: language)
             switch language {
             case .ru:
                 if minute == 0 { return "\(hourWords) \(russianForm(hour, one: "час", few: "часа", many: "часов")) ровно" }
@@ -113,13 +168,15 @@ enum LocalVoiceTextNormalizer {
     private static func replacingFractions(in source: String, language: AppLang) -> String {
         replacingMatches(in: source, pattern: #"(?<!\d)(\d+)\s*/\s*(\d+)(?!\d)"#) { groups in
             guard groups.count == 2 else { return groups.joined(separator: " ") }
-            let lhs = spokenNumber(groups[0], language: language)
-            let rhs = spokenNumber(groups[1], language: language)
             switch language {
-            case .ru: return "\(lhs) из \(rhs)"
-            case .en: return "\(lhs) out of \(rhs)"
-            case .de: return "\(lhs) von \(rhs)"
-            case .es: return "\(lhs) de \(rhs)"
+            case .ru:
+                return "\(spokenNumber(groups[0], language: language)) из \(russianGenitiveNumber(groups[1]))"
+            case .en:
+                return "\(spokenNumber(groups[0], language: language)) out of \(spokenNumber(groups[1], language: language))"
+            case .de:
+                return "\(spokenNumber(groups[0], language: language)) von \(spokenNumber(groups[1], language: language))"
+            case .es:
+                return "\(spokenNumber(groups[0], language: language)) de \(spokenNumber(groups[1], language: language))"
             }
         }
     }
@@ -130,13 +187,15 @@ enum LocalVoiceTextNormalizer {
             pattern: #"(?<!\d)(-?\d+(?:[.,]\d+)?)\s*[‑–—-]\s*(-?\d+(?:[.,]\d+)?)(?!\d)"#
         ) { groups in
             guard groups.count == 2 else { return groups.joined(separator: " ") }
-            let lhs = spokenNumber(groups[0], language: language)
-            let rhs = spokenNumber(groups[1], language: language)
             switch language {
-            case .ru: return "от \(lhs) до \(rhs)"
-            case .en: return "from \(lhs) to \(rhs)"
-            case .de: return "von \(lhs) bis \(rhs)"
-            case .es: return "de \(lhs) a \(rhs)"
+            case .ru:
+                return "от \(russianGenitiveNumber(groups[0])) до \(russianGenitiveNumber(groups[1]))"
+            case .en:
+                return "from \(spokenNumber(groups[0], language: language)) to \(spokenNumber(groups[1], language: language))"
+            case .de:
+                return "von \(spokenNumber(groups[0], language: language)) bis \(spokenNumber(groups[1], language: language))"
+            case .es:
+                return "de \(spokenNumber(groups[0], language: language)) a \(spokenNumber(groups[1], language: language))"
             }
         }
     }
@@ -176,8 +235,233 @@ enum LocalVoiceTextNormalizer {
         }
     }
 
+    // MARK: - Russian agreement
+
+    private enum RussianNumeralGender {
+        case masculine
+        case feminine
+        case neuter
+    }
+
+    private struct RussianCounter {
+        let pattern: String
+        let one: String
+        let few: String
+        let many: String
+        let genitiveOne: String
+        let gender: RussianNumeralGender
+        let accusativeOne: String?
+    }
+
+    private struct RussianAdjectiveCounter {
+        let pattern: String
+        let one: String
+        let few: String
+        let many: String
+        let gender: RussianNumeralGender
+    }
+
+    private static let russianCounters: [RussianCounter] = [
+        .init(pattern: #"задач(?:а|и|у|е|ей|ами|ах)?"#, one: "задача", few: "задачи", many: "задач", genitiveOne: "задачи", gender: .feminine, accusativeOne: "задачу"),
+        .init(pattern: #"цел(?:ь|и|ью|ей|ям|ями|ях)"#, one: "цель", few: "цели", many: "целей", genitiveOne: "цели", gender: .feminine, accusativeOne: "цель"),
+        .init(pattern: #"сесси(?:я|и|ю|ей|ям|ями|ях)"#, one: "сессия", few: "сессии", many: "сессий", genitiveOne: "сессии", gender: .feminine, accusativeOne: "сессию"),
+        .init(pattern: #"(?:минут(?:а|ы|у|е|ой|ами|ах)?|мин\.?)"#, one: "минута", few: "минуты", many: "минут", genitiveOne: "минуты", gender: .feminine, accusativeOne: "минуту"),
+        .init(pattern: #"(?:секунд(?:а|ы|у|е|ой|ами|ах)?|сек\.?)"#, one: "секунда", few: "секунды", many: "секунд", genitiveOne: "секунды", gender: .feminine, accusativeOne: "секунду"),
+        .init(pattern: #"недел(?:я|и|ю|е|ей|ями|ях)"#, one: "неделя", few: "недели", many: "недель", genitiveOne: "недели", gender: .feminine, accusativeOne: "неделю"),
+        .init(pattern: #"трениров(?:ка|ки|ку|ке|ок|кой|ками|ках)"#, one: "тренировка", few: "тренировки", many: "тренировок", genitiveOne: "тренировки", gender: .feminine, accusativeOne: "тренировку"),
+        .init(pattern: #"рекомендаци(?:я|и|ю|ей|ям|ями|ях)"#, one: "рекомендация", few: "рекомендации", many: "рекомендаций", genitiveOne: "рекомендации", gender: .feminine, accusativeOne: "рекомендацию"),
+        .init(pattern: #"(?:килокалори(?:я|и|ю|ей|ям|ями|ях)|ккал)"#, one: "килокалория", few: "килокалории", many: "килокалорий", genitiveOne: "килокалории", gender: .feminine, accusativeOne: "килокалорию"),
+        .init(pattern: #"попыт(?:ка|ки|ку|ке|ок|кой|ками|ках)"#, one: "попытка", few: "попытки", many: "попыток", genitiveOne: "попытки", gender: .feminine, accusativeOne: "попытку"),
+        .init(pattern: #"встреч(?:а|и|у|е|ей|ами|ах)"#, one: "встреча", few: "встречи", many: "встреч", genitiveOne: "встречи", gender: .feminine, accusativeOne: "встречу"),
+        .init(pattern: #"привыч(?:ка|ки|ку|ке|ек|кой|ками|ках)"#, one: "привычка", few: "привычки", many: "привычек", genitiveOne: "привычки", gender: .feminine, accusativeOne: "привычку"),
+        .init(pattern: #"(?:день|дня|дней|дню|днём|днями|днях|дн\.?)"#, one: "день", few: "дня", many: "дней", genitiveOne: "дня", gender: .masculine, accusativeOne: nil),
+        .init(pattern: #"шаг(?:а|ов|у|ом|ами|ах)?"#, one: "шаг", few: "шага", many: "шагов", genitiveOne: "шага", gender: .masculine, accusativeOne: nil),
+        .init(pattern: #"цикл(?:а|ов|у|ом|ами|ах)?"#, one: "цикл", few: "цикла", many: "циклов", genitiveOne: "цикла", gender: .masculine, accusativeOne: nil),
+        .init(pattern: #"раунд(?:а|ов|у|ом|ами|ах)?"#, one: "раунд", few: "раунда", many: "раундов", genitiveOne: "раунда", gender: .masculine, accusativeOne: nil),
+        .init(pattern: #"план(?:а|ов|у|ом|ами|ах)?"#, one: "план", few: "плана", many: "планов", genitiveOne: "плана", gender: .masculine, accusativeOne: nil),
+        .init(pattern: #"пункт(?:а|ов|у|ом|ами|ах)?"#, one: "пункт", few: "пункта", many: "пунктов", genitiveOne: "пункта", gender: .masculine, accusativeOne: nil),
+        .init(pattern: #"блок(?:а|ов|у|ом|ами|ах)?"#, one: "блок", few: "блока", many: "блоков", genitiveOne: "блока", gender: .masculine, accusativeOne: nil),
+        .init(pattern: #"час(?:а|ов|у|ом|ами|ах)?"#, one: "час", few: "часа", many: "часов", genitiveOne: "часа", gender: .masculine, accusativeOne: nil),
+        .init(pattern: #"удар(?:а|ов|у|ом|ами|ах)?"#, one: "удар", few: "удара", many: "ударов", genitiveOne: "удара", gender: .masculine, accusativeOne: nil),
+        .init(pattern: #"действи(?:е|я|ю|ем|й|ям|ями|ях)"#, one: "действие", few: "действия", many: "действий", genitiveOne: "действия", gender: .neuter, accusativeOne: nil),
+        .init(pattern: #"изменени(?:е|я|ю|ем|й|ям|ями|ях)"#, one: "изменение", few: "изменения", many: "изменений", genitiveOne: "изменения", gender: .neuter, accusativeOne: nil),
+        .init(pattern: #"упражнени(?:е|я|ю|ем|й|ям|ями|ях)"#, one: "упражнение", few: "упражнения", many: "упражнений", genitiveOne: "упражнения", gender: .neuter, accusativeOne: nil),
+        .init(pattern: #"напоминани(?:е|я|ю|ем|й|ям|ями|ях)"#, one: "напоминание", few: "напоминания", many: "напоминаний", genitiveOne: "напоминания", gender: .neuter, accusativeOne: nil)
+    ]
+
+    private static let russianAdjectiveCounters: [RussianAdjectiveCounter] = [
+        .init(pattern: #"выполненн(?:ая|ые|ых)\s+задач(?:а|и|у|ей)?"#, one: "выполненная задача", few: "выполненные задачи", many: "выполненных задач", gender: .feminine),
+        .init(pattern: #"активн(?:ая|ые|ых)\s+задач(?:а|и|у|ей)?"#, one: "активная задача", few: "активные задачи", many: "активных задач", gender: .feminine),
+        .init(pattern: #"просроченн(?:ая|ые|ых)\s+задач(?:а|и|у|ей)?"#, one: "просроченная задача", few: "просроченные задачи", many: "просроченных задач", gender: .feminine),
+        .init(pattern: #"ключев(?:ой|ых|ые)\s+шаг(?:а|ов)?"#, one: "ключевой шаг", few: "ключевых шага", many: "ключевых шагов", gender: .masculine),
+        .init(pattern: #"продуктивн(?:ый|ых|ые)\s+д(?:ень|ня|ней)"#, one: "продуктивный день", few: "продуктивных дня", many: "продуктивных дней", gender: .masculine),
+        .init(pattern: #"коротк(?:ая|ие|их)\s+сесси(?:я|и|й)"#, one: "короткая сессия", few: "короткие сессии", many: "коротких сессий", gender: .feminine),
+        .init(pattern: #"спокойн(?:ый|ые|ых)\s+цикл(?:а|ов)?"#, one: "спокойный цикл", few: "спокойных цикла", many: "спокойных циклов", gender: .masculine)
+    ]
+
+    private static func replacingRussianCountedRanges(in source: String) -> String {
+        var text = source
+        let separator = #"\s*[‑–—-]\s*"#
+
+        for counter in russianAdjectiveCounters {
+            text = replacingMatches(
+                in: text,
+                pattern: "(?<![\\p{L}\\p{N}])(по\\s+)?(-?\\d+)\(separator)(-?\\d+)\\s+(?:\(counter.pattern))(?![\\p{L}\\p{N}])",
+                options: [.caseInsensitive]
+            ) { groups in
+                guard groups.count == 3,
+                      let lower = Int(groups[1]),
+                      let upper = Int(groups[2]) else {
+                    return groups.joined(separator: " ")
+                }
+                let range = "от \(russianIntegerGenitive(lower, gender: counter.gender)) до \(russianIntegerGenitive(upper, gender: counter.gender)) \(counter.many)"
+                return groups[0].isEmpty ? range : "продолжительностью \(range)"
+            }
+        }
+
+        for counter in russianCounters {
+            text = replacingMatches(
+                in: text,
+                pattern: "(?<![\\p{L}\\p{N}])(по\\s+)?(-?\\d+)\(separator)(-?\\d+)\\s*(?:\(counter.pattern))(?![\\p{L}\\p{N}])",
+                options: [.caseInsensitive]
+            ) { groups in
+                guard groups.count == 3,
+                      let lower = Int(groups[1]),
+                      let upper = Int(groups[2]) else {
+                    return groups.joined(separator: " ")
+                }
+                let range = "от \(russianIntegerGenitive(lower, gender: counter.gender)) до \(russianIntegerGenitive(upper, gender: counter.gender)) \(counter.many)"
+                return groups[0].isEmpty ? range : "продолжительностью \(range)"
+            }
+        }
+        return text
+    }
+
+    private static func replacingRussianPartitiveCounts(
+        in source: String
+    ) -> String {
+        var text = source
+        for counter in russianCounters {
+            text = replacingMatches(
+                in: text,
+                pattern: "(?<![\\p{L}\\p{N}])((?:в|на)\\s+)?(-?\\d+)\\s+из\\s+(-?\\d+)\\s*(?:\(counter.pattern))(?![\\p{L}\\p{N}])",
+                options: [.caseInsensitive]
+            ) { groups in
+                guard groups.count == 3,
+                      let completed = Int(groups[1]),
+                      let total = Int(groups[2]) else {
+                    return groups.joined(separator: " ")
+                }
+
+                let prefix = groups[0]
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .lowercased()
+                let first: String
+                if prefix.isEmpty {
+                    first = russianInteger(completed, gender: counter.gender)
+                } else {
+                    first = russianIntegerPrepositional(
+                        completed,
+                        gender: counter.gender
+                    )
+                }
+                let totalWords = russianIntegerGenitive(
+                    total,
+                    gender: counter.gender
+                )
+                let phrase = "\(first) из \(totalWords) \(counter.many)"
+                return prefix.isEmpty ? phrase : "\(prefix) \(phrase)"
+            }
+        }
+        return text
+    }
+
+    private static func russianGenitiveNumber(_ raw: String) -> String {
+        let normalized = raw.replacingOccurrences(of: ",", with: ".")
+        guard !normalized.contains("."), let value = Int(normalized) else {
+            return spokenNumber(raw, language: .ru)
+        }
+        return russianIntegerGenitive(value, gender: .masculine)
+    }
+
+    private static func replacingRussianAdjectiveCounters(in source: String) -> String {
+        var text = source
+        for counter in russianAdjectiveCounters {
+            text = replacingMatches(
+                in: text,
+                pattern: "(?<![\\p{L}\\p{N}.,])(-?\\d+)\\s+(?:\(counter.pattern))(?![\\p{L}\\p{N}])",
+                options: [.caseInsensitive]
+            ) { groups in
+                guard let raw = groups.first, let value = Int(raw) else { return groups.joined(separator: " ") }
+                let phrase = russianForm(value, one: counter.one, few: counter.few, many: counter.many)
+                return "\(russianInteger(value, gender: counter.gender)) \(phrase)"
+            }
+        }
+        return text
+    }
+
+    private static func replacingRussianCounters(in source: String) -> String {
+        var text = source
+        let prefixPattern = #"(?:из|до|после|без|для|около|от|за|через|на)\s+"#
+        let genitivePrefixes: Set<String> = ["из", "до", "после", "без", "для", "около", "от"]
+        let accusativePrefixes: Set<String> = ["за", "через", "на"]
+
+        for counter in russianCounters {
+            text = replacingMatches(
+                in: text,
+                pattern: "(?<![\\p{L}\\p{N}.,])(?:(\(prefixPattern)))?(-?\\d+)\\s*(\(counter.pattern))(?![\\p{L}\\p{N}])",
+                options: [.caseInsensitive]
+            ) { groups in
+                guard groups.count == 3, let value = Int(groups[1]) else {
+                    return groups.joined(separator: " ")
+                }
+
+                let prefixWithSpace = groups[0]
+                let prefix = prefixWithSpace.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let rawNoun = groups[2].lowercased()
+                let absolute = abs(value)
+
+                if genitivePrefixes.contains(prefix) {
+                    let noun = russianForm(
+                        value,
+                        one: counter.genitiveOne,
+                        few: counter.many,
+                        many: counter.many
+                    )
+                    return "\(prefix) \(russianIntegerGenitive(value, gender: counter.gender)) \(noun)"
+                }
+
+                let usesAccusative = counter.accusativeOne != nil
+                    && (
+                        (
+                            counter.accusativeOne != counter.one
+                            && counter.accusativeOne == rawNoun
+                        )
+                        || accusativePrefixes.contains(prefix)
+                    )
+                    && !(rawNoun.hasSuffix("е") || rawNoun.hasSuffix("и"))
+                let singular = russianForm(value, one: true, few: false, many: false)
+                let noun: String
+                if singular, usesAccusative, let accusativeOne = counter.accusativeOne {
+                    noun = accusativeOne
+                } else {
+                    noun = russianForm(value, one: counter.one, few: counter.few, many: counter.many)
+                }
+
+                let numeral = russianInteger(
+                    value,
+                    gender: counter.gender,
+                    accusativeFeminine: usesAccusative && absolute % 10 == 1 && absolute % 100 != 11
+                )
+                return prefix.isEmpty ? "\(numeral) \(noun)" : "\(prefix) \(numeral) \(noun)"
+            }
+        }
+        return text
+    }
+
     private enum MeasurementKind: String, CaseIterable {
-        case calories, kilometers, meters, kilograms, grams, milliliters, liters, minutes, hours, days, steps
+        case calories, kilometers, meters, kilograms, grams, milliliters, liters
+        case minutes, seconds, hours, days, weeks, steps
 
         var patterns: [String] {
             switch self {
@@ -189,8 +473,10 @@ enum LocalVoiceTextNormalizer {
             case .milliliters: return ["мл", "ml"]
             case .liters: return ["литр(?:а|ов)?", "liters?", "litres?", "l"]
             case .minutes: return ["мин(?:ут(?:а|ы)?)?", "minutes?", "min"]
+            case .seconds: return ["сек(?:унд(?:а|ы)?)?", "seconds?", "secs?", "s"]
             case .hours: return ["час(?:а|ов)?", "hours?", "hrs?", "h"]
             case .days: return ["дн(?:я|ей)?", "days?", "tage?", "días?"]
+            case .weeks: return ["недел(?:я|и|ь)", "weeks?", "wochen?", "semanas?"]
             case .steps: return ["шаг(?:а|ов)?", "steps?", "schritte?", "pasos?"]
             }
         }
@@ -206,11 +492,32 @@ enum LocalVoiceTextNormalizer {
                 options: [.caseInsensitive]
             ) { groups in
                 guard let raw = groups.first else { return "" }
-                let amount = spokenNumber(raw, language: language)
+                let normalized = raw.replacingOccurrences(of: ",", with: ".")
+                let amount: String
+                if language == .ru, let integer = Int(normalized) {
+                    amount = russianInteger(
+                        integer,
+                        gender: russianMeasurementGender(kind)
+                    )
+                } else {
+                    amount = spokenNumber(raw, language: language)
+                }
                 return "\(amount) \(measurementName(kind, rawAmount: raw, language: language))"
             }
         }
         return text
+    }
+
+    private static func russianMeasurementGender(
+        _ kind: MeasurementKind
+    ) -> RussianNumeralGender {
+        switch kind {
+        case .calories, .minutes, .seconds, .weeks:
+            return .feminine
+        case .kilometers, .meters, .kilograms, .grams, .milliliters,
+             .liters, .hours, .days, .steps:
+            return .masculine
+        }
     }
 
     private static func measurementName(
@@ -232,8 +539,10 @@ enum LocalVoiceTextNormalizer {
             case .milliliters: forms = ("миллилитр", "миллилитра", "миллилитров")
             case .liters: forms = ("литр", "литра", "литров")
             case .minutes: forms = ("минута", "минуты", "минут")
+            case .seconds: forms = ("секунда", "секунды", "секунд")
             case .hours: forms = ("час", "часа", "часов")
             case .days: forms = ("день", "дня", "дней")
+            case .weeks: forms = ("неделя", "недели", "недель")
             case .steps: forms = ("шаг", "шага", "шагов")
             }
             guard let integer else { return forms.1 }
@@ -249,8 +558,10 @@ enum LocalVoiceTextNormalizer {
             case .milliliters: forms = ("milliliter", "milliliters")
             case .liters: forms = ("liter", "liters")
             case .minutes: forms = ("minute", "minutes")
+            case .seconds: forms = ("second", "seconds")
             case .hours: forms = ("hour", "hours")
             case .days: forms = ("day", "days")
+            case .weeks: forms = ("week", "weeks")
             case .steps: forms = ("step", "steps")
             }
             return normalized == "1" ? forms.0 : forms.1
@@ -264,8 +575,10 @@ enum LocalVoiceTextNormalizer {
             case .milliliters: return "Milliliter"
             case .liters: return "Liter"
             case .minutes: return normalized == "1" ? "Minute" : "Minuten"
+            case .seconds: return normalized == "1" ? "Sekunde" : "Sekunden"
             case .hours: return normalized == "1" ? "Stunde" : "Stunden"
             case .days: return normalized == "1" ? "Tag" : "Tage"
+            case .weeks: return normalized == "1" ? "Woche" : "Wochen"
             case .steps: return normalized == "1" ? "Schritt" : "Schritte"
             }
         case .es:
@@ -279,8 +592,10 @@ enum LocalVoiceTextNormalizer {
             case .milliliters: forms = ("mililitro", "mililitros")
             case .liters: forms = ("litro", "litros")
             case .minutes: forms = ("minuto", "minutos")
+            case .seconds: forms = ("segundo", "segundos")
             case .hours: forms = ("hora", "horas")
             case .days: forms = ("día", "días")
+            case .weeks: forms = ("semana", "semanas")
             case .steps: forms = ("paso", "pasos")
             }
             return normalized == "1" ? forms.0 : forms.1
@@ -376,7 +691,10 @@ enum LocalVoiceTextNormalizer {
         case .ru:
             aliases = [
                 ("Apple Watch", "Эпл Вотч"), ("HealthKit", "Хелс Кит"),
+                ("Apple Health", "Эпл Здоровье"), ("WidgetKit", "Виджет Кит"),
+                ("Live Activity", "Лайв Активити"), ("Liquid Glass", "Ликвид Гласс"),
                 ("iPhone", "айфон"), ("iOS", "ай о эс"),
+                ("watchOS", "вотч о эс"), ("macOS", "мак о эс"),
                 ("Lippi", "Липпи"), ("Bonsai", "Бонсай"),
                 ("Pomodoro", "Помодоро"), ("AI", "искусственный интеллект"),
                 ("ИИ", "искусственный интеллект"), ("HRV", "вариабельность сердечного ритма"),
@@ -414,12 +732,72 @@ enum LocalVoiceTextNormalizer {
         }
     }
 
+    private static func replacingRussianPronunciationHints(
+        in source: String
+    ) -> String {
+        let phrases: [(String, String)] = [
+            (#"\bи\s+т\.\s*д\."#, "и так далее"),
+            (#"\bи\s+т\.\s*п\."#, "и тому подобное"),
+            (#"\bт\.\s*е\."#, "то есть")
+        ]
+        var text = source
+        for (pattern, replacement) in phrases {
+            text = text.replacingOccurrences(
+                of: pattern,
+                with: replacement,
+                options: [.regularExpression, .caseInsensitive]
+            )
+        }
+
+        let words: [(String, String)] = [
+            ("ее", "её"),
+            ("еще", "ещё"),
+            ("идет", "идёт"),
+            ("идем", "идём"),
+            ("пойдет", "пойдёт"),
+            ("перенес", "перенёс"),
+            ("перенесет", "перенесёт"),
+            ("сохранен", "сохранён"),
+            ("сохраненный", "сохранённый"),
+            ("сохраненная", "сохранённая"),
+            ("сохраненное", "сохранённое"),
+            ("сохраненной", "сохранённой"),
+            ("включен", "включён"),
+            ("отключен", "отключён"),
+            ("завершен", "завершён"),
+            ("определен", "определён"),
+            ("обновлен", "обновлён"),
+            ("учет", "учёт"),
+            ("прием", "приём"),
+            ("объем", "объём"),
+            ("теплый", "тёплый"),
+            ("легкий", "лёгкий"),
+            ("надежный", "надёжный")
+        ]
+
+        for (sourceWord, spokenWord) in words {
+            let escaped = NSRegularExpression.escapedPattern(for: sourceWord)
+            text = replacingMatches(
+                in: text,
+                pattern: "(?<![\\p{L}\\p{N}])\(escaped)(?![\\p{L}\\p{N}])",
+                options: [.caseInsensitive]
+            ) { _ in spokenWord }
+        }
+        return text
+    }
+
     private static func spokenNumber(_ raw: String, language: AppLang) -> String {
         let normalized = raw.replacingOccurrences(of: ",", with: ".")
         if normalized.contains("."),
            let separator = normalized.firstIndex(of: ".") {
             let integerPart = String(normalized[..<separator])
             let fractionPart = String(normalized[normalized.index(after: separator)...])
+            if language == .ru {
+                return russianDecimal(
+                    integerPart: integerPart,
+                    fractionPart: fractionPart
+                )
+            }
             let connector: String
             switch language {
             case .ru: connector = "целых"
@@ -433,6 +811,48 @@ enum LocalVoiceTextNormalizer {
             return "\(spokenInteger(integerPart, language: language)) \(connector) \(fraction)"
         }
         return spokenInteger(normalized, language: language)
+    }
+
+    private static func russianDecimal(
+        integerPart: String,
+        fractionPart: String
+    ) -> String {
+        let negative = integerPart.hasPrefix("-")
+        let rawInteger = integerPart.replacingOccurrences(of: "-", with: "")
+        guard let integer = Int(rawInteger),
+              let fraction = Int(fractionPart) else {
+            let fallback = fractionPart.compactMap(\.wholeNumberValue)
+                .map { digitWord($0, language: .ru) }
+                .joined(separator: " ")
+            return "\(spokenInteger(integerPart, language: .ru)) целых \(fallback)"
+        }
+
+        let signedInteger = negative ? -integer : integer
+        let unsignedIntegerWords = russianInteger(integer, gender: .feminine)
+        let integerWords = negative ? "минус \(unsignedIntegerWords)" : unsignedIntegerWords
+        let wholeForm = russianForm(
+            signedInteger,
+            one: "целая",
+            few: "целых",
+            many: "целых"
+        )
+
+        let denominator: String
+        switch fractionPart.count {
+        case 1:
+            denominator = russianForm(fraction, one: "десятая", few: "десятых", many: "десятых")
+        case 2:
+            denominator = russianForm(fraction, one: "сотая", few: "сотых", many: "сотых")
+        case 3:
+            denominator = russianForm(fraction, one: "тысячная", few: "тысячных", many: "тысячных")
+        default:
+            let digits = fractionPart.compactMap(\.wholeNumberValue)
+                .map { digitWord($0, language: .ru) }
+                .joined(separator: " ")
+            return "\(integerWords) \(wholeForm) \(digits)"
+        }
+
+        return "\(integerWords) \(wholeForm) \(russianInteger(fraction, gender: .feminine)) \(denominator)"
     }
 
     private static func spokenInteger(_ raw: String, language: AppLang) -> String {
@@ -529,9 +949,19 @@ enum LocalVoiceTextNormalizer {
 
     // MARK: - Number names
 
-    private static func russianInteger(_ value: Int) -> String {
+    private static func russianInteger(
+        _ value: Int,
+        gender: RussianNumeralGender = .masculine,
+        accusativeFeminine: Bool = false
+    ) -> String {
         if value == 0 { return "ноль" }
-        if value < 0 { return "минус " + russianInteger(abs(value)) }
+        if value < 0 {
+            return "минус " + russianInteger(
+                abs(value),
+                gender: gender,
+                accusativeFeminine: accusativeFeminine
+            )
+        }
         guard value <= 999_999_999 else { return String(value).compactMap(\.wholeNumberValue).map { digitWord($0, language: .ru) }.joined(separator: " ") }
 
         let scales = [
@@ -542,21 +972,55 @@ enum LocalVoiceTextNormalizer {
         var parts: [String] = []
         for (scale, one, few, many, feminine) in scales where remainder >= scale {
             let amount = remainder / scale
-            parts.append(russianChunk(amount, feminine: feminine))
+            parts.append(
+                russianChunk(
+                    amount,
+                    gender: feminine ? .feminine : .masculine
+                )
+            )
             parts.append(russianForm(amount, one: one, few: few, many: many))
             remainder %= scale
         }
-        if remainder > 0 { parts.append(russianChunk(remainder, feminine: false)) }
+        if remainder > 0 {
+            parts.append(
+                russianChunk(
+                    remainder,
+                    gender: gender,
+                    accusativeFeminine: accusativeFeminine
+                )
+            )
+        }
         return parts.joined(separator: " ")
     }
 
-    private static func russianChunk(_ value: Int, feminine: Bool) -> String {
+    private static func russianChunk(
+        _ value: Int,
+        gender: RussianNumeralGender,
+        accusativeFeminine: Bool = false
+    ) -> String {
         let hundreds = ["", "сто", "двести", "триста", "четыреста", "пятьсот", "шестьсот", "семьсот", "восемьсот", "девятьсот"]
         let teens = ["десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать", "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать"]
         let tens = ["", "", "двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят", "семьдесят", "восемьдесят", "девяносто"]
-        let ones = feminine
-            ? ["", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
-            : ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
+        let ones: [String]
+        switch gender {
+        case .masculine:
+            ones = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
+        case .feminine:
+            ones = [
+                "",
+                accusativeFeminine ? "одну" : "одна",
+                "две",
+                "три",
+                "четыре",
+                "пять",
+                "шесть",
+                "семь",
+                "восемь",
+                "девять"
+            ]
+        case .neuter:
+            ones = ["", "одно", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
+        }
         var parts: [String] = []
         let h = value / 100
         if h > 0 { parts.append(hundreds[h]) }
@@ -570,7 +1034,133 @@ enum LocalVoiceTextNormalizer {
         return parts.joined(separator: " ")
     }
 
-    private static func russianForm(_ value: Int, one: String, few: String, many: String) -> String {
+    private static func russianIntegerGenitive(
+        _ value: Int,
+        gender: RussianNumeralGender
+    ) -> String {
+        if value == 0 { return "нуля" }
+        if value < 0 {
+            return "минус " + russianIntegerGenitive(abs(value), gender: gender)
+        }
+        guard value <= 999_999_999 else {
+            return russianInteger(value, gender: gender)
+        }
+
+        let scales = [
+            (1_000_000, "миллиона", "миллионов", RussianNumeralGender.masculine),
+            (1_000, "тысячи", "тысяч", RussianNumeralGender.feminine)
+        ]
+        var remainder = value
+        var parts: [String] = []
+
+        for (scale, one, many, scaleGender) in scales where remainder >= scale {
+            let amount = remainder / scale
+            parts.append(russianGenitiveChunk(amount, gender: scaleGender))
+            parts.append(abs(amount) % 10 == 1 && abs(amount) % 100 != 11 ? one : many)
+            remainder %= scale
+        }
+
+        if remainder > 0 {
+            parts.append(russianGenitiveChunk(remainder, gender: gender))
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private static func russianGenitiveChunk(
+        _ value: Int,
+        gender: RussianNumeralGender
+    ) -> String {
+        let hundreds = [
+            "", "ста", "двухсот", "трёхсот", "четырёхсот",
+            "пятисот", "шестисот", "семисот", "восьмисот", "девятисот"
+        ]
+        let underTwenty = [
+            "", "", "двух", "трёх", "четырёх", "пяти", "шести", "семи", "восьми", "девяти",
+            "десяти", "одиннадцати", "двенадцати", "тринадцати", "четырнадцати",
+            "пятнадцати", "шестнадцати", "семнадцати", "восемнадцати", "девятнадцати"
+        ]
+        let tens = [
+            "", "", "двадцати", "тридцати", "сорока",
+            "пятидесяти", "шестидесяти", "семидесяти", "восьмидесяти", "девяноста"
+        ]
+
+        var parts: [String] = []
+        let hundredsIndex = value / 100
+        if hundredsIndex > 0 {
+            parts.append(hundreds[hundredsIndex])
+        }
+
+        let rest = value % 100
+        if rest == 1 {
+            parts.append(gender == .feminine ? "одной" : "одного")
+        } else if (2...19).contains(rest) {
+            parts.append(underTwenty[rest])
+        } else if rest >= 20 {
+            parts.append(tens[rest / 10])
+            let unit = rest % 10
+            if unit == 1 {
+                parts.append(gender == .feminine ? "одной" : "одного")
+            } else if unit > 1 {
+                parts.append(underTwenty[unit])
+            }
+        }
+
+        return parts.joined(separator: " ")
+    }
+
+    private static func russianIntegerPrepositional(
+        _ value: Int,
+        gender: RussianNumeralGender
+    ) -> String {
+        if value == 0 { return "нуле" }
+        if value < 0 {
+            return "минус " + russianIntegerPrepositional(
+                abs(value),
+                gender: gender
+            )
+        }
+        guard value < 1_000 else {
+            return russianIntegerGenitive(value, gender: gender)
+        }
+
+        let hundreds = [
+            "", "ста", "двухстах", "трёхстах", "четырёхстах",
+            "пятистах", "шестистах", "семистах", "восьмистах", "девятистах"
+        ]
+        let underTwenty = [
+            "", "", "двух", "трёх", "четырёх", "пяти", "шести", "семи", "восьми", "девяти",
+            "десяти", "одиннадцати", "двенадцати", "тринадцати", "четырнадцати",
+            "пятнадцати", "шестнадцати", "семнадцати", "восемнадцати", "девятнадцати"
+        ]
+        let tens = [
+            "", "", "двадцати", "тридцати", "сорока",
+            "пятидесяти", "шестидесяти", "семидесяти", "восьмидесяти", "девяноста"
+        ]
+
+        var parts: [String] = []
+        let hundredsIndex = value / 100
+        if hundredsIndex > 0 {
+            parts.append(hundreds[hundredsIndex])
+        }
+
+        let rest = value % 100
+        if rest == 1 {
+            parts.append(gender == .feminine ? "одной" : "одном")
+        } else if (2...19).contains(rest) {
+            parts.append(underTwenty[rest])
+        } else if rest >= 20 {
+            parts.append(tens[rest / 10])
+            let unit = rest % 10
+            if unit == 1 {
+                parts.append(gender == .feminine ? "одной" : "одном")
+            } else if unit > 1 {
+                parts.append(underTwenty[unit])
+            }
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private static func russianForm<T>(_ value: Int, one: T, few: T, many: T) -> T {
         let absolute = abs(value) % 100
         if (11...14).contains(absolute) { return many }
         switch absolute % 10 {

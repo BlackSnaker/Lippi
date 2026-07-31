@@ -33,6 +33,14 @@ struct NeuralVoiceConfigurationTests {
             HealthVoicePlaybackSpeed.energetic.neuralSpeed
                 > HealthVoicePlaybackSpeed.balanced.neuralSpeed
         )
+        #expect(
+            LocalNeuralVoiceProvider.optimizedSpeed(1, language: .ru)
+                == 0.96
+        )
+        #expect(
+            LocalNeuralVoiceProvider.optimizedSpeed(1, language: .en)
+                == 1
+        )
     }
 
     @Test("Russian speech expands time, percentages, identifiers, and counters")
@@ -79,10 +87,77 @@ struct NeuralVoiceConfigurationTests {
             language: .ru
         )
 
-        #expect(spoken.contains("четыре целых восемь километра"))
+        #expect(spoken.contains("четыре целых восемь десятых километра"))
         #expect(spoken.contains("пятьсот семьдесят два шага"))
         #expect(spoken.contains("двадцать пять минут"))
         #expect(spoken.contains("шестьдесят четыре ударов в минуту"))
+    }
+
+    @Test("Russian counters agree with feminine and neuter nouns")
+    func inflectsRussianCountersByGender() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Запустил фокус на 1 минут. Осталось 2 задачи, 21 цель и 1 действие.",
+            language: .ru
+        )
+
+        #expect(spoken.contains("на одну минуту"))
+        #expect(spoken.contains("две задачи"))
+        #expect(spoken.contains("двадцать одна цель"))
+        #expect(spoken.contains("одно действие"))
+    }
+
+    @Test("Russian counted nouns support common genitive phrases")
+    func inflectsRussianGenitiveCounters() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Активность есть в 3 из 7 дней. До 2 целей осталось немного.",
+            language: .ru
+        )
+
+        #expect(spoken.contains("в трёх из семи дней"))
+        #expect(spoken.contains("до двух целей"))
+    }
+
+    @Test("Russian ranges and fractions use the genitive case")
+    func inflectsRussianRangesAndFractions() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Сделай 2-3 коротких сессий по 2-4 минуты. Выполнено 3/7.",
+            language: .ru
+        )
+
+        #expect(spoken.contains("от двух до трёх коротких сессий"))
+        #expect(spoken.contains("от двух до четырёх минут"))
+        #expect(spoken.contains("три из семи"))
+    }
+
+    @Test("Russian decimals include a spoken denominator")
+    func speaksNaturalRussianDecimals() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Пройдено 1,5 км, прогресс 0,25%.",
+            language: .ru
+        )
+
+        #expect(spoken.contains("одна целая пять десятых километра"))
+        #expect(spoken.contains("ноль целых двадцать пять сотых процента"))
+    }
+
+    @Test("Russian one-minute time uses feminine agreement")
+    func speaksRussianTimeWithAgreement() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Напоминание на 1:01.",
+            language: .ru
+        )
+
+        #expect(spoken == "Напоминание на один час одна минута.")
+    }
+
+    @Test("Russian pronunciation hints add pauses and restore yo")
+    func preparesRussianProsodyAndYo() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "План обновлен — еще 2 действия • прием воды.",
+            language: .ru
+        )
+
+        #expect(spoken == "План обновлён. ещё два действия. приём воды.")
     }
 
     @Test("Phone numbers are spoken digit by digit")

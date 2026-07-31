@@ -35,7 +35,6 @@ struct GoalPlannerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage("goal.planner.lastRoadmap") private var savedRoadmap: String = ""
     @AppStorage("goal.progress.lastSummary") private var savedProgressSummary: String = ""

@@ -18,7 +18,6 @@ private enum StatsMetric: String, CaseIterable, Identifiable {
 struct StatsCardView: View {
     @EnvironmentObject private var stats: StatsStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
 
     @State private var daysWindow: Int = 7
@@ -170,8 +169,7 @@ struct StatsCardView: View {
         )
         .lippiSystemGlass(
             in: RoundedRectangle(cornerRadius: 22, style: .continuous),
-            tint: DS.accent.opacity(0.10),
-            enabled: !isScrolling
+            tint: DS.accent.opacity(0.10)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -298,7 +296,7 @@ struct StatsCardView: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(DS.glassStroke(0.13), lineWidth: 1)
         )
-        .shadow(color: isScrolling ? .clear : DS.depthShadow(0.10), radius: isScrolling ? 0 : 7, x: 0, y: isScrolling ? 0 : 4)
+        .shadow(color: DS.depthShadow(0.10), radius: 7, x: 0, y: 4)
     }
 
     private var timelineHeader: some View {
@@ -410,7 +408,6 @@ struct StatsCardView: View {
 
 private struct ReadableActivityTimeline: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.lippiIsScrolling) private var isScrolling
 
     let data: [DayStats]
     let metric: StatsMetric
@@ -445,14 +442,13 @@ private struct ReadableActivityTimeline: View {
         )
         .lippiSystemGlass(
             in: RoundedRectangle(cornerRadius: 22, style: .continuous),
-            tint: DS.accent.opacity(0.08),
-            enabled: !isScrolling
+            tint: DS.accent.opacity(0.08)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(DS.glassStroke(0.14), lineWidth: 1)
         )
-        .shadow(color: isScrolling ? .clear : DS.depthShadow(0.10), radius: isScrolling ? 0 : 8, x: 0, y: isScrolling ? 0 : 5)
+        .shadow(color: DS.depthShadow(0.10), radius: 8, x: 0, y: 5)
     }
 
     private func timelineDay(_ day: DayStats, itemWidth: CGFloat) -> some View {

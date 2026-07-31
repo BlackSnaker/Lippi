@@ -35,8 +35,8 @@ final class ScrollPerformanceCoordinator: ObservableObject {
             return
         }
 
-        // Keep the lightweight render path through the final deceleration frames
-        // so glass, shadows, and implicit animations do not come back mid-scroll.
+        // Keep animation throttling through the final deceleration frames without
+        // changing the visual hierarchy or material quality.
         settleTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: self?.settleDelay ?? 360_000_000)
             guard !Task.isCancelled else { return }
@@ -126,7 +126,8 @@ private struct LippiPerformanceModeModifier: ViewModifier {
 }
 
 extension View {
-    /// Lets shared glass surfaces switch to their lighter drawing path during scrolling.
+    /// Reports active scrolling so expensive continuous motion can lower its frame rate.
+    /// Static surfaces must keep the same visual representation while this flag changes.
     func lippiScrollPerformance() -> some View {
         modifier(LippiScrollPerformanceModifier())
     }

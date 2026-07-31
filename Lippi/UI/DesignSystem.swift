@@ -501,7 +501,6 @@ extension View {
 /// The fallback deliberately adds no extra layer on older or constrained devices.
 struct LippiGlassEffectGroup<Content: View>: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.lippiIsScrolling) private var isScrolling
 
     private let spacing: CGFloat?
     private let content: Content
@@ -515,8 +514,7 @@ struct LippiGlassEffectGroup<Content: View>: View {
     var body: some View {
         if #available(iOS 26.0, *),
            DS.systemGlassEffectsEnabled,
-           !reduceTransparency,
-           !isScrolling {
+           !reduceTransparency {
             GlassEffectContainer(spacing: spacing) {
                 content
             }
@@ -527,7 +525,6 @@ struct LippiGlassEffectGroup<Content: View>: View {
 }
 
 private struct LippiSystemGlassModifier<S: Shape>: ViewModifier {
-    @Environment(\.lippiIsScrolling) private var isScrolling
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     let shape: S
@@ -542,7 +539,6 @@ private struct LippiSystemGlassModifier<S: Shape>: ViewModifier {
         let shouldRender = enabled
             && (interactive || prominent || forceSystemGlass)
             && (forceSystemGlass || DS.systemGlassEffectsEnabled)
-            && !isScrolling
             && !reduceTransparency
         if shouldRender {
             if #available(iOS 26.0, *) {
@@ -679,9 +675,8 @@ struct TightLabelStyle: LabelStyle {
 private struct LippiWindowChrome: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.lippiIsScrolling) private var isScrolling
 
-    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
+    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency }
 
     var body: some View {
         GeometryReader { proxy in
@@ -724,14 +719,13 @@ private struct LippiWindowChrome: View {
 // =======================================================
 struct LippiSectionHeader: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.lippiIsScrolling) private var isScrolling
 
     let title: String
     var subtitle: String? = nil
     var icon: String
     var accent: Color = DS.accent
 
-    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
+    private var simplified: Bool { DS.performanceEffectsReduced || reduceTransparency }
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -825,7 +819,6 @@ struct GlassCard<Content: View>: View {
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.lippiIsScrolling) private var isScrolling
 
     var padding: CGFloat = DS.pad
     var cornerRadius: CGFloat = DS.radius
@@ -836,10 +829,9 @@ struct GlassCard<Content: View>: View {
     @State private var didAppear = false
 
     private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
-    private var scrollPerformanceMode: Bool { isScrolling }
     private var isFlatStyle: Bool { style == .flat }
-    private var useFlatEffects: Bool { style == .flat || performanceMode || scrollPerformanceMode }
-    private var useLightEffects: Bool { useFlatEffects || style == .lightweight || isScrolling }
+    private var useFlatEffects: Bool { style == .flat || performanceMode }
+    private var useLightEffects: Bool { useFlatEffects || style == .lightweight }
     private var cardShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
     }
@@ -895,8 +887,6 @@ struct GlassCard<Content: View>: View {
         let shape = cardShape
         if reduceTransparency {
             shape.fill(DS.solidSurface)
-        } else if scrollPerformanceMode {
-            shape.fill(DS.contentSurfaceSubtle)
         } else if useFlatEffects {
             shape
                 .fill(DS.contentSurfaceSubtle)
@@ -923,21 +913,18 @@ struct GlassCard<Content: View>: View {
     }
 
     private var primaryShadowColor: Color {
-        if scrollPerformanceMode { return DS.shadow.opacity(0.06) }
         return DS.shadow.opacity(useFlatEffects ? 0.06 : (useLightEffects ? 0.12 : 0.20))
     }
     private var primaryShadowRadius: CGFloat {
-        if scrollPerformanceMode { return 1.2 }
         return useFlatEffects ? 1.8 : (useLightEffects ? 4 : 10)
     }
     private var primaryShadowY: CGFloat {
-        if scrollPerformanceMode { return 1 }
         return useFlatEffects ? 1 : (useLightEffects ? 2 : 5)
     }
     private func fullModeBackground(shape: RoundedRectangle) -> some View {
         shape
-            .fill(.thinMaterial)
-            .overlay { shape.fill(DS.contentSurface).opacity(0.82) }
+            .fill(DS.contentSurface)
+            .overlay { shape.fill(DS.glassTint).opacity(0.16) }
             .overlay { shape.fill(DS.glassDepth).opacity(0.08) }
     }
 }
@@ -957,7 +944,7 @@ struct LippiButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.lippiIsScrolling) private var isScrolling
 
-    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
+    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency }
     private var scrollingEffects: Bool { isScrolling }
     private var systemGlassEnabled: Bool { forceSystemGlass || !simplifiedEffects }
     private var usesSystemGlass: Bool {
@@ -1355,14 +1342,13 @@ struct AnimatedBackground: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.displayScale) private var displayScale
-    @Environment(\.lippiIsScrolling) private var isScrolling
 
     // Тюнинг производительности
     private let globalBlurCap: CGFloat = 28
     private let blobEdgeSoftness: CGFloat = 0.72
 
     // In Simulator/Low Power/thermal pressure we keep the look, but stop live redraws.
-    private var reducedEffects: Bool { DS.performanceEffectsReduced || isScrolling }
+    private var reducedEffects: Bool { DS.performanceEffectsReduced }
     private var targetFPS: Double { DS.preferredFramesPerSecond >= 120 ? 24 : 18 }
     private var effectiveFPS: Double { reducedEffects ? 8 : targetFPS }
     private var enableGlowBlend: Bool { !reducedEffects && !reduceMotion } // plusLighter дорогой при скролле

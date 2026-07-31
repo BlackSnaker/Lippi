@@ -56,7 +56,7 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
                         let data = try runtime.generate(
                             text: preparedText,
                             language: language,
-                            speed: speed,
+                            speed: Self.optimizedSpeed(speed, language: language),
                             profile: profile,
                             cancellation: cancellation
                         )
@@ -128,6 +128,18 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
             return String(prefix[..<wordEnd]).trimmingCharacters(in: .whitespaces) + "…"
         }
         return prefix + "…"
+    }
+
+    static func optimizedSpeed(
+        _ requestedSpeed: Float,
+        language: AppLang
+    ) -> Float {
+        let safeSpeed = min(max(requestedSpeed, 0.82), 1.12)
+        guard language == .ru else { return safeSpeed }
+
+        // Compact multilingual voices articulate Russian consonant clusters
+        // more clearly with a small amount of extra time per phoneme.
+        return min(max(safeSpeed - 0.04, 0.84), 1.04)
     }
 
     private static func checkPowerPolicy() throws {
@@ -204,7 +216,7 @@ private final class SupertonicRuntime {
             rule_fsts: Self.cString(""),
             max_num_sentences: 1,
             rule_fars: Self.cString(""),
-            silence_scale: 0.16
+            silence_scale: 0.22
         )
         guard let created = SherpaOnnxCreateOfflineTts(&config) else {
             throw NeuralVoiceProviderError.initialization
@@ -225,7 +237,7 @@ private final class SupertonicRuntime {
     ) throws -> Data {
         let extra = #"{"lang":"\#(language.rawValue)"}"#
         var config = SherpaOnnxGenerationConfig(
-            silence_scale: 0.16,
+            silence_scale: 0.22,
             speed: speed,
             sid: Int32(profile.speakerID),
             reference_audio: nil,

@@ -3024,10 +3024,8 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showEyes) {
             EyeComfortCameraView()
         }
-        .sheet(isPresented: $showVoiceAssistant) {
+        .fullScreenCover(isPresented: $showVoiceAssistant) {
             AppVoiceAssistantSheet(assistant: voiceAssistant, lang: lang)
-                .presentationDetents([.fraction(0.72), .large])
-                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showAssistantCalendar) {
             LippiCalendarView {
@@ -3111,11 +3109,10 @@ struct AppBackdrop: View {
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.lippiHasGlobalBackdrop) private var hasGlobalBackdrop
-    @Environment(\.lippiIsScrolling) private var isScrolling
     @AppStorage(AppTheme.storageKey) private var themeRaw: String = AppTheme.defaultTheme.rawValue
     var renderMode: RenderMode = .auto
 
-    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
+    private var performanceMode: Bool { DS.performanceEffectsReduced || reduceTransparency }
     private var increasedContrast: Bool { colorSchemeContrast == .increased }
     private var activeTheme: AppTheme { AppTheme(rawValue: themeRaw) ?? AppTheme.defaultTheme }
     private var palette: AppThemePalette { activeTheme.palette }
@@ -3374,14 +3371,13 @@ struct GlassTabBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
-    @Environment(\.lippiIsScrolling) private var isScrolling
 
     @Binding var selection: AppTab
     var isInteractionEnabled: Bool = true
     let lang: AppLang
     @Namespace private var tabSelectionNamespace
 
-    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency || isScrolling }
+    private var simplifiedEffects: Bool { DS.performanceEffectsReduced || reduceTransparency }
     private var usesSystemGlass: Bool {
         if #available(iOS 26.0, *) {
             return !simplifiedEffects && DS.systemGlassEffectsEnabled

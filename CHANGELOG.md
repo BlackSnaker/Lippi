@@ -12,14 +12,16 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2030%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2031%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Living assistant interface" src="https://img.shields.io/badge/Assistant-Living%20interface-BF5AF2?style=for-the-badge">
+    <img alt="Stable scrolling quality" src="https://img.shields.io/badge/Dark%20UI-Stable%20quality-64D2FF?style=for-the-badge">
     <img alt="Adaptive calendar" src="https://img.shields.io/badge/Calendar-Adaptive-64D2FF?style=for-the-badge">
     <img alt="Conversational assistant" src="https://img.shields.io/badge/Assistant-Conversational-5E5CE6?style=for-the-badge">
     <img alt="Natural speech" src="https://img.shields.io/badge/Speech-Natural-30D158?style=for-the-badge">
     <img alt="Adaptive Pomodoro" src="https://img.shields.io/badge/Pomodoro-Adaptive-0A84FF?style=for-the-badge">
     <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=for-the-badge">
     <img alt="Complete app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=for-the-badge">
-    <img alt="Tests" src="https://img.shields.io/badge/Tests-116-30D158?style=for-the-badge">
+    <img alt="Tests" src="https://img.shields.io/badge/Tests-122-30D158?style=for-the-badge">
     <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=for-the-badge">
     <img alt="Apple Watch companion" src="https://img.shields.io/badge/Apple%20Watch-Companion-30D158?style=for-the-badge">
     <img alt="Widgets redesigned" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=for-the-badge">
@@ -46,32 +48,90 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>A day with perspective</strong><br>
-      <sub>Month, plans, and roadmap in one calm view.</sub>
+      <strong>Intelligence with a presence</strong><br>
+      <sub>A living full-screen voice experience.</sub>
       <br><br>
-      <strong>День — в перспективе</strong><br>
-      <sub>Месяц, планы и маршрут в одном спокойном экране.</sub>
+      <strong>Интеллект обрёл присутствие</strong><br>
+      <sub>Живой полноэкранный голосовой сценарий.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>A plan that can breathe</strong><br>
-      <sub>Capacity-aware suggestions, always confirmed.</sub>
+      <strong>Motion that communicates</strong><br>
+      <sub>Distinct listening, thinking, and speaking states.</sub>
       <br><br>
-      <strong>План, в котором есть воздух</strong><br>
-      <sub>Бережные предложения — только с подтверждением.</sub>
+      <strong>Движение, которое говорит</strong><br>
+      <sub>Свои состояния для внимания, мысли и ответа.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>A request, understood together</strong><br>
-      <sub>Several actions and natural follow-ups.</sub>
+      <strong>Russian with grammar</strong><br>
+      <sub>Agreement, cases, ranges, and fractions.</sub>
       <br><br>
-      <strong>Просьба понята целиком</strong><br>
-      <sub>Несколько действий и естественные продолжения.</sub>
+      <strong>Русский — с грамматикой</strong><br>
+      <sub>Согласование, падежи, диапазоны и дроби.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Numbers sound human</strong><br>
-      <sub>Speech receives meaning, not raw symbols.</sub>
+      <strong>One quality in motion</strong><br>
+      <sub>Dark materials remain crisp while scrolling.</sub>
       <br><br>
-      <strong>Цифры звучат по-человечески</strong><br>
-      <sub>Голос получает смысл, а не набор символов.</sub>
+      <strong>Одно качество в движении</strong><br>
+      <sub>Тёмные материалы остаются чёткими при прокрутке.</sub>
+    </td>
+  </tr>
+</table>
+
+### July 31, 2026 — Lippi comes alive when you speak. / Lippi оживает, когда вы говорите.
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img alt="Lippi voice assistant ready for a command" src="AppStore/PrivacySite/public/showcase/assistant-golden-gate-ready.jpg">
+      <br><br>
+      <strong>Ready to understand / Готова понять</strong>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img alt="Lippi voice assistant speaking a result" src="AppStore/PrivacySite/public/showcase/assistant-golden-gate-response.jpg">
+      <br><br>
+      <strong>Ready to continue / Готова продолжить</strong>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi's voice assistant is now a complete conversation space with a living visual identity, clearer controls, more natural Russian speech, and a dark interface that keeps the same quality while moving.</strong></p>
+      <ul>
+        <li><strong>A full-screen voice experience:</strong> the assistant now opens as a dedicated space rather than a partial-height sheet. State, response, personalized suggestions, typed input, quick commands, and the control dock share one deliberate hierarchy.</li>
+        <li><strong>An intelligence sphere with meaning:</strong> five fluid color fields, spectral ribbons, rotating contours, and a restrained outer aura respond differently to idle, listening, processing, speaking, and error states.</li>
+        <li><strong>A compact state capsule:</strong> the top control mirrors the current palette and icon while keeping Lippi's name and live status readable against the dark backdrop.</li>
+        <li><strong>Useful motion, bounded cost:</strong> the primary composition is capped at 30 FPS and the compact indicator at 20 FPS. Reduce Motion and constrained runtime conditions produce a polished static state instead of running continuous effects.</li>
+        <li><strong>Vector clarity:</strong> moving color lobes now use native SwiftUI radial gradients instead of a blurred raster Canvas, removing the low-resolution phase that could appear while the view was moving.</li>
+        <li><strong>No dark-mode quality switch:</strong> scrolling no longer removes Liquid Glass, shadows, background lighting, or card depth and then restores them after a delay. The appearance is stable from the first touch through the end of deceleration.</li>
+        <li><strong>Static content surfaces:</strong> information cards use stable vector fills, depth gradients, and borders. System glass remains reserved for navigation and controls, where it can preserve its intended optical character.</li>
+        <li><strong>Performance without visible compromise:</strong> the scroll coordinator still disables unnecessary implicit animation and lowers continuous frame rates, but it no longer changes material hierarchy or visual quality.</li>
+        <li><strong>Russian grammar before synthesis:</strong> masculine, feminine, and neuter agreement now covers phrases such as one minute, two tasks, one goal, and one action. Common genitive constructions, ranges, fractions, decimals, and time forms are expanded naturally.</li>
+        <li><strong>Clearer Russian articulation:</strong> playback is slightly calmer, punctuation creates more useful pauses, and frequent words regain «ё» where that improves pronunciation.</li>
+        <li><strong>Localized throughout:</strong> all hero states, keyboard entry, command catalog, and control labels are complete in Russian, English, German, and Spanish.</li>
+        <li><strong>Verification:</strong> the app, watchOS companion, both widget extensions, and test bundle complete a successful build-for-testing. The suite now contains <strong>122 tests</strong>; no Simulator was launched during this verification.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Голосовой помощник Lippi стал цельным пространством для разговора — с живой визуальной айдентикой, понятным управлением, более естественной русской речью и тёмным интерфейсом, который сохраняет качество в движении.</strong></p>
+      <ul>
+        <li><strong>Полноэкранный голосовой сценарий:</strong> помощник открывается как самостоятельное пространство, а не частичная шторка. Состояние, ответ, персональные рекомендации, ввод с клавиатуры, быстрые команды и центр управления собраны в одной иерархии.</li>
+        <li><strong>Сфера интеллекта со смыслом:</strong> пять текучих цветовых полей, спектральные ленты, вращающиеся контуры и сдержанная внешняя аура по-разному ведут себя в ожидании, прослушивании, обработке, ответе и ошибке.</li>
+        <li><strong>Компактная капсула состояния:</strong> верхний элемент повторяет актуальную палитру и символ, сохраняя имя Lippi и живой статус читаемыми на тёмном фоне.</li>
+        <li><strong>Полезное движение с ограниченной нагрузкой:</strong> основная композиция работает не выше 30 FPS, мини-индикатор — 20 FPS. Reduce Motion и ограничение ресурсов дают красивое статичное состояние без непрерывных эффектов.</li>
+        <li><strong>Векторная чёткость:</strong> движущиеся цветовые лепестки построены на нативных радиальных градиентах SwiftUI вместо размытого растрового Canvas, поэтому во время движения больше нет фазы пониженного разрешения.</li>
+        <li><strong>Тёмная тема без переключения качества:</strong> прокрутка больше не убирает Liquid Glass, тени, фоновый свет и глубину карточек с последующим резким восстановлением. Внешний вид стабилен от первого касания до завершения инерции.</li>
+        <li><strong>Стабильные поверхности контента:</strong> информационные карточки используют векторные заливки, градиент глубины и контуры. Системное стекло остаётся на уровне навигации и управления, где сохраняет нужный оптический характер.</li>
+        <li><strong>Оптимизация без видимого компромисса:</strong> координатор прокрутки по-прежнему отключает лишние неявные анимации и ограничивает частоту непрерывного движения, но больше не меняет материалы и качество картинки.</li>
+        <li><strong>Русская грамматика до синтеза:</strong> учитываются мужской, женский и средний род — «одна минута», «две задачи», «одна цель», «одно действие». Естественно раскрываются частые конструкции родительного падежа, диапазоны, дроби, десятичные числа и время.</li>
+        <li><strong>Чище русская дикция:</strong> темп стал немного спокойнее, пунктуация создаёт полезные паузы, а частые слова получают «ё» там, где это улучшает произношение.</li>
+        <li><strong>Полная локализация:</strong> состояния главного экрана, клавиатурный ввод, каталог команд и элементы управления готовы на русском, английском, немецком и испанском.</li>
+        <li><strong>Проверка:</strong> приложение, watchOS companion, оба расширения виджетов и тестовый bundle успешно проходят build-for-testing. Набор вырос до <strong>122 тестов</strong>; Simulator во время проверки не запускался.</li>
+      </ul>
     </td>
   </tr>
 </table>
