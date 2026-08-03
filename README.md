@@ -47,7 +47,7 @@
   <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=flat-square">
   <img alt="Lippi app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-122-30D158?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-125-30D158?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
@@ -115,6 +115,47 @@ Lippi объединяет планирование, фокус и восста�
 [Политика конфиденциальности Lippi →](https://lippi.lenuma.ru/privacy)
 
 ## Последнее обновление · Latest release
+
+### 3 августа 2026 — Больше пространства. Больше ясности.
+
+Самые живые сценарии Lippi стали цельнее. Голосовой режим теперь действительно ощущается системным: стеклянные поверхности объединяются и разделяются по контексту, а текст появляется мягким световым движением и больше не обрывается внутри ответа. Календарь, тренажёр для глаз и диалог «Умных целей» получили тот же спокойный визуальный язык — с большим количеством воздуха и полезными действиями прямо там, где они нужны.
+
+<table>
+  <tr>
+    <td width="25%" align="center" valign="top">
+      <strong>◉ Голос — как пространство</strong><br><br>
+      Состояние, ответ, рекомендации и команды собраны в связанную систему Liquid Glass.<br><br>
+      <sub>One conversation. One material language.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>▦ Календарь — как инструмент</strong><br><br>
+      Месяц и неделя, фильтры, создание, редактирование и перенос планов без лишней навигации.<br><br>
+      <sub>See the rhythm. Shape the day.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>◎ Забота — во весь экран</strong><br><br>
+      Камера, упражнение, показатели и подсказки теперь живут в одном полноэкранном сценарии.<br><br>
+      <sub>Guidance without breaking focus.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>✦ Цели — как разговор</strong><br><br>
+      Больше воздуха, яснее реплики и мягкое появление каждого нового смыслового блока.<br><br>
+      <sub>Less form. More understanding.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Системный Liquid Glass в голосовом режиме.** Верхняя капсула, кнопки, подсказки, поле ответа, быстрые команды и каталоги используют нативное стекло на поддерживаемых версиях iOS и читаемый material-fallback на более ранних.
+- **Текст появляется живо — и остаётся целиком.** Заголовки и ответы раскрываются по глифам с лёгким светом, подъёмом и уходящим размытием. Ограничение строк у ответа снято, поэтому длинная реплика больше не теряет продолжение.
+- **Русский голос увереннее завершает мысль.** Более естественные паузы, явная финальная граница фразы и увеличенный интервал тишины помогают сохранить окончания и не склеивать соседние части предложения.
+- **`Е`, `ё`, `и` и `й` больше не смешиваются.** В контексте букв Lippi произносит их как отдельные названия, не меняя обычные союзы и слова; словарь частых форм с `ё` расширен и сохраняет регистр.
+- **Календарь работает в масштабе месяца и недели.** Периоды переключаются одной стеклянной капсулой, горизонтальный жест листает месяц или неделю, а выбранный день переходит между состояниями через matched Liquid Glass.
+- **Планы можно менять прямо в календаре.** Добавление на выбранную дату, редактирование, завершение, фильтры активных и готовых дел, перенос на завтра или следующую неделю и снятие даты доступны без возврата к отдельному списку задач.
+- **Тренажёр для глаз стал полноэкранным.** Видеопоток занимает всю поверхность, цель взгляда остаётся вне Dynamic Island и нижних панелей, а статус, прогресс и показатели располагаются поверх камеры на компактных стеклянных слоях.
+- **Уведомления помогают, не отвлекая.** Этап упражнения, готовность камеры, положение лица и заметные сигналы усталости или покраснения появляются как временные Liquid Glass-уведомления с понятным цветом и действием закрытия.
+- **Диалог «Умных целей» дышит свободнее.** Увеличены поля и интервалы, реплики Lippi и пользователя получили разную иерархию, настройки маршрута и поле ввода стали самостоятельными стеклянными объектами.
+- **Движение учитывает доступность и производительность.** `Reduce Motion` заменяет сложные переходы спокойным появлением, `Reduce Transparency` сохраняет контраст, а во время прокрутки не запускаются лишние текстовые эффекты.
+- **Проверено на актуальном макете устройства.** Все сценарии интерактивно проверены владельцем проекта в **Simulator iPhone 17**. Приложение, watchOS companion, оба расширения виджетов и test bundle также успешно проходят `build-for-testing`; кодовая база содержит **125 тестов**. Физический iPhone остаётся следующим этапом проверки камеры и реальной производительности.
 
 ### 31 июля 2026 — Lippi оживает, когда вы говорите.
 
@@ -479,6 +520,16 @@ The product is designed around four promises:
 - **Responsive interaction** that preserves visual quality while throttling continuous motion when resources are constrained.
 
 ### Latest release
+
+The August 3 release gives Lippi's most conversational experiences more room to breathe. Voice assistance, Smart Goals, Calendar, and camera-guided eye care now share one coherent Liquid Glass language: native system glass where available, stable readable fallbacks elsewhere, and motion that communicates state without becoming constant decoration.
+
+The voice experience now materializes its title, response, recommendations, controls, and command surfaces as a connected glass composition. Text reveals with a restrained glyph-level glow and lift, complete answers are allowed to wrap instead of being cut after a fixed number of lines, and Reduce Motion provides an immediate calm alternative. Russian speech preparation adds clearer phrase endings, wider pauses, more common `ё` forms, and context-aware names for the letters `е`, `ё`, `и`, and `й`.
+
+Calendar is now a working planning surface rather than a passive overview. It switches between month and week, supports swipe navigation, filters active and completed plans, and lets the user create, edit, complete, reschedule, or unschedule a task directly from the selected day. The current selection moves through matched Liquid Glass while exact changes still remain under the user's control.
+
+The eye-comfort camera is edge-to-edge, with gaze targets kept clear of system chrome and compact glass layers for status, progress, metrics, and temporary guidance. Smart Goals received the same refinement: wider spacing, clearer speaker hierarchy, grouped glass messages, a redesigned composer, and short text-reveal transitions that stop while scrolling.
+
+The owner has interactively verified the complete update in **iPhone 17 Simulator**. The app, watchOS companion, both widget extensions, and test bundle also complete a successful `build-for-testing`; the repository now contains **125 tests**. Camera behavior, thermals, and sustained performance on a physical iPhone remain the next verification stage.
 
 The July 31 release gives Lippi a voice interface with a presence of its own. A full-screen conversation space brings together a living multicolor intelligence sphere, clear state language, personalized recommendations, quick commands, typed input, and immediate follow-up. Listening, thinking, speaking, idle, and recovery states each have a distinct motion character without imitating a system assistant.
 

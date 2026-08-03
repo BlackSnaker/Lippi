@@ -37,14 +37,25 @@ enum LocalVoiceTextNormalizer {
         text = replacingIntegers(in: text, language: language)
         text = replacingSymbols(in: text, language: language)
         text = removingUnsupportedSpeechCharacters(in: text)
+        if language == .ru {
+            text = applyingRussianProsody(to: text)
+        }
 
-        return text
+        let normalized = text
             .replacingOccurrences(of: #"\.{2,}"#, with: ".", options: .regularExpression)
             .replacingOccurrences(of: #",\s*([,.!?;:])"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"\s+([,.!?;:])"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"([,.!?;:])(?=[\p{L}\p{N}])"#, with: "$1 ", options: .regularExpression)
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // A terminal boundary gives the acoustic model enough context to
+        // finish the final syllable instead of clipping a quiet ending.
+        guard let last = normalized.last,
+              !".!?…".contains(last) else {
+            return normalized
+        }
+        return normalized + "."
     }
 
     // MARK: - Speech-safe typography
@@ -740,7 +751,7 @@ enum LocalVoiceTextNormalizer {
             (#"\bи\s+т\.\s*п\."#, "и тому подобное"),
             (#"\bт\.\s*е\."#, "то есть")
         ]
-        var text = source
+        var text = replacingRussianLetterSequences(in: source)
         for (pattern, replacement) in phrases {
             text = text.replacingOccurrences(
                 of: pattern,
@@ -752,9 +763,24 @@ enum LocalVoiceTextNormalizer {
         let words: [(String, String)] = [
             ("ее", "её"),
             ("еще", "ещё"),
+            ("мое", "моё"),
+            ("твое", "твоё"),
+            ("свое", "своё"),
             ("идет", "идёт"),
             ("идем", "идём"),
+            ("идешь", "идёшь"),
             ("пойдет", "пойдёт"),
+            ("пойдем", "пойдём"),
+            ("пойдешь", "пойдёшь"),
+            ("начнем", "начнём"),
+            ("перейдем", "перейдём"),
+            ("найдем", "найдём"),
+            ("учтем", "учтём"),
+            ("ждет", "ждёт"),
+            ("дает", "даёт"),
+            ("ведет", "ведёт"),
+            ("создает", "создаёт"),
+            ("создаем", "создаём"),
             ("перенес", "перенёс"),
             ("перенесет", "перенесёт"),
             ("сохранен", "сохранён"),
@@ -771,17 +797,126 @@ enum LocalVoiceTextNormalizer {
             ("прием", "приём"),
             ("объем", "объём"),
             ("теплый", "тёплый"),
+            ("теплая", "тёплая"),
+            ("теплое", "тёплое"),
             ("легкий", "лёгкий"),
-            ("надежный", "надёжный")
+            ("легкая", "лёгкая"),
+            ("легкое", "лёгкое"),
+            ("надежный", "надёжный"),
+            ("надежная", "надёжная"),
+            ("надежное", "надёжное"),
+            ("четкий", "чёткий"),
+            ("четкая", "чёткая"),
+            ("четкое", "чёткое"),
+            ("серьезный", "серьёзный"),
+            ("серьезная", "серьёзная"),
+            ("серьезное", "серьёзное")
         ]
 
         for (sourceWord, spokenWord) in words {
             let escaped = NSRegularExpression.escapedPattern(for: sourceWord)
             text = replacingMatches(
                 in: text,
-                pattern: "(?<![\\p{L}\\p{N}])\(escaped)(?![\\p{L}\\p{N}])",
+                pattern: "(?<![\\p{L}\\p{N}])(\(escaped))(?![\\p{L}\\p{N}])",
                 options: [.caseInsensitive]
-            ) { _ in spokenWord }
+            ) { groups in
+                guard let original = groups.first else { return spokenWord }
+                return matchingCase(of: spokenWord, to: original)
+            }
+        }
+
+        let participleStems: [(String, String)] = [
+            ("сохраненн", "сохранённ"),
+            ("включенн", "включённ"),
+            ("отключенн", "отключённ"),
+            ("завершенн", "завершённ"),
+            ("определенн", "определённ"),
+            ("обновленн", "обновлённ")
+        ]
+        for (sourceStem, spokenStem) in participleStems {
+            text = replacingMatches(
+                in: text,
+                pattern: "(?<![\\p{L}\\p{N}])(\(sourceStem))([а-яё]*)(?![\\p{L}\\p{N}])",
+                options: [.caseInsensitive]
+            ) { groups in
+                guard groups.count == 2 else { return groups.joined() }
+                return matchingCase(of: spokenStem, to: groups[0]) + groups[1]
+            }
+        }
+        return text
+    }
+
+    /// Makes letter names explicit only when the text clearly refers to
+    /// letters. Normal words containing `е`, `ё`, `и`, or `й` are untouched.
+    private static func replacingRussianLetterSequences(in source: String) -> String {
+        var text = replacingMatches(
+            in: source,
+            pattern: #"(?<![\p{L}\p{N}])((?:букв(?:а|ы|у|е|ой|ами|ах)|символ(?:а|ы|ов|у|ом|ами|ах)))\s+((?:[еёий](?:\s*(?:[,;/]|\bи\b)\s*[еёий]){0,7}))(?![\p{L}\p{N}])"#,
+            options: [.caseInsensitive]
+        ) { groups in
+            guard groups.count == 2 else { return groups.joined(separator: " ") }
+            let noun = groups[0]
+            let rawLetters = groups[1]
+            let separated = rawLetters.replacingOccurrences(
+                of: #"\s+и\s+(?=[еёий](?:\s|$))"#,
+                with: ",",
+                options: [.regularExpression, .caseInsensitive]
+            )
+            let letters = separated
+                .components(separatedBy: CharacterSet(charactersIn: ",;/"))
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            return noun + ": " + letters.map(russianLetterName).joined(separator: ", ")
+        }
+
+        // `й` and `ё` are never standalone Russian words, while a lone `е`
+        // is overwhelmingly a requested letter. A lone `и` is deliberately
+        // not replaced because it is also the everyday conjunction.
+        text = replacingMatches(
+            in: text,
+            pattern: #"(?<!буква )(?<![\p{L}\p{N}])([еёй])(?![\p{L}\p{N}])"#,
+            options: [.caseInsensitive]
+        ) { groups in
+            groups.first.map(russianLetterName) ?? ""
+        }
+        return text
+    }
+
+    private static func russianLetterName(_ raw: String) -> String {
+        switch raw.lowercased() {
+        case "ё": return "буква ё"
+        case "й": return "буква и краткое"
+        case "и": return "буква и"
+        default: return "буква е"
+        }
+    }
+
+    private static func matchingCase(of replacement: String, to original: String) -> String {
+        guard original.first?.isUppercase == true,
+              let first = replacement.first else {
+            return replacement
+        }
+        return first.uppercased() + String(replacement.dropFirst())
+    }
+
+    private static func applyingRussianProsody(to source: String) -> String {
+        var text = source
+
+        // Supertonic reacts more naturally to explicit medium pauses than to
+        // semicolons, which compact multilingual voices often ignore.
+        text = text.replacingOccurrences(of: ";", with: ". ")
+
+        let cues = [
+            "хорошо", "отлично", "итак", "конечно", "понимаю",
+            "пожалуйста", "например", "главное"
+        ].joined(separator: "|")
+        text = replacingMatches(
+            in: text,
+            pattern: "(^|[.!?…]\\s+)(\(cues))(?=\\s+)(?!\\s*[,!.?:;])",
+            options: [.caseInsensitive]
+        ) { groups in
+            guard groups.count == 2 else { return groups.joined() }
+            return groups[0] + groups[1] + ","
         }
         return text
     }

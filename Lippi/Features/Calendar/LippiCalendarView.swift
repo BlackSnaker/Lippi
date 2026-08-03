@@ -3,6 +3,21 @@ import SwiftUI
 import UIKit
 #endif
 
+private enum LippiCalendarScope: String, CaseIterable, Identifiable {
+    case month
+    case week
+
+    var id: String { rawValue }
+}
+
+private enum LippiCalendarTaskFilter: String, CaseIterable, Identifiable {
+    case all
+    case active
+    case completed
+
+    var id: String { rawValue }
+}
+
 struct LippiCalendarView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -22,6 +37,11 @@ struct LippiCalendarView: View {
     ) ?? .now
     @State private var showAdaptationConfirmation = false
     @State private var adaptationResult: String?
+    @State private var scope: LippiCalendarScope = .month
+    @State private var taskFilter: LippiCalendarTaskFilter = .all
+    @State private var editingTask: TaskItem?
+    @State private var isPresentingTaskEditor = false
+    @Namespace private var calendarGlassNamespace
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
@@ -90,6 +110,20 @@ struct LippiCalendarView: View {
             } message: {
                 Text(L10n.fmt("calendar.adapt.confirm.body", lang, intelligence.suggestions.count))
             }
+            .sheet(isPresented: $isPresentingTaskEditor, onDismiss: {
+                editingTask = nil
+            }) {
+                AddEditTaskView(
+                    item: editingTask,
+                    initialDueDate: editingTask == nil ? suggestedDueDate(for: selectedDate) : nil
+                ) { task in
+                    if editingTask == nil {
+                        store.add(task)
+                    } else {
+                        store.update(task)
+                    }
+                }
+            }
         }
         .background(Color.clear)
     }
@@ -151,25 +185,27 @@ struct LippiCalendarView: View {
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    HStack(spacing: 8) {
-                        heroMetric(
-                            value: "\(intelligence.plansToday)",
-                            title: s("calendar.metric.today"),
-                            icon: "checklist",
-                            tint: DS.accent
-                        )
-                        heroMetric(
-                            value: "\(intelligence.focusMinutesToday)",
-                            title: s("calendar.metric.focus"),
-                            icon: "timer",
-                            tint: Color(hex: 0x64D2FF)
-                        )
-                        heroMetric(
-                            value: "\(intelligence.completedThisWeek)",
-                            title: s("calendar.metric.week"),
-                            icon: "checkmark.seal.fill",
-                            tint: Color(hex: 0x30D158)
-                        )
+                    LippiGlassEffectGroup(spacing: 8) {
+                        HStack(spacing: 8) {
+                            heroMetric(
+                                value: "\(intelligence.plansToday)",
+                                title: s("calendar.metric.today"),
+                                icon: "checklist",
+                                tint: DS.accent
+                            )
+                            heroMetric(
+                                value: "\(intelligence.focusMinutesToday)",
+                                title: s("calendar.metric.focus"),
+                                icon: "timer",
+                                tint: Color(hex: 0x64D2FF)
+                            )
+                            heroMetric(
+                                value: "\(intelligence.completedThisWeek)",
+                                title: s("calendar.metric.week"),
+                                icon: "checkmark.seal.fill",
+                                tint: Color(hex: 0x30D158)
+                            )
+                        }
                     }
                 }
                 .padding(20)
@@ -201,6 +237,11 @@ struct LippiCalendarView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(DS.glassStroke(0.10), lineWidth: 1)
         )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            tint: tint.opacity(0.08),
+            forceSystemGlass: true
+        )
     }
 
     private var monthCard: some View {
@@ -210,10 +251,10 @@ struct LippiCalendarView: View {
                     monthNavigationButton(direction: -1, icon: "chevron.left")
 
                     VStack(spacing: 2) {
-                        Text(monthTitle)
+                        Text(calendarHeaderTitle)
                             .font(.headline.weight(.bold))
                             .foregroundStyle(DS.textPrimary)
-                        Text(s("calendar.month.subtitle"))
+                        Text(scope == .month ? s("calendar.month.subtitle") : s("calendar.week.subtitle"))
                             .font(.caption)
                             .foregroundStyle(DS.textTertiary)
                     }
@@ -222,33 +263,90 @@ struct LippiCalendarView: View {
                     monthNavigationButton(direction: 1, icon: "chevron.right")
                 }
 
-                LazyVGrid(columns: weekdayColumns, spacing: 7) {
-                    ForEach(weekdaySymbols, id: \.self) { symbol in
-                        Text(symbol.uppercased())
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(DS.textTertiary)
-                            .frame(maxWidth: .infinity)
-                    }
+                calendarScopePicker
 
-                    ForEach(Array(monthDays.enumerated()), id: \.offset) { _, date in
-                        if let date {
-                            dayButton(date)
-                        } else {
-                            Color.clear.frame(height: 45)
+                LippiGlassEffectGroup(spacing: 7) {
+                    LazyVGrid(columns: weekdayColumns, spacing: 7) {
+                        ForEach(weekdaySymbols, id: \.self) { symbol in
+                            Text(symbol.uppercased())
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(DS.textTertiary)
+                                .frame(maxWidth: .infinity)
+                        }
+
+                        ForEach(Array(visibleDays.enumerated()), id: \.offset) { _, date in
+                            if let date {
+                                dayButton(date)
+                            } else {
+                                Color.clear.frame(height: 45)
+                            }
                         }
                     }
                 }
+            }
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 24)
+                .onEnded { value in
+                    guard abs(value.translation.width) > abs(value.translation.height),
+                          abs(value.translation.width) > 48 else { return }
+                    navigateCalendar(direction: value.translation.width < 0 ? 1 : -1)
+                }
+        )
+    }
+
+    private var calendarScopePicker: some View {
+        LippiGlassEffectGroup(spacing: 8) {
+            HStack(spacing: 8) {
+                ForEach(LippiCalendarScope.allCases) { item in
+                    Button {
+                        withAnimation(reduceMotion ? nil : DS.motionState) {
+                            scope = item
+                            displayedMonth = monthStart(for: selectedDate)
+                        }
+                    } label: {
+                        Text(s("calendar.scope.\(item.rawValue)"))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(item == scope ? DS.accent : DS.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .background(
+                                item == scope ? DS.accent.opacity(0.08) : DS.glassFill(0.035),
+                                in: Capsule(style: .continuous)
+                            )
+                            .lippiSystemGlass(
+                                in: Capsule(style: .continuous),
+                                tint: item == scope ? DS.accent.opacity(0.13) : nil,
+                                interactive: true,
+                                forceSystemGlass: true
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(item == scope ? .isSelected : [])
+                }
+            }
+        }
+    }
+
+    private func navigateCalendar(direction: Int) {
+        let component: Calendar.Component = scope == .month ? .month : .weekOfYear
+        let anchor = scope == .month ? displayedMonth : selectedDate
+        guard let destination = calendar.date(byAdding: component, value: direction, to: anchor) else { return }
+
+        withAnimation(reduceMotion ? nil : DS.motionState) {
+            if scope == .month {
+                displayedMonth = monthStart(for: destination)
+                selectedDate = monthStart(for: destination)
+            } else {
+                selectedDate = destination
+                displayedMonth = monthStart(for: destination)
             }
         }
     }
 
     private func monthNavigationButton(direction: Int, icon: String) -> some View {
         Button {
-            guard let month = calendar.date(byAdding: .month, value: direction, to: displayedMonth) else { return }
-            withAnimation(reduceMotion ? nil : DS.motionState) {
-                displayedMonth = monthStart(for: month)
-                selectedDate = monthStart(for: month)
-            }
+            navigateCalendar(direction: direction)
         } label: {
             Image(safeSystemName: icon, fallback: icon)
                 .font(.caption.weight(.bold))
@@ -256,8 +354,15 @@ struct LippiCalendarView: View {
                 .frame(width: 44, height: 44)
                 .background(DS.glassFill(0.08), in: Circle())
                 .overlay(Circle().stroke(DS.glassStroke(0.11), lineWidth: 1))
+                .lippiSystemGlass(
+                    in: Circle(),
+                    tint: DS.accent.opacity(0.07),
+                    interactive: true,
+                    forceSystemGlass: true
+                )
         }
         .buttonStyle(PressScaleStyle(scale: 0.94, opacity: 0.82))
+        .accessibilityLabel(s(direction < 0 ? "calendar.previous" : "calendar.next"))
     }
 
     private func dayButton(_ date: Date) -> some View {
@@ -275,35 +380,56 @@ struct LippiCalendarView: View {
             VStack(spacing: 3) {
                 Text("\(calendar.component(.day, from: date))")
                     .font(.subheadline.weight(isSelected || isToday ? .bold : .medium))
-                    .foregroundStyle(isSelected ? Color.white : DS.textPrimary)
+                    .foregroundStyle(isSelected ? DS.accent : DS.textPrimary)
 
                 HStack(spacing: 2) {
                     if unfinished > 0 {
                         Circle()
-                            .fill(isSelected ? Color.white : DS.accent)
+                            .fill(DS.accent)
                             .frame(width: 4, height: 4)
                     }
                     if completed {
                         Circle()
-                            .fill(isSelected ? Color.white.opacity(0.65) : Color(hex: 0x30D158))
+                            .fill(Color(hex: 0x30D158))
                             .frame(width: 4, height: 4)
                     }
                 }
                 .frame(height: 5)
             }
             .frame(maxWidth: .infinity, minHeight: 45)
-            .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(isSelected ? DS.accent : (isToday ? DS.accent.opacity(0.11) : Color.clear))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .stroke(isToday && !isSelected ? DS.accent.opacity(0.40) : Color.clear, lineWidth: 1)
-            )
+            .background { daySelectionSurface(isSelected: isSelected, isToday: isToday) }
             .contentShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(dayAccessibilityLabel(date: date, planCount: plans.count))
+    }
+
+    @ViewBuilder
+    private func daySelectionSurface(isSelected: Bool, isToday: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
+
+        if isSelected {
+            if #available(iOS 26.0, *) {
+                shape
+                    .fill(Color.clear)
+                    .glassEffect(
+                        Glass.regular.tint(DS.accent.opacity(0.18)).interactive(),
+                        in: shape
+                    )
+                    .glassEffectID("calendar.selected.day", in: calendarGlassNamespace)
+                    .glassEffectTransition(.matchedGeometry)
+            } else {
+                shape
+                    .fill(DS.accent.opacity(0.16))
+                    .overlay(shape.stroke(DS.accent.opacity(0.34), lineWidth: 1))
+            }
+        } else if isToday {
+            shape
+                .fill(DS.accent.opacity(0.08))
+                .overlay(shape.stroke(DS.accent.opacity(0.34), lineWidth: 1))
+        } else {
+            Color.clear
+        }
     }
 
     private var intelligenceCard: some View {
@@ -347,6 +473,11 @@ struct LippiCalendarView: View {
                             .padding(.horizontal, 10)
                             .background(DS.glassFill(0.065), in: Capsule(style: .continuous))
                             .overlay(Capsule(style: .continuous).stroke(DS.glassStroke(0.09), lineWidth: 1))
+                            .lippiSystemGlass(
+                                in: Capsule(style: .continuous),
+                                tint: accent.opacity(0.055),
+                                forceSystemGlass: true
+                            )
                     }
                 }
 
@@ -367,6 +498,11 @@ struct LippiCalendarView: View {
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .lippiSystemGlass(
+                        in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                        tint: accent.opacity(0.08),
+                        forceSystemGlass: true
+                    )
                 }
 
                 if intelligence.shouldOfferAdaptation {
@@ -432,34 +568,58 @@ struct LippiCalendarView: View {
         .padding(.horizontal, 11)
         .padding(.vertical, 9)
         .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            tint: paceAccent(intelligence.pace.level).opacity(0.055),
+            forceSystemGlass: true
+        )
     }
 
     private var selectedPlansCard: some View {
-        let dated = tasks(on: selectedDate)
-        let undated = calendar.isDateInToday(selectedDate)
+        let allDated = tasks(on: selectedDate)
+        let allUndated = calendar.isDateInToday(selectedDate)
             ? store.tasks.filter { !$0.isCompleted && $0.dueDate == nil }
             : []
+        let dated = allDated.filter(matchesTaskFilter)
+        let undated = allUndated.filter(matchesTaskFilter)
+        let visibleCount = dated.count + undated.count
+        let hasPlansBeforeFiltering = !(allDated.isEmpty && allUndated.isEmpty)
 
-        return GlassCard(padding: 17, cornerRadius: 26, style: .lightweight) {
+        return GlassCard(padding: 17, cornerRadius: 26, style: .full, forceSystemGlass: true) {
             VStack(alignment: .leading, spacing: 14) {
                 LippiSectionHeader(
                     title: selectedDateTitle,
                     subtitle: dated.isEmpty && undated.isEmpty
-                        ? s("calendar.day.empty")
-                        : L10n.fmt("calendar.day.count", lang, dated.count + undated.count),
+                        ? s(hasPlansBeforeFiltering ? "calendar.day.filtered_empty" : "calendar.day.empty")
+                        : L10n.fmt("calendar.day.count", lang, visibleCount),
                     icon: "calendar.day.timeline.left",
                     accent: DS.accent
                 )
 
+                selectedDayToolbar
+
                 if dated.isEmpty && undated.isEmpty {
-                    HStack(spacing: 12) {
-                        Image(safeSystemName: "leaf.fill", fallback: "sparkles")
-                            .foregroundStyle(Color(hex: 0x30D158))
-                            .frame(width: 38, height: 38)
-                            .background(Color(hex: 0x30D158).opacity(0.10), in: Circle())
-                        Text(s("calendar.day.empty_hint"))
-                            .font(.subheadline)
-                            .foregroundStyle(DS.textSecondary)
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 12) {
+                            Image(safeSystemName: hasPlansBeforeFiltering ? "line.3.horizontal.decrease.circle" : "leaf.fill", fallback: "sparkles")
+                                .foregroundStyle(hasPlansBeforeFiltering ? DS.accent : Color(hex: 0x30D158))
+                                .frame(width: 38, height: 38)
+                                .background(
+                                    (hasPlansBeforeFiltering ? DS.accent : Color(hex: 0x30D158)).opacity(0.10),
+                                    in: Circle()
+                                )
+                            Text(s(hasPlansBeforeFiltering ? "calendar.day.filtered_hint" : "calendar.day.empty_hint"))
+                                .font(.subheadline)
+                                .foregroundStyle(DS.textSecondary)
+                        }
+
+                        if !hasPlansBeforeFiltering {
+                            Button(action: presentNewTask) {
+                                Label(s("calendar.action.add"), systemImage: "plus")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(LippiButtonStyle(kind: .secondary, forceSystemGlass: true))
+                        }
                     }
                 } else {
                     ForEach(dated) { task in
@@ -480,11 +640,90 @@ struct LippiCalendarView: View {
         }
     }
 
-    private func taskRow(_ task: TaskItem, showsUnscheduled: Bool) -> some View {
+    private var selectedDayToolbar: some View {
+        LippiGlassEffectGroup(spacing: 8) {
+            HStack(spacing: 8) {
+                dayNavigationButton(direction: -1, icon: "chevron.left")
+                dayNavigationButton(direction: 1, icon: "chevron.right")
+
+                Spacer(minLength: 4)
+
+                Menu {
+                    Picker(s("calendar.filter.title"), selection: $taskFilter) {
+                        ForEach(LippiCalendarTaskFilter.allCases) { filter in
+                            Label(
+                                s("calendar.filter.\(filter.rawValue)"),
+                                systemImage: filterIcon(filter)
+                            )
+                            .tag(filter)
+                        }
+                    }
+                } label: {
+                    Label(
+                        s("calendar.filter.\(taskFilter.rawValue)"),
+                        systemImage: "line.3.horizontal.decrease"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.textSecondary)
+                    .padding(.horizontal, 12)
+                    .frame(height: 38)
+                    .background(DS.glassFill(0.045), in: Capsule(style: .continuous))
+                    .lippiSystemGlass(
+                        in: Capsule(style: .continuous),
+                        tint: DS.accent.opacity(0.07),
+                        interactive: true,
+                        forceSystemGlass: true
+                    )
+                }
+
+                Button(action: presentNewTask) {
+                    Image(safeSystemName: "plus", fallback: "plus.circle")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(DS.accent)
+                        .frame(width: 38, height: 38)
+                        .background(DS.accent.opacity(0.08), in: Circle())
+                        .lippiSystemGlass(
+                            in: Circle(),
+                            tint: DS.accent.opacity(0.13),
+                            interactive: true,
+                            forceSystemGlass: true
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(s("calendar.action.add"))
+            }
+        }
+    }
+
+    private func dayNavigationButton(direction: Int, icon: String) -> some View {
         Button {
-            store.toggle(task.id, stats: stats)
+            guard let date = calendar.date(byAdding: .day, value: direction, to: selectedDate) else { return }
+            withAnimation(reduceMotion ? nil : DS.motionQuick) {
+                selectedDate = date
+                displayedMonth = monthStart(for: date)
+            }
         } label: {
-            HStack(spacing: 12) {
+            Image(safeSystemName: icon, fallback: icon)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(DS.textSecondary)
+                .frame(width: 38, height: 38)
+                .background(DS.glassFill(0.045), in: Circle())
+                .lippiSystemGlass(
+                    in: Circle(),
+                    tint: DS.accent.opacity(0.055),
+                    interactive: true,
+                    forceSystemGlass: true
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(s(direction < 0 ? "calendar.day.previous" : "calendar.day.next"))
+    }
+
+    private func taskRow(_ task: TaskItem, showsUnscheduled: Bool) -> some View {
+        HStack(spacing: 10) {
+            Button {
+                store.toggle(task.id, stats: stats)
+            } label: {
                 ZStack {
                     Circle()
                         .fill(task.isCompleted ? Color(hex: 0x30D158).opacity(0.16) : task.category.tint.opacity(0.13))
@@ -493,7 +732,14 @@ struct LippiCalendarView: View {
                         .foregroundStyle(task.isCompleted ? Color(hex: 0x30D158) : task.category.tint)
                 }
                 .frame(width: 38, height: 38)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(task.title)
+            .accessibilityHint(s("calendar.task.toggle_hint"))
 
+            Button {
+                presentEditor(for: task)
+            } label: {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(task.title)
                         .font(.subheadline.weight(.semibold))
@@ -511,16 +757,55 @@ struct LippiCalendarView: View {
                             .foregroundStyle(date < .now && !task.isCompleted ? Color(hex: 0xFF453A) : DS.textTertiary)
                     }
                 }
-
-                Spacer(minLength: 8)
-
-                Image(safeSystemName: task.isCompleted ? "checkmark.circle.fill" : "circle", fallback: "circle")
-                    .foregroundStyle(task.isCompleted ? Color(hex: 0x30D158) : DS.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .accessibilityHint(s("calendar.action.edit"))
+
+            Menu {
+                Button {
+                    presentEditor(for: task)
+                } label: {
+                    Label(s("calendar.action.edit"), systemImage: "pencil")
+                }
+
+                Button {
+                    reschedule(task, daysFromToday: 1)
+                } label: {
+                    Label(s("calendar.action.tomorrow"), systemImage: "sunrise")
+                }
+
+                Button {
+                    reschedule(task, daysFromToday: 7)
+                } label: {
+                    Label(s("calendar.action.next_week"), systemImage: "calendar.badge.plus")
+                }
+
+                if task.dueDate != nil {
+                    Button {
+                        var updated = task
+                        updated.dueDate = nil
+                        store.update(updated)
+                    } label: {
+                        Label(s("calendar.action.unschedule"), systemImage: "calendar.badge.minus")
+                    }
+                }
+            } label: {
+                Image(safeSystemName: "ellipsis", fallback: "ellipsis.circle")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(width: 36, height: 36)
+                    .background(DS.glassFill(0.05), in: Circle())
+                    .lippiSystemGlass(
+                        in: Circle(),
+                        tint: task.category.tint.opacity(0.06),
+                        interactive: true,
+                        forceSystemGlass: true
+                    )
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityHint(s("calendar.task.toggle_hint"))
+        .padding(.vertical, 2)
     }
 
     @ViewBuilder
@@ -554,7 +839,7 @@ struct LippiCalendarView: View {
                 }
             }
         } else {
-            GlassCard(padding: 17, cornerRadius: 24, style: .flat) {
+            GlassCard(padding: 17, cornerRadius: 24, style: .flat, forceSystemGlass: true) {
                 HStack(spacing: 13) {
                     Image(safeSystemName: "map.fill", fallback: "sparkles")
                         .font(.title3.weight(.semibold))
@@ -649,6 +934,11 @@ struct LippiCalendarView: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(DS.accent.opacity(0.10), in: Capsule())
+                            .lippiSystemGlass(
+                                in: Capsule(),
+                                tint: DS.accent.opacity(0.10),
+                                forceSystemGlass: true
+                            )
                     }
                 }
 
@@ -669,6 +959,30 @@ struct LippiCalendarView: View {
         displayedMonth.formatted(
             .dateTime.locale(Locale(identifier: lang.localeIdentifier)).month(.wide).year()
         )
+    }
+
+    private var calendarHeaderTitle: String {
+        guard scope == .week,
+              let first = weekDays.first,
+              let last = weekDays.last else { return monthTitle }
+
+        if calendar.component(.month, from: first) == calendar.component(.month, from: last) {
+            let start = first.formatted(
+                .dateTime.locale(Locale(identifier: lang.localeIdentifier)).day()
+            )
+            let end = last.formatted(
+                .dateTime.locale(Locale(identifier: lang.localeIdentifier)).day().month(.wide).year()
+            )
+            return "\(start)–\(end)"
+        }
+
+        let start = first.formatted(
+            .dateTime.locale(Locale(identifier: lang.localeIdentifier)).day().month(.abbreviated)
+        )
+        let end = last.formatted(
+            .dateTime.locale(Locale(identifier: lang.localeIdentifier)).day().month(.abbreviated).year()
+        )
+        return "\(start) – \(end)"
     }
 
     private var selectedDateTitle: String {
@@ -706,6 +1020,21 @@ struct LippiCalendarView: View {
         return result
     }
 
+    private var weekDays: [Date] {
+        let start = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start
+            ?? calendar.startOfDay(for: selectedDate)
+        return (0..<7).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: start)
+        }
+    }
+
+    private var visibleDays: [Date?] {
+        if scope == .week {
+            return weekDays.map(Optional.some)
+        }
+        return monthDays
+    }
+
     private var intelligenceSummary: String {
         if intelligence.overduePlans > 0 {
             return L10n.fmt("calendar.intelligence.overdue", lang, intelligence.overduePlans)
@@ -731,6 +1060,71 @@ struct LippiCalendarView: View {
                 if lhs.isCompleted != rhs.isCompleted { return !lhs.isCompleted }
                 return (lhs.dueDate ?? .distantFuture) < (rhs.dueDate ?? .distantFuture)
             }
+    }
+
+    private func matchesTaskFilter(_ task: TaskItem) -> Bool {
+        switch taskFilter {
+        case .all:
+            return true
+        case .active:
+            return !task.isCompleted
+        case .completed:
+            return task.isCompleted
+        }
+    }
+
+    private func filterIcon(_ filter: LippiCalendarTaskFilter) -> String {
+        switch filter {
+        case .all: return "square.grid.2x2"
+        case .active: return "circle"
+        case .completed: return "checkmark.circle.fill"
+        }
+    }
+
+    private func presentNewTask() {
+        editingTask = nil
+        isPresentingTaskEditor = true
+    }
+
+    private func presentEditor(for task: TaskItem) {
+        editingTask = task
+        isPresentingTaskEditor = true
+    }
+
+    private func suggestedDueDate(for date: Date) -> Date {
+        if calendar.isDateInToday(date) {
+            return Date.now.addingTimeInterval(60 * 60)
+        }
+        return calendar.date(bySettingHour: 18, minute: 0, second: 0, of: date)
+            ?? date.addingTimeInterval(18 * 60 * 60)
+    }
+
+    private func reschedule(_ task: TaskItem, daysFromToday: Int) {
+        let today = calendar.startOfDay(for: .now)
+        guard let destinationDay = calendar.date(
+            byAdding: .day,
+            value: daysFromToday,
+            to: today
+        ) else { return }
+
+        let originalTime = task.dueDate.map {
+            calendar.dateComponents([.hour, .minute], from: $0)
+        }
+        let dueDate = calendar.date(
+            bySettingHour: originalTime?.hour ?? 18,
+            minute: originalTime?.minute ?? 0,
+            second: 0,
+            of: destinationDay
+        ) ?? destinationDay.addingTimeInterval(18 * 60 * 60)
+
+        var updated = task
+        updated.dueDate = dueDate
+        store.update(updated)
+
+        withAnimation(reduceMotion ? nil : DS.motionState) {
+            selectedDate = destinationDay
+            displayedMonth = monthStart(for: destinationDay)
+        }
     }
 
     private func monthStart(for date: Date) -> Date {

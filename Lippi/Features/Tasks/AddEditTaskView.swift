@@ -30,7 +30,11 @@ struct AddEditTaskView: View {
         AppBackdrop(renderMode: .force)
     }
 
-    init(item: TaskItem? = nil, onSave: @escaping (TaskItem) -> Void) {
+    init(
+        item: TaskItem? = nil,
+        initialDueDate: Date? = nil,
+        onSave: @escaping (TaskItem) -> Void
+    ) {
         self.item = item
         self.onSave = onSave
         _title = State(initialValue: item?.title ?? "")
@@ -38,6 +42,9 @@ struct AddEditTaskView: View {
         if let d = item?.dueDate {
             _hasDueDate = State(initialValue: true)
             _dueDate = State(initialValue: d)
+        } else if let initialDueDate {
+            _hasDueDate = State(initialValue: true)
+            _dueDate = State(initialValue: initialDueDate)
         }
         _category = State(initialValue: item?.category ?? .other)
     }

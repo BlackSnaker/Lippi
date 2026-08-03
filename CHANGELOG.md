@@ -12,8 +12,12 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-July%2031%2C%202026-0A84FF?style=for-the-badge">
-    <img alt="Living assistant interface" src="https://img.shields.io/badge/Assistant-Living%20interface-BF5AF2?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-August%203%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="System Liquid Glass" src="https://img.shields.io/badge/Interface-System%20Glass-BF5AF2?style=for-the-badge">
+    <img alt="Animated assistant text" src="https://img.shields.io/badge/Text-Living%20reveal-64D2FF?style=for-the-badge">
+    <img alt="Full-screen eye exercise" src="https://img.shields.io/badge/Eye%20Camera-Full%20screen-30D158?style=for-the-badge">
+    <img alt="Week calendar" src="https://img.shields.io/badge/Calendar-Month%20·%20Week-FF9F0A?style=for-the-badge">
+    <img alt="Smart Goals glass chat" src="https://img.shields.io/badge/Smart%20Goals-Glass%20chat-5E5CE6?style=for-the-badge">
     <img alt="Stable scrolling quality" src="https://img.shields.io/badge/Dark%20UI-Stable%20quality-64D2FF?style=for-the-badge">
     <img alt="Adaptive calendar" src="https://img.shields.io/badge/Calendar-Adaptive-64D2FF?style=for-the-badge">
     <img alt="Conversational assistant" src="https://img.shields.io/badge/Assistant-Conversational-5E5CE6?style=for-the-badge">
@@ -21,7 +25,7 @@
     <img alt="Adaptive Pomodoro" src="https://img.shields.io/badge/Pomodoro-Adaptive-0A84FF?style=for-the-badge">
     <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=for-the-badge">
     <img alt="Complete app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=for-the-badge">
-    <img alt="Tests" src="https://img.shields.io/badge/Tests-122-30D158?style=for-the-badge">
+    <img alt="Tests" src="https://img.shields.io/badge/Tests-125-30D158?style=for-the-badge">
     <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=for-the-badge">
     <img alt="Apple Watch companion" src="https://img.shields.io/badge/Apple%20Watch-Companion-30D158?style=for-the-badge">
     <img alt="Widgets redesigned" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=for-the-badge">
@@ -48,32 +52,77 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>Intelligence with a presence</strong><br>
-      <sub>A living full-screen voice experience.</sub>
+      <strong>One material language</strong><br>
+      <sub>Native glass across conversation and control.</sub>
       <br><br>
-      <strong>Интеллект обрёл присутствие</strong><br>
-      <sub>Живой полноэкранный голосовой сценарий.</sub>
+      <strong>Один язык материалов</strong><br>
+      <sub>Системное стекло в разговоре и управлении.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Motion that communicates</strong><br>
-      <sub>Distinct listening, thinking, and speaking states.</sub>
+      <strong>A calendar you can act in</strong><br>
+      <sub>Month, week, filters, and direct edits.</sub>
       <br><br>
-      <strong>Движение, которое говорит</strong><br>
-      <sub>Свои состояния для внимания, мысли и ответа.</sub>
+      <strong>Календарь для действий</strong><br>
+      <sub>Месяц, неделя, фильтры и быстрые изменения.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Russian with grammar</strong><br>
-      <sub>Agreement, cases, ranges, and fractions.</sub>
+      <strong>Eye care, edge to edge</strong><br>
+      <sub>Camera guidance with calm glass notices.</sub>
       <br><br>
-      <strong>Русский — с грамматикой</strong><br>
-      <sub>Согласование, падежи, диапазоны и дроби.</sub>
+      <strong>Забота о глазах — во весь экран</strong><br>
+      <sub>Камера и спокойные стеклянные подсказки.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>One quality in motion</strong><br>
-      <sub>Dark materials remain crisp while scrolling.</sub>
+      <strong>Goals as a conversation</strong><br>
+      <sub>More air, clearer turns, gentle text motion.</sub>
       <br><br>
-      <strong>Одно качество в движении</strong><br>
-      <sub>Тёмные материалы остаются чёткими при прокрутке.</sub>
+      <strong>Цели как разговор</strong><br>
+      <sub>Больше воздуха, яснее реплики, мягче текст.</sub>
+    </td>
+  </tr>
+</table>
+
+### August 3, 2026 — More room. More clarity. / Больше пространства. Больше ясности.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi's voice assistant, Calendar, camera-guided eye exercise, and Smart Goals chat now feel like parts of one product: spacious, responsive, and built from the same native Liquid Glass language.</strong></p>
+      <ul>
+        <li><strong>Native glass without stacked blur:</strong> the voice experience uses a dedicated system-glass path on supported iOS releases, a stable material fallback on earlier versions, and an opaque readable surface when Reduce Transparency is enabled.</li>
+        <li><strong>Text arrives with meaning:</strong> a custom SwiftUI text renderer reveals assistant titles and responses glyph by glyph with a short lift, fading blur, and restrained color glow. Reduce Motion receives the complete text immediately.</li>
+        <li><strong>The complete response stays visible:</strong> conversation copy is no longer capped at three lines. Longer results wrap naturally inside the glass response surface instead of losing their ending.</li>
+        <li><strong>One connected voice composition:</strong> the state capsule, close control, hero copy, response, suggestion strip, microphone dock, keyboard entry, quick commands, and command catalog are grouped into coherent Liquid Glass regions.</li>
+        <li><strong>Clearer Russian endings and pauses:</strong> Russian synthesis receives a wider silence scale, explicit phrase endings, useful pauses after introductory words, and stronger separation between clauses so quiet suffixes are less likely to disappear.</li>
+        <li><strong>`е`, `ё`, `и`, and `й` remain distinct:</strong> letter names are expanded only in clear letter contexts, while everyday conjunctions and normal words remain untouched. Common `ё` spellings and participle forms preserve the source capitalization.</li>
+        <li><strong>Calendar at two scales:</strong> a glass scope control switches between month and week. Buttons and horizontal swipes navigate the active period, and the selected day uses a matched system-glass transition on supported iOS releases.</li>
+        <li><strong>Plans are actionable in place:</strong> users can add a task to the selected day, edit it, mark it complete, filter active or finished plans, move it to tomorrow or next week, or remove its date without leaving Calendar.</li>
+        <li><strong>Full-screen eye guidance:</strong> the camera now fills the display, while the gaze target stays clear of Dynamic Island, the home indicator, and bottom controls. Status, instructions, progress, and three live metrics float above it as compact glass layers.</li>
+        <li><strong>Useful camera notices:</strong> stage changes, camera readiness, alignment, and stronger fatigue or redness signals appear as temporary color-coded Liquid Glass notices that can also be dismissed manually.</li>
+        <li><strong>Smart Goals can breathe:</strong> wider spacing, a clearer Lippi/user hierarchy, grouped glass messages, a larger context editor, and a redesigned composer make the roadmap conversation easier to scan. New message surfaces materialize before their text gently resolves from blur.</li>
+        <li><strong>Accessible motion and stable scrolling:</strong> text reveal stops while scrolling, Reduce Motion removes travel and blur, and Reduce Transparency selects higher-contrast surfaces. No continuous decorative animation was added to these screens.</li>
+        <li><strong>Verification:</strong> the owner interactively tested the complete update in <strong>iPhone 17 Simulator</strong>. The app, watchOS companion, both widget extensions, and test bundle also pass `build-for-testing`; the repository contains <strong>125 tests</strong>. Physical-iPhone camera, thermal, and sustained-performance verification remains the next checkpoint.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Голосовой помощник, календарь, камерный тренажёр для глаз и диалог «Умных целей» теперь ощущаются частями одного продукта: просторного, отзывчивого и собранного на едином языке системного Liquid Glass.</strong></p>
+      <ul>
+        <li><strong>Нативное стекло без лишнего размытия:</strong> голосовой режим использует отдельный путь системного Liquid Glass на поддерживаемых версиях iOS, стабильный material-fallback на более ранних и плотную читаемую поверхность при Reduce Transparency.</li>
+        <li><strong>Текст появляется осмысленно:</strong> собственный SwiftUI-рендерер раскрывает заголовки и ответы по глифам — с коротким подъёмом, уходящим размытием и сдержанным цветным светом. При Reduce Motion весь текст показывается сразу.</li>
+        <li><strong>Ответ остаётся целиком:</strong> текст разговора больше не ограничен тремя строками. Длинный результат естественно переносится внутри стеклянной поверхности и не теряет окончание.</li>
+        <li><strong>Единая композиция голосового режима:</strong> капсула состояния, закрытие, главный текст, ответ, рекомендации, микрофон, клавиатура, быстрые команды и полный каталог объединены в связанные области Liquid Glass.</li>
+        <li><strong>Чётче окончания и паузы:</strong> русская модель получает увеличенный интервал тишины, явное завершение фразы, полезные паузы после вводных слов и лучшее разделение частей предложения, чтобы тихие окончания не пропадали.</li>
+        <li><strong>`Е`, `ё`, `и` и `й` различаются:</strong> названия букв раскрываются только в явном буквенном контексте, а обычные союзы и слова не меняются. Расширены частые формы с `ё` и причастные основы с сохранением регистра.</li>
+        <li><strong>Два масштаба календаря:</strong> стеклянный переключатель открывает месяц или неделю. Кнопки и горизонтальный свайп листают активный период, а выбранный день переходит через matched Liquid Glass на поддерживаемых версиях iOS.</li>
+        <li><strong>Планы меняются на месте:</strong> задачу можно добавить на выбранную дату, открыть для редактирования, завершить, отфильтровать, перенести на завтра или следующую неделю либо убрать дату прямо из календаря.</li>
+        <li><strong>Полноэкранная забота о глазах:</strong> камера занимает весь дисплей, а цель взгляда не попадает под Dynamic Island, домашний индикатор и нижние панели. Статус, инструкция, прогресс и три показателя располагаются поверх потока на компактных стеклянных слоях.</li>
+        <li><strong>Полезные камерные уведомления:</strong> этап упражнения, готовность камеры, наведение лица и заметные сигналы усталости или покраснения появляются как временные цветовые Liquid Glass-плашки с ручным закрытием.</li>
+        <li><strong>«Умным целям» стало свободнее:</strong> увеличены интервалы, яснее разделены реплики Lippi и пользователя, сообщения объединены системным стеклом, редактор контекста стал выше, а поле ввода получило самостоятельную стеклянную композицию. Сначала материализуется поверхность, затем из лёгкого размытия появляется текст.</li>
+        <li><strong>Доступное движение и стабильная прокрутка:</strong> во время скролла текстовые эффекты не запускаются, Reduce Motion убирает перемещение и размытие, Reduce Transparency повышает контраст. Постоянных декоративных анимаций на этих экранах не добавлено.</li>
+        <li><strong>Проверка:</strong> владелец проекта интерактивно проверил всё обновление в <strong>Simulator iPhone 17</strong>. Приложение, watchOS companion, оба расширения виджетов и test bundle также успешно проходят `build-for-testing`; в репозитории **125 тестов**. Камера, нагрев и длительная производительность на физическом iPhone остаются следующим этапом.</li>
+      </ul>
     </td>
   </tr>
 </table>

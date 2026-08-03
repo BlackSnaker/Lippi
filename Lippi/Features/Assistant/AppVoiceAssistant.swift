@@ -2783,6 +2783,186 @@ private enum VoiceAssistantPanel: String, Identifiable {
     var id: String { rawValue }
 }
 
+/// Keeps the assistant on Apple's native Liquid Glass when the system supports it,
+/// while retaining a calm, readable material on earlier releases and when
+/// transparency is reduced. Unlike the generic fallback, this modifier does not
+/// stack an extra blur beneath the system glass.
+private struct VoiceAssistantSystemGlassModifier<S: Shape>: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    let shape: S
+    let tint: Color?
+    let interactive: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if reduceTransparency {
+            content
+                .background(DS.contentSurface, in: shape)
+                .overlay(shape.stroke(DS.glassStroke(0.16), lineWidth: 1))
+        } else if #available(iOS 26.0, *) {
+            content.glassEffect(
+                Glass.regular.tint(tint).interactive(interactive),
+                in: shape
+            )
+        } else {
+            content
+                .background(.ultraThinMaterial, in: shape)
+                .overlay(shape.stroke(DS.glassStroke(0.10), lineWidth: 1))
+        }
+    }
+}
+
+private extension View {
+    func voiceAssistantSystemGlass<S: Shape>(
+        in shape: S,
+        tint: Color? = nil,
+        interactive: Bool = false
+    ) -> some View {
+        modifier(
+            VoiceAssistantSystemGlassModifier(
+                shape: shape,
+                tint: tint,
+                interactive: interactive
+            )
+        )
+    }
+
+    @ViewBuilder
+    func voiceAssistantGlassMaterialize() -> some View {
+        if #available(iOS 26.0, *) {
+            glassEffectTransition(.materialize)
+        } else {
+            self
+        }
+    }
+}
+
+private struct VoiceAssistantTextRevealRenderer: TextRenderer {
+    var progress: Double
+    let tint: Color
+    let stagger: Double
+    let travel: CGFloat
+
+    var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    var displayPadding: EdgeInsets {
+        EdgeInsets(top: 9, leading: 6, bottom: 9, trailing: 6)
+    }
+
+    func draw(layout: Text.Layout, in context: inout GraphicsContext) {
+        let glyphCount = max(
+            1,
+            layout.reduce(0) { lineCount, line in
+                lineCount + line.reduce(0) { $0 + $1.count }
+            }
+        )
+        var glyphIndex = 0
+
+        for line in layout {
+            for run in line {
+                for glyph in run {
+                    let position = Double(glyphIndex) / Double(max(glyphCount - 1, 1))
+                    let delay = position * stagger
+                    let localProgress = min(
+                        max((progress - delay) / max(1 - delay, 0.001), 0),
+                        1
+                    )
+                    let eased = 1 - pow(1 - localProgress, 3)
+                    let lift = (1 - eased) * travel
+                    let glowAmount = sin(localProgress * .pi) * 0.42
+
+                    if glowAmount > 0.001 {
+                        var glowContext = context
+                        glowContext.opacity = glowAmount
+                        glowContext.translateBy(x: 0, y: lift * 0.45)
+                        glowContext.addFilter(.colorMultiply(tint))
+                        glowContext.addFilter(.blur(radius: 3.2))
+                        glowContext.draw(glyph)
+                    }
+
+                    var glyphContext = context
+                    glyphContext.opacity = eased
+                    glyphContext.translateBy(x: 0, y: lift)
+                    if localProgress < 0.999 {
+                        glyphContext.addFilter(.blur(radius: (1 - eased) * 5.5))
+                    }
+                    glyphContext.draw(glyph)
+                    glyphIndex += 1
+                }
+            }
+        }
+    }
+}
+
+private struct VoiceAssistantAnimatedText: View {
+    let text: String
+    let font: Font
+    let color: Color
+    let tint: Color
+    let alignment: TextAlignment
+    let lineLimit: Int?
+    let duration: Double
+    let delay: Double
+    let stagger: Double
+    let travel: CGFloat
+    let animated: Bool
+    let reduceMotion: Bool
+
+    @State private var revealProgress = 0.0
+
+    var body: some View {
+        if reduceMotion || !animated {
+            label
+        } else {
+            label
+                .textRenderer(
+                    VoiceAssistantTextRevealRenderer(
+                        progress: revealProgress,
+                        tint: tint,
+                        stagger: stagger,
+                        travel: travel
+                    )
+                )
+                .id(text)
+                .transition(.blurReplace(.upUp))
+                .task(id: text) {
+                    var resetTransaction = Transaction()
+                    resetTransaction.disablesAnimations = true
+                    withTransaction(resetTransaction) {
+                        revealProgress = 0
+                    }
+
+                    if delay > 0 {
+                        try? await Task.sleep(
+                            nanoseconds: UInt64(delay * 1_000_000_000)
+                        )
+                    } else {
+                        await Task.yield()
+                    }
+                    guard !Task.isCancelled else { return }
+
+                    withAnimation(.easeOut(duration: duration)) {
+                        revealProgress = 1
+                    }
+                }
+        }
+    }
+
+    private var label: some View {
+        Text(text)
+            .font(font)
+            .foregroundStyle(color)
+            .multilineTextAlignment(alignment)
+            .lineLimit(lineLimit)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel(text)
+    }
+}
+
 struct AppVoiceAssistantSheet: View {
     @ObservedObject var assistant: AppVoiceAssistantCenter
     let lang: AppLang
@@ -2881,6 +3061,15 @@ struct AppVoiceAssistantSheet: View {
         }
     }
 
+    private var animatesConversationReveal: Bool {
+        switch assistant.state {
+        case .idle, .speaking, .error:
+            return true
+        case .listening, .processing:
+            return false
+        }
+    }
+
     private var allQuickCommands: [QuickCommandItem] {
         [
             .init(key: "assistant.quick.add", icon: "plus", tone: Color(hex: 0x34C7FF)),
@@ -2975,35 +3164,33 @@ struct AppVoiceAssistantSheet: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: 10) {
-            LippiIntelligenceCapsule(
-                state: assistant.state,
-                status: statusText,
-                reduceMotion: reduceMotion || DS.runtimeConstrained,
-                reduceTransparency: reduceTransparency
-            )
+        LippiGlassEffectGroup(spacing: 12) {
+            HStack(spacing: 10) {
+                LippiIntelligenceCapsule(
+                    state: assistant.state,
+                    status: statusText,
+                    reduceMotion: reduceMotion || DS.runtimeConstrained,
+                    reduceTransparency: reduceTransparency
+                )
 
-            Spacer()
+                Spacer()
 
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(DS.text(0.78))
-                    .frame(width: 42, height: 42)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .overlay(Circle().stroke(DS.glassStroke(0.10), lineWidth: 1))
-                    .lippiSystemGlass(
-                        in: Circle(),
-                        tint: assistant.state.liquidTones[0].opacity(0.05),
-                        interactive: true,
-                        enabled: !reduceTransparency,
-                        forceSystemGlass: true
-                    )
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.text(0.78))
+                        .frame(width: 42, height: 42)
+                        .voiceAssistantSystemGlass(
+                            in: Circle(),
+                            tint: assistant.state.liquidTones[0].opacity(0.08),
+                            interactive: true
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(s("assistant.button.close"))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(s("assistant.button.close"))
         }
         .padding(.top, 8)
     }
@@ -3020,112 +3207,154 @@ struct AppVoiceAssistantSheet: View {
             .frame(width: orbSize, height: orbSize)
             .accessibilityHidden(true)
 
-            VStack(spacing: 7) {
-                Text(heroTitle)
-                    .font(.system(size: 25, weight: .semibold, design: .rounded))
-                    .foregroundStyle(DS.text(0.98))
-                    .multilineTextAlignment(.center)
-                    .contentTransition(.opacity)
+            LippiGlassEffectGroup(spacing: 12) {
+                VStack(spacing: 0) {
+                    VStack(spacing: 7) {
+                        VoiceAssistantAnimatedText(
+                            text: heroTitle,
+                            font: .system(size: 25, weight: .semibold, design: .rounded),
+                            color: DS.text(0.98),
+                            tint: assistant.state.intelligencePalette[1],
+                            alignment: .center,
+                            lineLimit: 2,
+                            duration: 0.76,
+                            delay: 0,
+                            stagger: 0.42,
+                            travel: 8,
+                            animated: true,
+                            reduceMotion: reduceMotion
+                        )
 
-                Text(heroSubtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(DS.text(0.62))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .contentTransition(.opacity)
-            }
-            .padding(.top, 22)
-            .animation(reduceMotion ? nil : DS.motionState, value: heroTitle)
+                        VoiceAssistantAnimatedText(
+                            text: heroSubtitle,
+                            font: .subheadline,
+                            color: DS.text(0.62),
+                            tint: assistant.state.intelligencePalette[2],
+                            alignment: .center,
+                            lineLimit: 3,
+                            duration: 0.68,
+                            delay: 0.10,
+                            stagger: 0.34,
+                            travel: 6,
+                            animated: true,
+                            reduceMotion: reduceMotion
+                        )
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 13)
+                    .voiceAssistantSystemGlass(
+                        in: RoundedRectangle(cornerRadius: 24, style: .continuous),
+                        tint: assistant.state.liquidTones[0].opacity(0.045)
+                    )
+                    .voiceAssistantGlassMaterialize()
+                    .id(assistant.state.orbAnimationKey)
+                    .padding(.top, 22)
 
-            if !conversationText.isEmpty {
-                HStack(alignment: .top, spacing: 9) {
-                    Image(systemName: conversationIcon)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(assistant.state.liquidTones[0])
-                        .padding(.top, 2)
+                    if !conversationText.isEmpty {
+                        HStack(alignment: .top, spacing: 9) {
+                            Image(systemName: conversationIcon)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(assistant.state.liquidTones[0])
+                                .padding(.top, 2)
 
-                    Text(conversationText)
-                        .font(.footnote)
-                        .foregroundStyle(DS.text(0.82))
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
+                            VoiceAssistantAnimatedText(
+                                text: conversationText,
+                                font: .footnote,
+                                color: DS.text(0.82),
+                                tint: assistant.state.intelligencePalette[3],
+                                alignment: .leading,
+                                lineLimit: nil,
+                                duration: 0.86,
+                                delay: 0.04,
+                                stagger: 0.56,
+                                travel: 6,
+                                animated: animatesConversationReveal,
+                                reduceMotion: reduceMotion
+                            )
+                            .layoutPriority(1)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 11)
+                        .frame(maxWidth: 360, alignment: .leading)
+                        .voiceAssistantSystemGlass(
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                            tint: assistant.state.liquidTones[0].opacity(0.09)
+                        )
+                        .voiceAssistantGlassMaterialize()
+                        .padding(.top, 16)
+                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                    }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .frame(maxWidth: 360, alignment: .leading)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(DS.glassStroke(0.10), lineWidth: 1)
-                )
-                .lippiSystemGlass(
-                    in: RoundedRectangle(cornerRadius: 18, style: .continuous),
-                    tint: assistant.state.liquidTones[0].opacity(0.06),
-                    enabled: !reduceTransparency,
-                    forceSystemGlass: true
-                )
-                .padding(.top, 16)
-                .transition(.opacity.combined(with: .scale(scale: 0.97)))
             }
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(heroTitle). \(heroSubtitle)")
+        .accessibilityLabel(assistantStageAccessibilityLabel)
+        .animation(reduceMotion ? nil : DS.motionState, value: assistant.state.orbAnimationKey)
         .animation(reduceMotion ? nil : DS.motionState, value: conversationText)
     }
 
+    private var assistantStageAccessibilityLabel: String {
+        [heroTitle, heroSubtitle, conversationText]
+            .filter { !$0.isEmpty }
+            .joined(separator: ". ")
+    }
+
     private var suggestionStrip: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack {
-                Label(
-                    s("assistant.suggested.title"),
-                    systemImage: assistant.hasPersonalizedSuggestions ? "sparkles" : "wand.and.stars"
-                )
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(DS.text(0.64))
+        LippiGlassEffectGroup(spacing: 10) {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack {
+                    Label(
+                        s("assistant.suggested.title"),
+                        systemImage: assistant.hasPersonalizedSuggestions ? "sparkles" : "wand.and.stars"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DS.text(0.64))
 
-                Spacer()
+                    Spacer()
 
-                Button(s("assistant.commands.all")) {
-                    activePanel = .quickCommands
+                    Button(s("assistant.commands.all")) {
+                        activePanel = .quickCommands
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(assistant.state.liquidTones[0])
                 }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(assistant.state.liquidTones[0])
-            }
 
-            ScrollView(.horizontal) {
-                HStack(spacing: 9) {
-                    ForEach(suggestedCommands.prefix(3)) { command in
-                        Button {
-                            run(command)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: command.icon)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(command.tone)
+                ScrollView(.horizontal) {
+                    HStack(spacing: 9) {
+                        ForEach(suggestedCommands.prefix(3)) { command in
+                            Button {
+                                run(command)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: command.icon)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(command.tone)
 
-                                Text(s(command.titleKey))
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(DS.text(0.84))
-                                    .lineLimit(1)
+                                    Text(s(command.titleKey))
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(DS.text(0.84))
+                                        .lineLimit(1)
+                                }
+                                .padding(.horizontal, 13)
+                                .frame(height: 40)
+                                .voiceAssistantSystemGlass(
+                                    in: Capsule(),
+                                    tint: command.tone.opacity(0.09),
+                                    interactive: true
+                                )
                             }
-                            .padding(.horizontal, 13)
-                            .frame(height: 40)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .overlay(Capsule().stroke(DS.glassStroke(0.09), lineWidth: 1))
-                            .lippiSystemGlass(
-                                in: Capsule(),
-                                tint: command.tone.opacity(0.06),
-                                interactive: true,
-                                enabled: !reduceTransparency,
-                                forceSystemGlass: true
-                            )
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
+            .padding(12)
+            .voiceAssistantSystemGlass(
+                in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+                tint: assistant.state.liquidTones[0].opacity(0.045)
+            )
         }
     }
 
@@ -3159,12 +3388,16 @@ struct AppVoiceAssistantSheet: View {
                         Circle()
                             .fill(assistant.state.liquidGradient)
                             .frame(width: 68, height: 68)
-                            .overlay(Circle().stroke(.white.opacity(0.30), lineWidth: 1))
                             .shadow(
                                 color: assistant.state.liquidTones[0].opacity(reduceTransparency ? 0.12 : 0.26),
                                 radius: 16,
                                 x: 0,
                                 y: 9
+                            )
+                            .voiceAssistantSystemGlass(
+                                in: Circle(),
+                                tint: assistant.state.liquidTones[1].opacity(0.20),
+                                interactive: true
                             )
 
                         Image(systemName: assistant.isListening ? "stop.fill" : "mic.fill")
@@ -3193,13 +3426,9 @@ struct AppVoiceAssistantSheet: View {
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(DS.glassStroke(0.11), lineWidth: 1))
-            .lippiSystemGlass(
+            .voiceAssistantSystemGlass(
                 in: Capsule(),
-                tint: assistant.state.liquidTones[0].opacity(0.05),
-                enabled: !reduceTransparency,
-                forceSystemGlass: true
+                tint: assistant.state.liquidTones[0].opacity(0.08)
             )
         }
         .frame(maxWidth: .infinity)
@@ -3218,14 +3447,10 @@ struct AppVoiceAssistantSheet: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(tone)
                     .frame(width: 46, height: 46)
-                    .background(DS.glassFill(0.055), in: Circle())
-                    .overlay(Circle().stroke(DS.glassStroke(0.09), lineWidth: 1))
-                    .lippiSystemGlass(
+                    .voiceAssistantSystemGlass(
                         in: Circle(),
-                        tint: tone.opacity(0.05),
-                        interactive: true,
-                        enabled: !reduceTransparency,
-                        forceSystemGlass: true
+                        tint: tone.opacity(0.09),
+                        interactive: true
                     )
 
                 if showsBadge {
@@ -3248,12 +3473,10 @@ struct AppVoiceAssistantSheet: View {
             quickCommandsPanel
                 .presentationDetents([.height(390), .large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(.ultraThinMaterial)
         case .keyboard:
             keyboardPanel
                 .presentationDetents([.height(250)])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(.ultraThinMaterial)
         }
     }
 
@@ -3272,9 +3495,11 @@ struct AppVoiceAssistantSheet: View {
                         .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    LazyVGrid(columns: quickCommandColumns, spacing: 10) {
-                        ForEach(suggestedCommands) { command in
-                            commandTile(command)
+                    LippiGlassEffectGroup(spacing: 10) {
+                        LazyVGrid(columns: quickCommandColumns, spacing: 10) {
+                            ForEach(suggestedCommands) { command in
+                                commandTile(command)
+                            }
                         }
                     }
 
@@ -3305,10 +3530,10 @@ struct AppVoiceAssistantSheet: View {
                                 .foregroundStyle(DS.text(0.44))
                         }
                         .padding(12)
-                        .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(DS.glassStroke(0.09), lineWidth: 1)
+                        .voiceAssistantSystemGlass(
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                            tint: assistant.state.liquidTones[0].opacity(0.07),
+                            interactive: true
                         )
                     }
                     .buttonStyle(.plain)
@@ -3334,42 +3559,44 @@ struct AppVoiceAssistantSheet: View {
 
     private var commandCatalogView: some View {
         ScrollView {
-            LazyVStack(spacing: 9) {
-                ForEach(allQuickCommands) { command in
-                    Button {
-                        run(command)
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: command.icon)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(command.tone)
-                                .frame(width: 38, height: 38)
-                                .background(command.tone.opacity(0.11), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            LippiGlassEffectGroup(spacing: 9) {
+                LazyVStack(spacing: 9) {
+                    ForEach(allQuickCommands) { command in
+                        Button {
+                            run(command)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: command.icon)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(command.tone)
+                                    .frame(width: 38, height: 38)
+                                    .background(command.tone.opacity(0.11), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(s(command.titleKey))
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(DS.text(0.92))
-                                Text(s(command.subtitleKey))
-                                    .font(.caption)
-                                    .foregroundStyle(DS.text(0.58))
-                                    .lineLimit(2)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(s(command.titleKey))
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(DS.text(0.92))
+                                    Text(s(command.subtitleKey))
+                                        .font(.caption)
+                                        .foregroundStyle(DS.text(0.58))
+                                        .lineLimit(2)
+                                }
+
+                                Spacer(minLength: 8)
+
+                                Image(systemName: "arrow.up.forward")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(DS.text(0.42))
                             }
-
-                            Spacer(minLength: 8)
-
-                            Image(systemName: "arrow.up.forward")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(DS.text(0.42))
+                            .padding(12)
+                            .voiceAssistantSystemGlass(
+                                in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                                tint: command.tone.opacity(0.055),
+                                interactive: true
+                            )
                         }
-                        .padding(12)
-                        .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(DS.glassStroke(0.09), lineWidth: 1)
-                        )
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 18)
@@ -3399,17 +3626,10 @@ struct AppVoiceAssistantSheet: View {
             }
             .padding(13)
             .frame(maxWidth: .infinity, minHeight: 94, alignment: .leading)
-            .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(DS.glassStroke(0.09), lineWidth: 1)
-            )
-            .lippiSystemGlass(
+            .voiceAssistantSystemGlass(
                 in: RoundedRectangle(cornerRadius: 20, style: .continuous),
-                tint: command.tone.opacity(0.04),
-                interactive: true,
-                enabled: !reduceTransparency,
-                forceSystemGlass: true
+                tint: command.tone.opacity(0.07),
+                interactive: true
             )
         }
         .buttonStyle(.plain)
@@ -3436,10 +3656,10 @@ struct AppVoiceAssistantSheet: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(DS.glassFill(0.07), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 17, style: .continuous)
-                        .stroke(DS.glassStroke(0.10), lineWidth: 1)
+                .voiceAssistantSystemGlass(
+                    in: RoundedRectangle(cornerRadius: 17, style: .continuous),
+                    tint: assistant.state.liquidTones[0].opacity(0.055),
+                    interactive: true
                 )
 
                 Button {
@@ -3450,6 +3670,11 @@ struct AppVoiceAssistantSheet: View {
                         .foregroundStyle(.white)
                         .frame(width: 46, height: 46)
                         .background(assistant.state.liquidGradient, in: Circle())
+                        .voiceAssistantSystemGlass(
+                            in: Circle(),
+                            tint: assistant.state.liquidTones[1].opacity(0.18),
+                            interactive: true
+                        )
                 }
                 .buttonStyle(.plain)
                 .disabled(typedCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -4231,49 +4456,25 @@ private struct LippiIntelligenceCapsule: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Lippi")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.white.opacity(0.96))
+                    .foregroundStyle(DS.text(0.96))
 
                 Text(status)
                     .font(.caption2.weight(.medium))
-                    .foregroundStyle(Color.white.opacity(0.58))
+                    .foregroundStyle(DS.text(0.60))
                     .lineLimit(1)
             }
         }
         .padding(.leading, 7)
         .padding(.trailing, 13)
         .padding(.vertical, 6)
-        .background(
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(hex: 0x12192A).opacity(reduceTransparency ? 0.96 : 0.88),
-                            Color.black.opacity(reduceTransparency ? 0.94 : 0.76)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .overlay(
-            Capsule()
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(reduceTransparency ? 0.18 : 0.32),
-                            state.intelligencePalette[1].opacity(0.32),
-                            state.intelligencePalette[2].opacity(0.18)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
+        .voiceAssistantSystemGlass(
+            in: Capsule(),
+            tint: state.intelligencePalette[0].opacity(0.11)
         )
         .shadow(
-            color: state.intelligencePalette[0].opacity(reduceTransparency ? 0.08 : 0.17),
-            radius: 14,
-            y: 7
+            color: state.intelligencePalette[0].opacity(reduceTransparency ? 0.06 : 0.13),
+            radius: 12,
+            y: 6
         )
         .accessibilityElement(children: .combine)
     }

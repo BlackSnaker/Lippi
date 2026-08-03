@@ -142,6 +142,12 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
         return min(max(safeSpeed - 0.04, 0.84), 1.04)
     }
 
+    static func silenceScale(for language: AppLang) -> Float {
+        // Russian benefits from a slightly wider breathing space: suffixes
+        // stay audible and comma-separated clauses no longer run together.
+        language == .ru ? 0.28 : 0.22
+    }
+
     private static func checkPowerPolicy() throws {
         if ProcessInfo.processInfo.isLowPowerModeEnabled {
             throw NeuralVoiceProviderError.lowPowerMode
@@ -237,7 +243,7 @@ private final class SupertonicRuntime {
     ) throws -> Data {
         let extra = #"{"lang":"\#(language.rawValue)"}"#
         var config = SherpaOnnxGenerationConfig(
-            silence_scale: 0.22,
+            silence_scale: LocalNeuralVoiceProvider.silenceScale(for: language),
             speed: speed,
             sid: Int32(profile.speakerID),
             reference_audio: nil,

@@ -781,77 +781,92 @@ struct GoalPlannerView: View {
 
         return GlassCard(
             padding: 0,
-            cornerRadius: 26,
-            style: .lightweight,
-            forceSystemGlass: false
+            cornerRadius: 34,
+            style: .full,
+            forceSystemGlass: true
         ) {
             VStack(spacing: 0) {
                 roadmapChatHeader(showsCloseButton: false)
 
-                VStack(alignment: .leading, spacing: 12) {
-                    if let roadmap {
-                        compactRoadmapReady(roadmap)
-                    } else {
-                        if !hasDisplayedGoal {
-                            chatMessageBubble(
-                                text: s("goals.chat.ask_goal"),
-                                icon: "sparkles",
-                                tone: DS.accent
-                            )
-                        }
-
-                        if hasDisplayedGoal {
-                            chatMessageBubble(
-                                title: s("goals.chat.user_goal"),
-                                text: displayedGoal,
-                                icon: "flag.checkered",
-                                tone: Color(hex: 0x30D158),
-                                isUser: true
-                            )
-                        }
-
-                        if hasGoalInput {
-                            ForEach(visibleContextBlocks, id: \.self) { block in
+                LippiGlassEffectGroup(spacing: 18) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        if let roadmap {
+                            compactRoadmapReady(roadmap)
+                        } else {
+                            if !hasDisplayedGoal {
                                 chatMessageBubble(
-                                    title: s("goals.chat.user_context"),
-                                    text: block,
-                                    icon: "text.alignleft",
-                                    tone: Color(hex: 0x64D2FF),
+                                    text: s("goals.chat.ask_goal"),
+                                    icon: "sparkles",
+                                    tone: DS.accent
+                                )
+                            }
+
+                            if hasDisplayedGoal {
+                                chatMessageBubble(
+                                    title: s("goals.chat.user_goal"),
+                                    text: displayedGoal,
+                                    icon: "flag.checkered",
+                                    tone: Color(hex: 0x30D158),
                                     isUser: true
                                 )
                             }
 
-                            planningOptionsDisclosure(brief)
-
-                            if !isGenerating {
-                                if let activeQuestion {
-                                    chatQuestionBubble(
-                                        activeQuestion,
-                                        index: activeGuidanceQuestionIndex,
-                                        total: max(currentGuidanceQuestions.count, 1)
-                                    )
-                                } else {
+                            if hasGoalInput {
+                                ForEach(visibleContextBlocks, id: \.self) { block in
                                     chatMessageBubble(
-                                        text: s("goals.chat.enough_context"),
-                                        icon: "checkmark.seal.fill",
-                                        tone: Color(hex: 0x30D158)
+                                        title: s("goals.chat.user_context"),
+                                        text: block,
+                                        icon: "text.alignleft",
+                                        tone: Color(hex: 0x64D2FF),
+                                        isUser: true
                                     )
                                 }
+
+                                planningOptionsDisclosure(brief)
+
+                                if !isGenerating {
+                                    if let activeQuestion {
+                                        chatQuestionBubble(
+                                            activeQuestion,
+                                            index: activeGuidanceQuestionIndex,
+                                            total: max(currentGuidanceQuestions.count, 1)
+                                        )
+                                    } else {
+                                        chatMessageBubble(
+                                            text: s("goals.chat.enough_context"),
+                                            icon: "checkmark.seal.fill",
+                                            tone: Color(hex: 0x30D158)
+                                        )
+                                    }
+                                }
+                            }
+
+                            if isGenerating {
+                                chatProcessingPanel
+                            } else if let generationIssue {
+                                chatIssuePanel(generationIssue)
                             }
                         }
-
-                        if isGenerating {
-                            chatProcessingPanel
-                        } else if let generationIssue {
-                            chatIssuePanel(generationIssue)
-                        }
                     }
+                    .animation(reduceMotion ? nil : DS.motionMagic, value: hasDisplayedGoal)
+                    .animation(reduceMotion ? nil : DS.motionMagic, value: visibleContextBlocks)
+                    .animation(reduceMotion ? nil : DS.motionMagic, value: activeQuestion)
+                    .animation(reduceMotion ? nil : DS.motionGentle, value: generationStage)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 16)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 24)
             }
         }
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 34, style: .continuous),
+            tint: DS.accent.opacity(0.045),
+            forceSystemGlass: true
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 34, style: .continuous)
+                .stroke(DS.glassStroke(0.15), lineWidth: 1)
+        )
     }
 
     private func compactRoadmapReady(_ roadmap: GoalRoadmap) -> some View {
@@ -875,15 +890,22 @@ struct GoalPlannerView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 15)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(Color(hex: 0x30D158).opacity(0.055))
         )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: Color(hex: 0x30D158).opacity(0.10),
+            forceSystemGlass: true
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(DS.glassStroke(0.10), lineWidth: 1)
         )
+        .lippiMagicAppear(delay: 0.04, y: 12, scale: 0.985)
     }
 
     private func planningOptionsDisclosure(_ brief: GoalRequestBrief) -> some View {
@@ -896,10 +918,17 @@ struct GoalPlannerView: View {
                 .foregroundStyle(DS.textPrimary)
         }
         .tint(DS.accent)
-        .padding(12)
-        .background(DS.glassFill(0.05), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, 15)
+        .padding(.vertical, 14)
+        .background(DS.glassFill(0.05), in: RoundedRectangle(cornerRadius: 21, style: .continuous))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 21, style: .continuous),
+            tint: DS.accent.opacity(0.055),
+            interactive: true,
+            forceSystemGlass: true
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 21, style: .continuous)
                 .stroke(DS.glassStroke(0.10), lineWidth: 1)
         )
     }
@@ -1067,25 +1096,39 @@ struct GoalPlannerView: View {
     }
 
     private func roadmapChatHeader(showsCloseButton: Bool = true) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            Image(safeSystemName: "sparkles", fallback: "sparkles")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(DS.accent)
-                .frame(width: 36, height: 36)
-                .background(DS.accent.opacity(0.12), in: Circle())
+        HStack(alignment: .center, spacing: 14) {
+            ZStack(alignment: .bottomTrailing) {
+                Image(safeSystemName: "sparkles", fallback: "sparkles")
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(DS.accent)
+                    .frame(width: 44, height: 44)
+                    .background(DS.accent.opacity(0.10), in: Circle())
+                    .lippiSystemGlass(
+                        in: Circle(),
+                        tint: DS.accent.opacity(0.13),
+                        forceSystemGlass: true
+                    )
+                    .overlay(Circle().stroke(DS.glassStroke(0.16), lineWidth: 1))
 
-            VStack(alignment: .leading, spacing: 3) {
+                Circle()
+                    .fill(Color(hex: 0x30D158))
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(DS.solidSurface, lineWidth: 2))
+            }
+
+            VStack(alignment: .leading, spacing: 5) {
                 Text(s("goals.chat.title"))
-                    .font(.headline.weight(.semibold))
+                    .font(.headline.weight(.bold))
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(2)
 
                 Text(hasGoalInput
                      ? "\(horizon.title(lang: lang)) · \(intensity.title(lang: lang))"
-                     : s("goals.chat.intro_subtitle"))
+                    : s("goals.chat.intro_subtitle"))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(DS.textSecondary)
-                    .lineLimit(2)
+                    .lineLimit(3)
+                    .lineSpacing(2)
             }
 
             Spacer(minLength: 8)
@@ -1096,15 +1139,24 @@ struct GoalPlannerView: View {
                 } label: {
                     Image(safeSystemName: "xmark", fallback: "xmark")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .frame(width: 18, height: 18)
+                        .frame(width: 20, height: 20)
                 }
-                .buttonStyle(LippiButtonStyle(kind: .ghost, compact: true))
+                .buttonStyle(LippiButtonStyle(kind: .ghost, compact: true, forceSystemGlass: true))
                 .accessibilityLabel(s("common.close"))
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 17)
+        .overlay(alignment: .bottom) {
+            LinearGradient(
+                colors: [.clear, DS.glassStroke(0.16), .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 1)
+            .padding(.horizontal, 18)
+        }
     }
 
     private func chatMessageBubble(
@@ -1114,14 +1166,16 @@ struct GoalPlannerView: View {
         tone: Color,
         isUser: Bool = false
     ) -> some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            if isUser { Spacer(minLength: 34) }
+        HStack(alignment: .bottom, spacing: 10) {
+            if isUser { Spacer(minLength: 46) }
 
-            VStack(alignment: .leading, spacing: 7) {
-                HStack(spacing: 7) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
                     Image(safeSystemName: icon, fallback: "sparkles")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .foregroundStyle(tone)
+                        .frame(width: 22, height: 22)
+                        .background(tone.opacity(0.10), in: Circle())
 
                     Text(title ?? (isUser ? s("goals.chat.user") : "Lippi"))
                         .font(.caption.weight(.bold))
@@ -1129,28 +1183,45 @@ struct GoalPlannerView: View {
                         .singleLine()
                 }
 
-                Text(text)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(DS.text(0.88))
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
+                GoalChatAnimatedText(text: text, isUser: isUser)
+                    .id(text)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 11)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 15)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(DS.glassFill(isUser ? 0.12 : 0.075))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(tone.opacity(isUser ? 0.11 : 0.07)))
+                RoundedRectangle(cornerRadius: 23, style: .continuous)
+                    .fill(reduceTransparency ? DS.solidSurface : DS.glassFill(isUser ? 0.11 : 0.065))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 23, style: .continuous)
+                            .fill(tone.opacity(isUser ? 0.10 : 0.055))
+                    )
             )
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.12), lineWidth: 1))
+            .lippiSystemGlass(
+                in: RoundedRectangle(cornerRadius: 23, style: .continuous),
+                tint: tone.opacity(isUser ? 0.10 : 0.055),
+                forceSystemGlass: true
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 23, style: .continuous)
+                    .stroke(DS.glassStroke(isUser ? 0.16 : 0.12), lineWidth: 1)
+            )
+            .lippiMagicAppear(delay: isUser ? 0.02 : 0.07, y: 12, scale: 0.985)
 
-            if !isUser { Spacer(minLength: 34) }
+            if !isUser { Spacer(minLength: 46) }
         }
         .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
+        .transition(
+            reduceMotion
+                ? .opacity
+                : .asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .bottom)),
+                    removal: .opacity
+                )
+        )
     }
 
     private func chatQuestionBubble(_ question: String, index: Int? = nil, total: Int? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 11) {
             chatMessageBubble(
                 title: questionProgressTitle(index: index, total: total),
                 text: question,
@@ -1158,7 +1229,7 @@ struct GoalPlannerView: View {
                 tone: Color(hex: 0x64D2FF)
             )
 
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Text(s("goals.chat.answer_prompt"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(DS.textTertiary)
@@ -1174,10 +1245,10 @@ struct GoalPlannerView: View {
                         .font(.caption.weight(.bold))
                         .labelStyle(TightLabelStyle())
                 }
-                .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true))
+                .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true, forceSystemGlass: true))
             }
-            .padding(.leading, 2)
-            .padding(.trailing, 36)
+            .padding(.leading, 4)
+            .padding(.trailing, 46)
         }
     }
 
@@ -1187,14 +1258,14 @@ struct GoalPlannerView: View {
     }
 
     private var chatContextComposer: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 11) {
             Label(s("goals.chat.context_title"), systemImage: "text.alignleft")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(DS.text(0.70))
                 .labelStyle(TightLabelStyle())
 
             TextEditor(text: $contextText)
-                .frame(minHeight: 78, maxHeight: 118)
+                .frame(minHeight: 94, maxHeight: 142)
                 .scrollContentBackground(.hidden)
                 .font(.callout)
                 .foregroundStyle(DS.textPrimary)
@@ -1213,22 +1284,24 @@ struct GoalPlannerView: View {
 
     private var chatProcessingPanel: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(DS.glassFill(0.08))
-                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(DS.brandSoftGradient).opacity(0.18))
+                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(DS.brandSoftGradient).opacity(0.16))
 
-            VStack(spacing: 14) {
+            VStack(spacing: 18) {
                 processingEmblem.scaleEffect(0.78)
 
-                VStack(spacing: 4) {
+                VStack(spacing: 6) {
                     Text(generationStage.title(lang: lang))
                         .font(.headline.weight(.bold))
                         .foregroundStyle(DS.textPrimary)
+                        .contentTransition(.opacity)
 
                     Text(generationStage.detail(lang: lang))
                         .font(.caption.weight(.medium))
                         .foregroundStyle(DS.textSecondary)
                         .multilineTextAlignment(.center)
+                        .lineSpacing(3)
                         .contentTransition(.opacity)
                 }
 
@@ -1243,14 +1316,14 @@ struct GoalPlannerView: View {
                 }
                 .animation(.snappy(duration: 0.34), value: generationStage)
             }
-            .padding(16)
+            .padding(20)
         }
         .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            in: RoundedRectangle(cornerRadius: 26, style: .continuous),
             tint: DS.accent.opacity(0.08),
-            forceSystemGlass: false
+            forceSystemGlass: true
         )
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(DS.glassStroke(0.13), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(DS.glassStroke(0.13), lineWidth: 1))
         .lippiMagicAppear(delay: 0.02, y: 10, scale: 0.975)
     }
 
@@ -2621,27 +2694,37 @@ struct GoalPlannerView: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .padding(.bottom, 10)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
         .background(
             Rectangle()
-                .fill(DS.glassFill(0.10))
-                .opacity(0.28)
+                .fill(reduceTransparency ? DS.solidSurface : DS.glassFill(0.075))
+                .opacity(reduceTransparency ? 1 : 0.32)
                 .ignoresSafeArea()
         )
         .lippiSystemGlass(
             in: Rectangle(),
             tint: DS.accent.opacity(0.05),
-            prominent: true
+            prominent: true,
+            forceSystemGlass: true
         )
+        .overlay(alignment: .top) {
+            LinearGradient(
+                colors: [.clear, DS.glassStroke(0.14), .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 1)
+            .padding(.horizontal, 18)
+        }
     }
 
     private var chatComposerField: some View {
-        HStack(alignment: .bottom, spacing: 10) {
+        HStack(alignment: .bottom, spacing: 12) {
             TextField(chatComposerPlaceholder, text: $chatDraftText, axis: .vertical)
-                .lineLimit(1...4)
+                .lineLimit(1...5)
                 .textFieldStyle(.plain)
-                .font(.callout.weight(.medium))
+                .font(.body.weight(.medium))
                 .foregroundStyle(DS.textPrimary)
                 .submitLabel(.send)
                 .onSubmit(sendChatDraft)
@@ -2649,27 +2732,43 @@ struct GoalPlannerView: View {
             Button {
                 sendChatDraft()
             } label: {
-                Image(safeSystemName: "arrow.up.circle.fill", fallback: "paperplane.fill")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(canSendChatDraft ? DS.accent : DS.textTertiary)
+                Image(safeSystemName: "arrow.up", fallback: "paperplane.fill")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(canSendChatDraft ? Color.white : DS.textTertiary)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Circle()
+                            .fill(canSendChatDraft ? DS.accent : DS.glassFill(0.08))
+                    )
+                    .lippiSystemGlass(
+                        in: Circle(),
+                        tint: canSendChatDraft ? DS.accent.opacity(0.22) : nil,
+                        interactive: true,
+                        forceSystemGlass: true
+                    )
+                    .overlay(Circle().stroke(DS.glassStroke(canSendChatDraft ? 0.20 : 0.10), lineWidth: 1))
             }
             .buttonStyle(.plain)
             .disabled(!canSendChatDraft)
+            .animation(reduceMotion ? nil : DS.motionState, value: canSendChatDraft)
             .accessibilityLabel(s("goals.chat.send"))
         }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 11)
+        .padding(.leading, 17)
+        .padding(.trailing, 8)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(DS.glassFill(0.09))
-                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(DS.glassTint).opacity(0.20))
+            RoundedRectangle(cornerRadius: 27, style: .continuous)
+                .fill(reduceTransparency ? DS.solidSurface : DS.glassFill(0.075))
+                .overlay(RoundedRectangle(cornerRadius: 27, style: .continuous).fill(DS.glassTint).opacity(0.16))
         )
         .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 20, style: .continuous),
-            tint: DS.accent.opacity(0.06),
-            interactive: true
+            in: RoundedRectangle(cornerRadius: 27, style: .continuous),
+            tint: DS.accent.opacity(0.05),
+            interactive: true,
+            forceSystemGlass: true
         )
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(DS.glassStroke(0.14), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 27, style: .continuous).stroke(DS.glassStroke(0.15), lineWidth: 1))
+        .shadow(color: DS.shadow.opacity(0.10), radius: 12, y: 5)
     }
 
     private var chatComposerPlaceholder: String {
@@ -5202,6 +5301,40 @@ private enum SemanticGoalBridge {
 // =======================================================
 // MARK: - Helpers
 // =======================================================
+private struct GoalChatAnimatedText: View {
+    let text: String
+    let isUser: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.lippiIsScrolling) private var isScrolling
+    @State private var isRevealed = false
+
+    private var shouldAnimate: Bool {
+        !reduceMotion && !isScrolling
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.callout.weight(isUser ? .semibold : .medium))
+            .foregroundStyle(DS.text(isUser ? 0.92 : 0.88))
+            .lineSpacing(5)
+            .fixedSize(horizontal: false, vertical: true)
+            .opacity(shouldAnimate ? (isRevealed ? 1 : 0.001) : 1)
+            .blur(radius: shouldAnimate && !isRevealed ? 4 : 0)
+            .offset(y: shouldAnimate && !isRevealed ? 5 : 0)
+            .onAppear {
+                guard shouldAnimate else {
+                    isRevealed = true
+                    return
+                }
+                guard !isRevealed else { return }
+                withAnimation(DS.motionGentle.delay(0.09)) {
+                    isRevealed = true
+                }
+            }
+    }
+}
+
 private extension View {
     func goalGlassField(tint: Color) -> some View {
         self

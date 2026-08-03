@@ -41,6 +41,8 @@ struct NeuralVoiceConfigurationTests {
             LocalNeuralVoiceProvider.optimizedSpeed(1, language: .en)
                 == 1
         )
+        #expect(LocalNeuralVoiceProvider.silenceScale(for: .ru) == 0.28)
+        #expect(LocalNeuralVoiceProvider.silenceScale(for: .en) == 0.22)
     }
 
     @Test("Russian speech expands time, percentages, identifiers, and counters")
@@ -90,7 +92,7 @@ struct NeuralVoiceConfigurationTests {
         #expect(spoken.contains("четыре целых восемь десятых километра"))
         #expect(spoken.contains("пятьсот семьдесят два шага"))
         #expect(spoken.contains("двадцать пять минут"))
-        #expect(spoken.contains("шестьдесят четыре ударов в минуту"))
+        #expect(spoken.contains("шестьдесят четыре удара в минуту"))
     }
 
     @Test("Russian counters agree with feminine and neuter nouns")
@@ -158,6 +160,44 @@ struct NeuralVoiceConfigurationTests {
         )
 
         #expect(spoken == "План обновлён. ещё два действия. приём воды.")
+    }
+
+    @Test("Russian letter names distinguish е, ё, и, and й")
+    func distinguishesRussianLetterNames() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Назови буквы е, ё, й и и. Новый план и идея остаются без изменений.",
+            language: .ru
+        )
+
+        #expect(
+            spoken.contains(
+                "буква е, буква ё, буква и краткое, буква и"
+            )
+        )
+        #expect(spoken.contains("Новый план и идея"))
+    }
+
+    @Test("Russian pronunciation restores common ё forms without changing meaning")
+    func restoresCommonRussianYoForms() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Всё учтем: еще раз начнем, затем найдем твое сохраненное действие.",
+            language: .ru
+        )
+
+        #expect(
+            spoken
+                == "Всё учтём: ещё раз начнём, затем найдём твоё сохранённое действие."
+        )
+    }
+
+    @Test("Russian speech adds measured pauses and a final boundary")
+    func preparesRussianPausesAndEndings() {
+        let spoken = LocalVoiceTextNormalizer.normalize(
+            "Хорошо начнем; затем проверим результат",
+            language: .ru
+        )
+
+        #expect(spoken == "Хорошо, начнём. затем проверим результат.")
     }
 
     @Test("Phone numbers are spoken digit by digit")

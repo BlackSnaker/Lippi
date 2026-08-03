@@ -535,6 +535,30 @@ struct EyeComfortCameraView: View {
         case summary
     }
 
+    private enum LiveToastTone: Equatable {
+        case info
+        case success
+        case caution
+        case attention
+
+        var color: Color {
+            switch self {
+            case .info: return Color(hex: 0x64D2FF)
+            case .success: return Color(hex: 0x30D158)
+            case .caution: return Color(hex: 0xFF9F0A)
+            case .attention: return Color(hex: 0xFF453A)
+            }
+        }
+    }
+
+    private struct LiveToast: Identifiable, Equatable {
+        let id = UUID()
+        let title: String
+        let subtitle: String?
+        let icon: String
+        let tone: LiveToastTone
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -555,6 +579,8 @@ struct EyeComfortCameraView: View {
     @State private var targetTimes: [Double] = []
     @State private var didSaveSession = false
     @State private var analysisInput: EyeHealthAnalysisInput?
+    @State private var liveToast: LiveToast?
+    @State private var toastDismissTask: Task<Void, Never>?
 
     private let targetPoints: [CGPoint] = [
         CGPoint(x: 0.50, y: 0.50),
@@ -589,11 +615,15 @@ struct EyeComfortCameraView: View {
             .navigationTitle(s("eye.camera.nav_title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(s("eye.camera.close")) { dismiss() }
+                if !isLiveStage {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(s("eye.camera.close")) { dismiss() }
+                    }
                 }
             }
         }
+        .toolbar(isLiveStage ? .hidden : .visible, for: .navigationBar)
+        .statusBarHidden(isLiveStage)
         .task(id: stage) {
             guard stage == .calibrating || stage == .blinking || stage == .following else { return }
             while !Task.isCancelled {
@@ -608,7 +638,30 @@ struct EyeComfortCameraView: View {
                 analyzer.stop()
             }
         }
-        .onDisappear { analyzer.stop() }
+        .onChange(of: stage) { _, newStage in
+            guard newStage == .calibrating || newStage == .blinking || newStage == .following else {
+                return
+            }
+            presentStageToast()
+        }
+        .onChange(of: statusTitle) { _, newValue in
+            guard isLiveStage else { return }
+            presentLiveToast(
+                title: newValue,
+                subtitle: nil,
+                icon: statusIcon,
+                tone: analyzer.snapshot.isReadyForExercise ? .success : .caution,
+                duration: 2.4
+            )
+        }
+        .onChange(of: liveHealthAlertSignature) { _, signature in
+            guard isLiveStage, !signature.isEmpty else { return }
+            presentHealthToast()
+        }
+        .onDisappear {
+            analyzer.stop()
+            toastDismissTask?.cancel()
+        }
     }
 
     private var welcomeView: some View {
@@ -730,64 +783,135 @@ struct EyeComfortCameraView: View {
     }
 
     private var liveSessionView: some View {
-        VStack(spacing: 14) {
-            cameraCanvas
-                .frame(maxHeight: .infinity)
-
-            liveMetrics
-            liveControls
-        }
-        .padding(.horizontal, 14)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
-    }
-
-    private var cameraCanvas: some View {
         GeometryReader { proxy in
             ZStack {
-                RoundedRectangle(cornerRadius: 34, style: .continuous)
-                    .fill(Color.black.opacity(0.92))
+                cameraCanvas(in: proxy)
+                    .ignoresSafeArea()
+                liveCameraChrome(in: proxy)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .background {
+            Color.black.ignoresSafeArea()
+        }
+        .onAppear {
+            guard liveToast == nil else { return }
+            presentStageToast()
+        }
+    }
 
-                if analyzer.accessState == .authorized {
-                    EyeCameraPreview(session: analyzer.session)
-                        .overlay(
-                            LinearGradient(
-                                colors: [.black.opacity(0.38), .clear, .black.opacity(0.56)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                } else {
-                    permissionStateView
-                }
+    private func cameraCanvas(in proxy: GeometryProxy) -> some View {
+        ZStack {
+            Color.black
 
-                faceGuide
+            if analyzer.accessState == .authorized {
+                EyeCameraPreview(session: analyzer.session)
+                    .ignoresSafeArea()
+            } else {
+                permissionStateView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            LinearGradient(
+                colors: [
+                    .black.opacity(0.64),
+                    .black.opacity(0.05),
+                    .clear,
+                    .black.opacity(0.10),
+                    .black.opacity(0.82)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+
+            RadialGradient(
+                colors: [.clear, .black.opacity(0.30)],
+                center: .center,
+                startRadius: min(proxy.size.width, proxy.size.height) * 0.28,
+                endRadius: max(proxy.size.width, proxy.size.height) * 0.72
+            )
+            .allowsHitTesting(false)
+
+            if analyzer.accessState == .authorized {
+                faceGuide(in: proxy.size)
 
                 if stage == .blinking {
                     blinkOrb
                 } else if stage == .following {
-                    trackingTarget(in: proxy.size)
+                    trackingTarget(
+                        in: proxy.size,
+                        safeAreaInsets: proxy.safeAreaInsets
+                    )
                 }
-
-                VStack {
-                    liveStatusPill
-                    Spacer()
-                    instructionPanel
-                }
-                .padding(14)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 34, style: .continuous).stroke(DS.glassStroke(0.18), lineWidth: 1))
         }
     }
 
-    private var faceGuide: some View {
-        Ellipse()
+    private func liveCameraChrome(in proxy: GeometryProxy) -> some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                liveCloseButton
+                Spacer(minLength: 12)
+                liveStatusPill
+            }
+
+            if let liveToast {
+                liveToastView(liveToast)
+                    .transition(
+                        reduceMotion
+                            ? .opacity
+                            : .move(edge: .top)
+                                .combined(with: .opacity)
+                                .combined(with: .scale(scale: 0.96, anchor: .top))
+                    )
+                    .id(liveToast.id)
+            }
+
+            Spacer(minLength: 110)
+
+            VStack(spacing: 10) {
+                instructionPanel
+                liveMetrics
+                liveControls
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, proxy.safeAreaInsets.top + 12)
+        .padding(.bottom, proxy.safeAreaInsets.bottom + 10)
+    }
+
+    private var liveCloseButton: some View {
+        Button {
+            analyzer.stop()
+            dismiss()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .background(.black.opacity(reduceTransparency ? 0.78 : 0.28), in: Circle())
+        .overlay(Circle().stroke(.white.opacity(0.16), lineWidth: 1))
+        .lippiSystemGlass(
+            in: Circle(),
+            tint: Color.white.opacity(0.05),
+            interactive: true,
+            forceSystemGlass: true
+        )
+        .accessibilityLabel(Text(s("eye.camera.close")))
+    }
+
+    private func faceGuide(in size: CGSize) -> some View {
+        let width = min(max(size.width * 0.58, 208), 280)
+        return Ellipse()
             .stroke(
                 analyzer.snapshot.isFaceAligned ? Color.green.opacity(0.72) : Color.white.opacity(0.58),
                 style: StrokeStyle(lineWidth: 1.5, dash: analyzer.snapshot.isFaceAligned ? [] : [8, 8])
             )
-            .frame(width: 220, height: 300)
+            .frame(width: width, height: width * 1.34)
             .shadow(color: analyzer.snapshot.isFaceAligned ? .green.opacity(0.24) : .clear, radius: 12)
             .animation(reduceMotion ? nil : DS.motionState, value: analyzer.snapshot.isFaceAligned)
             .accessibilityHidden(true)
@@ -808,8 +932,17 @@ struct EyeComfortCameraView: View {
         .accessibilityHidden(true)
     }
 
-    private func trackingTarget(in size: CGSize) -> some View {
+    private func trackingTarget(
+        in size: CGSize,
+        safeAreaInsets: EdgeInsets
+    ) -> some View {
         let point = currentTarget
+        let horizontalInset: CGFloat = 26
+        let topInset = safeAreaInsets.top + 104
+        let bottomInset = safeAreaInsets.bottom + 270
+        let availableWidth = max(size.width - horizontalInset * 2, 1)
+        let availableHeight = max(size.height - topInset - bottomInset, 210)
+
         return ZStack {
             Circle()
                 .stroke(Color.white.opacity(0.84), lineWidth: 3)
@@ -824,7 +957,10 @@ struct EyeComfortCameraView: View {
                 .frame(width: 28, height: 28)
                 .shadow(color: DS.accent.opacity(0.55), radius: 14)
         }
-        .position(x: point.x * size.width, y: point.y * size.height)
+        .position(
+            x: horizontalInset + point.x * availableWidth,
+            y: topInset + point.y * availableHeight
+        )
         .animation(reduceMotion ? nil : .spring(duration: 0.48, bounce: 0.12), value: targetIndex)
         .accessibilityLabel(Text(s("eye.camera.target")))
     }
@@ -834,38 +970,119 @@ struct EyeComfortCameraView: View {
             Circle()
                 .fill(statusTone)
                 .frame(width: 8, height: 8)
+                .shadow(color: statusTone.opacity(0.72), radius: 5)
             Text(statusTitle)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
+                .minimumScaleFactor(0.78)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(.black.opacity(reduceTransparency ? 0.78 : 0.36), in: Capsule())
+        .padding(.vertical, 10)
+        .background(.black.opacity(reduceTransparency ? 0.78 : 0.28), in: Capsule())
+        .overlay(Capsule().stroke(.white.opacity(0.14), lineWidth: 1))
         .lippiSystemGlass(in: Capsule(), tint: statusTone.opacity(0.16), forceSystemGlass: true)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: 320, alignment: .trailing)
     }
 
     private var instructionPanel: some View {
-        VStack(spacing: 7) {
-            Text(instructionTitle)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-            Text(instructionSubtitle)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.78))
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+        VStack(spacing: 11) {
+            HStack(spacing: 12) {
+                Image(safeSystemName: stageIcon, fallback: "eye.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x64D2FF))
+                    .frame(width: 40, height: 40)
+                    .background(Color(hex: 0x64D2FF).opacity(0.14), in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(instructionTitle)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text(instructionSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Text("\(Int((liveProgress * 100).rounded()))%")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.82))
+                    .monospacedDigit()
+            }
+
+            ProgressView(value: liveProgress)
+                .tint(Color(hex: 0x64D2FF))
+                .scaleEffect(y: 1.35)
         }
         .frame(maxWidth: .infinity)
-        .padding(14)
-        .background(.black.opacity(reduceTransparency ? 0.82 : 0.34), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(15)
+        .background(.black.opacity(reduceTransparency ? 0.84 : 0.30), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(.white.opacity(0.14), lineWidth: 1)
+        )
         .lippiSystemGlass(
-            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
-            tint: DS.accent.opacity(0.08),
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous),
+            tint: Color(hex: 0x64D2FF).opacity(0.10),
             forceSystemGlass: true
         )
+    }
+
+    private func liveToastView(_ toast: LiveToast) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(toast.tone.color.opacity(0.18))
+                Image(safeSystemName: toast.icon, fallback: "sparkles")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(toast.tone.color)
+            }
+            .frame(width: 40, height: 40)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(toast.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                if let subtitle = toast.subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.70))
+                        .lineLimit(2)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                dismissLiveToast(id: toast.id)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .frame(width: 28, height: 28)
+                    .background(.white.opacity(0.08), in: Circle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(12)
+        .background(
+            .black.opacity(reduceTransparency ? 0.86 : 0.30),
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.16), lineWidth: 1)
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            tint: toast.tone.color.opacity(0.12),
+            forceSystemGlass: true
+        )
+        .frame(maxWidth: 460)
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -887,25 +1104,27 @@ struct EyeComfortCameraView: View {
     }
 
     private var liveMetrics: some View {
-        HStack(spacing: 10) {
-            metricPill(
-                icon: "eye.fill",
-                value: opennessValue,
-                title: s("eye.camera.metric_openness"),
-                tone: Color(hex: 0x64D2FF)
-            )
-            metricPill(
-                icon: "drop.fill",
-                value: rednessValue,
-                title: s("eye.camera.metric_redness"),
-                tone: rednessTone
-            )
-            metricPill(
-                icon: "moon.zzz.fill",
-                value: fatigueValue,
-                title: s("eye.camera.metric_fatigue"),
-                tone: fatigueTone
-            )
+        LippiGlassEffectGroup(spacing: 9) {
+            HStack(spacing: 9) {
+                metricPill(
+                    icon: "eye.fill",
+                    value: opennessValue,
+                    title: s("eye.camera.metric_openness"),
+                    tone: Color(hex: 0x64D2FF)
+                )
+                metricPill(
+                    icon: "drop.fill",
+                    value: rednessValue,
+                    title: s("eye.camera.metric_redness"),
+                    tone: rednessTone
+                )
+                metricPill(
+                    icon: "moon.zzz.fill",
+                    value: fatigueValue,
+                    title: s("eye.camera.metric_fatigue"),
+                    tone: fatigueTone
+                )
+            }
         }
     }
 
@@ -916,17 +1135,22 @@ struct EyeComfortCameraView: View {
                 .foregroundStyle(tone)
             Text(value)
                 .font(.caption.weight(.bold))
-                .foregroundStyle(DS.textPrimary)
+                .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(DS.textTertiary)
+                .foregroundStyle(.white.opacity(0.62))
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, minHeight: 72)
-        .background(DS.glassFill(0.06), in: RoundedRectangle(cornerRadius: 19, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 19, style: .continuous).stroke(DS.glassStroke(0.11), lineWidth: 1))
+        .background(.black.opacity(reduceTransparency ? 0.80 : 0.27), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.13), lineWidth: 1))
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous),
+            tint: tone.opacity(0.08),
+            forceSystemGlass: true
+        )
     }
 
     private var liveControls: some View {
@@ -938,8 +1162,18 @@ struct EyeComfortCameraView: View {
                 } label: {
                     Label(s("eye.camera.later"), systemImage: "xmark")
                         .frame(maxWidth: .infinity)
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 12)
                 }
-                .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true, forceSystemGlass: true))
+                .buttonStyle(.plain)
+                .background(.black.opacity(reduceTransparency ? 0.80 : 0.26), in: Capsule())
+                .overlay(Capsule().stroke(.white.opacity(0.14), lineWidth: 1))
+                .lippiSystemGlass(
+                    in: Capsule(),
+                    tint: Color.white.opacity(0.05),
+                    interactive: true,
+                    forceSystemGlass: true
+                )
 
                 if stage == .calibrating && analyzer.accessState == .denied {
                     Button(s("eye.camera.open_settings")) { openSettings() }
@@ -1236,9 +1470,122 @@ struct EyeComfortCameraView: View {
         targetPoints[min(max(targetIndex, 0), targetPoints.count - 1)]
     }
 
+    private var isLiveStage: Bool {
+        stage == .calibrating || stage == .blinking || stage == .following
+    }
+
+    private var stageIcon: String {
+        switch stage {
+        case .calibrating: return "viewfinder"
+        case .blinking: return "eye.fill"
+        case .following: return "scope"
+        case .welcome, .summary: return "sparkles"
+        }
+    }
+
+    private var liveProgress: Double {
+        switch stage {
+        case .calibrating:
+            return min(max(calibrationProgress, 0), 1)
+        case .blinking:
+            let blinks = max(analyzer.snapshot.blinkCount - blinkBaseline, 0)
+            return min(Double(blinks) / 3, 1)
+        case .following:
+            let progress = Double(completedTargets) + min(max(targetHold, 0), 1)
+            return min(progress / Double(max(targetPoints.count, 1)), 1)
+        case .welcome:
+            return 0
+        case .summary:
+            return 1
+        }
+    }
+
+    private var statusIcon: String {
+        switch analyzer.accessState {
+        case .denied: return "camera.fill.badge.xmark"
+        case .unavailable, .failed: return "exclamationmark.triangle.fill"
+        case .idle, .requesting: return "camera.fill"
+        case .authorized:
+            if analyzer.snapshot.isReadyForExercise { return "checkmark.circle.fill" }
+            if !analyzer.snapshot.hasFace { return "person.crop.circle.badge.questionmark" }
+            if !analyzer.snapshot.hasUsableLight { return "sun.max.fill" }
+            return "move.3d"
+        }
+    }
+
+    private var liveHealthAlertSignature: String {
+        let fatigue = analyzer.snapshot.fatigueScore
+        let redness = analyzer.snapshot.rednessScore ?? 0
+        if fatigue >= 0.68, fatigue >= redness { return "fatigue.high" }
+        if redness >= 0.68 { return "redness.high" }
+        return ""
+    }
+
+    private func presentStageToast() {
+        guard isLiveStage else { return }
+        presentLiveToast(
+            title: instructionTitle,
+            subtitle: instructionSubtitle,
+            icon: stageIcon,
+            tone: .info,
+            duration: 3.0
+        )
+    }
+
+    private func presentHealthToast() {
+        let redness = analyzer.snapshot.rednessScore ?? 0
+        let fatigue = analyzer.snapshot.fatigueScore
+        let isFatigue = fatigue >= redness
+        presentLiveToast(
+            title: isFatigue
+                ? "\(s("eye.camera.metric_fatigue")) · \(fatigueValue)"
+                : "\(s("eye.camera.metric_redness")) · \(rednessValue)",
+            subtitle: summaryMessage,
+            icon: isFatigue ? "moon.zzz.fill" : "drop.fill",
+            tone: .attention,
+            duration: 4.2
+        )
+    }
+
+    private func presentLiveToast(
+        title: String,
+        subtitle: String?,
+        icon: String,
+        tone: LiveToastTone,
+        duration: Double
+    ) {
+        toastDismissTask?.cancel()
+        let toast = LiveToast(
+            title: title,
+            subtitle: subtitle,
+            icon: icon,
+            tone: tone
+        )
+        withAnimation(reduceMotion ? nil : .spring(duration: 0.46, bounce: 0.16)) {
+            liveToast = toast
+        }
+        toastDismissTask = Task { @MainActor in
+            try? await Task.sleep(
+                nanoseconds: UInt64(max(duration, 0.5) * 1_000_000_000)
+            )
+            guard !Task.isCancelled, liveToast?.id == toast.id else { return }
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
+                liveToast = nil
+            }
+        }
+    }
+
+    private func dismissLiveToast(id: UUID) {
+        guard liveToast?.id == id else { return }
+        toastDismissTask?.cancel()
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) {
+            liveToast = nil
+        }
+    }
+
     private var statusTitle: String {
         let snapshot = analyzer.snapshot
-        if analyzer.accessState == .requesting { return s("eye.camera.status_requesting") }
+        if analyzer.accessState != .authorized { return permissionTitle }
         if !snapshot.hasFace { return s("eye.camera.status_no_face") }
         if !snapshot.isFaceAligned { return s("eye.camera.status_align") }
         if !snapshot.hasUsableLight { return s("eye.camera.status_light") }
