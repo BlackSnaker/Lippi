@@ -21,6 +21,10 @@ private struct EyeCameraSnapshot: Equatable {
     var hasEyes = false
     var isFaceAligned = false
     var hasUsableLight = false
+    var usesTrueDepth = false
+    var hasUsableDepth = false
+    var faceDistanceMeters: Double?
+    var depthConfidence = 0.0
     var gazePoint = CGPoint(x: 0.5, y: 0.5)
     var eyeOpenness = 1.0
     var blinkCount = 0
@@ -29,7 +33,11 @@ private struct EyeCameraSnapshot: Equatable {
     var lightLevel = 0.5
 
     var isReadyForExercise: Bool {
-        hasFace && hasEyes && isFaceAligned && hasUsableLight
+        hasFace
+            && hasEyes
+            && isFaceAligned
+            && hasUsableLight
+            && (!usesTrueDepth || hasUsableDepth)
     }
 }
 
@@ -47,6 +55,8 @@ private final class EyeCameraAnalyzer: NSObject, ObservableObject {
     // throttled frames keep the Vision work responsive without monopolizing
     // the performance cores during a break.
     private let analysisQueue = DispatchQueue(label: "Lippi.EyeComfort.Vision", qos: .utility)
+    private let depthQueue = DispatchQueue(label: "Lippi.EyeComfort.TrueDepth", qos: .utility)
+    private let depthStateLock = NSLock()
     private let ciContext = CIContext(options: [
         .cacheIntermediates: false,
         .priorityRequestLow: true
@@ -63,6 +73,11 @@ private final class EyeCameraAnalyzer: NSObject, ObservableObject {
     private var eyeClosureStartedAt: CFTimeInterval?
     private var detectedBlinks = 0
     private var longClosures = 0
+    private var trueDepthEnabled = false
+    private var latestDepthTime = 0.0
+    private var lastDepthAnalysisTime = 0.0
+    private var smoothedFaceDistance: Double?
+    private var latestDepthConfidence = 0.0
 
     func requestAccessAndStart() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -120,13 +135,19 @@ private final class EyeCameraAnalyzer: NSObject, ObservableObject {
 
     private func configureSession() -> Bool {
         session.beginConfiguration()
-        session.sessionPreset = .vga640x480
+        session.sessionPreset = .inputPriority
         defer { session.commitConfiguration() }
 
-        // Vision only needs the RGB feed here. Prefer the regular front camera
-        // so the depth system is not engaged for a short comfort exercise.
-        let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
-            ?? AVCaptureDevice.default(.builtInTrueDepthCamera, for: .video, position: .front)
+        // The front Face ID hardware is a TrueDepth system rather than LiDAR.
+        // Prefer it for transient geometry only; older devices and Simulator
+        // keep using the regular front camera without blocking the exercise.
+        let trueDepthCamera = AVCaptureDevice.default(
+            .builtInTrueDepthCamera,
+            for: .video,
+            position: .front
+        )
+        let camera = trueDepthCamera
+            ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
 
         guard let camera,
               let input = try? AVCaptureDeviceInput(device: camera),
@@ -135,21 +156,10 @@ private final class EyeCameraAnalyzer: NSObject, ObservableObject {
             return false
         }
 
-        do {
-            try camera.lockForConfiguration()
-            let desired = CMTime(value: 1, timescale: 15)
-            if camera.activeFormat.videoSupportedFrameRateRanges.contains(where: {
-                $0.minFrameRate <= 15 && $0.maxFrameRate >= 15
-            }) {
-                camera.activeVideoMinFrameDuration = desired
-                camera.activeVideoMaxFrameDuration = desired
-            }
-            camera.unlockForConfiguration()
-        } catch {
-            // The system-selected frame rate is still safe to use.
-        }
-
         session.addInput(input)
+
+        let wantsTrueDepth = camera.deviceType == .builtInTrueDepthCamera
+        let configuredDepthFormat = configure(camera: camera, wantsTrueDepth: wantsTrueDepth)
 
         let output = AVCaptureVideoDataOutput()
         output.alwaysDiscardsLateVideoFrames = true
@@ -165,7 +175,110 @@ private final class EyeCameraAnalyzer: NSObject, ObservableObject {
         }
 
         session.addOutput(output)
+
+        if wantsTrueDepth, configuredDepthFormat {
+            let depthOutput = AVCaptureDepthDataOutput()
+            depthOutput.alwaysDiscardsLateDepthData = true
+            depthOutput.isFilteringEnabled = true
+            // Keep depth delivery independent from Vision inference. If the
+            // landmark request takes longer for one frame, the newest depth
+            // sample can still arrive instead of being starved behind it.
+            depthOutput.setDelegate(self, callbackQueue: depthQueue)
+
+            if session.canAddOutput(depthOutput) {
+                session.addOutput(depthOutput)
+                setTrueDepthEnabled(depthOutput.connection(with: .depthData) != nil)
+            }
+        }
+
         return true
+    }
+
+    /// Chooses a modest depth-capable format. RGB and depth are capped at
+    /// 15 fps, while the depth map itself is sampled only a few times a second.
+    /// That gives stable head-distance guidance without running a heavy 3D
+    /// reconstruction pipeline or creating a face template.
+    private func configure(camera: AVCaptureDevice, wantsTrueDepth: Bool) -> Bool {
+        do {
+            try camera.lockForConfiguration()
+            defer { camera.unlockForConfiguration() }
+
+            var depthConfigured = false
+            if wantsTrueDepth,
+               let videoFormat = preferredTrueDepthVideoFormat(for: camera) {
+                camera.activeFormat = videoFormat
+
+                if let depthFormat = preferredDepthFormat(from: videoFormat.supportedDepthDataFormats) {
+                    camera.activeDepthDataFormat = depthFormat
+                    depthConfigured = true
+                }
+            }
+
+            let desired = CMTime(value: 1, timescale: 15)
+            if camera.activeFormat.videoSupportedFrameRateRanges.contains(where: {
+                $0.minFrameRate <= 15 && $0.maxFrameRate >= 15
+            }) {
+                camera.activeVideoMinFrameDuration = desired
+                camera.activeVideoMaxFrameDuration = desired
+            }
+            if depthConfigured,
+               let depthFormat = camera.activeDepthDataFormat,
+               depthFormat.videoSupportedFrameRateRanges.contains(where: {
+                   $0.minFrameRate <= 15 && $0.maxFrameRate >= 15
+               }) {
+                camera.activeDepthDataMinFrameDuration = desired
+            }
+            return depthConfigured
+        } catch {
+            return false
+        }
+    }
+
+    private func preferredTrueDepthVideoFormat(for camera: AVCaptureDevice) -> AVCaptureDevice.Format? {
+        let targetArea = Double(640 * 480)
+        let targetAspect = 4.0 / 3.0
+        return camera.formats
+            .filter { !$0.supportedDepthDataFormats.isEmpty }
+            .filter {
+                $0.videoSupportedFrameRateRanges.contains(where: {
+                    $0.minFrameRate <= 15 && $0.maxFrameRate >= 15
+                })
+            }
+            .min { lhs, rhs in
+                let left = formatScore(lhs, targetArea: targetArea, targetAspect: targetAspect)
+                let right = formatScore(rhs, targetArea: targetArea, targetAspect: targetAspect)
+                return left < right
+            }
+    }
+
+    private func preferredDepthFormat(
+        from formats: [AVCaptureDevice.Format]
+    ) -> AVCaptureDevice.Format? {
+        let metricFormats = formats.filter {
+            let subtype = CMFormatDescriptionGetMediaSubType($0.formatDescription)
+            return subtype == kCVPixelFormatType_DepthFloat16
+                || subtype == kCVPixelFormatType_DepthFloat32
+        }
+        let candidates = metricFormats.isEmpty ? formats : metricFormats
+        let targetArea = Double(640 * 480)
+        return candidates.min { lhs, rhs in
+            let left = formatScore(lhs, targetArea: targetArea, targetAspect: 4.0 / 3.0)
+            let right = formatScore(rhs, targetArea: targetArea, targetAspect: 4.0 / 3.0)
+            return left < right
+        }
+    }
+
+    private func formatScore(
+        _ format: AVCaptureDevice.Format,
+        targetArea: Double,
+        targetAspect: Double
+    ) -> Double {
+        let dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+        let width = max(Double(dimensions.width), 1)
+        let height = max(Double(dimensions.height), 1)
+        let areaPenalty = abs(log((width * height) / targetArea))
+        let aspectPenalty = abs((width / height) - targetAspect) * 3
+        return areaPenalty + aspectPenalty
     }
 
     private func resetSessionMetrics() {
@@ -181,6 +294,7 @@ private final class EyeCameraAnalyzer: NSObject, ObservableObject {
             self.eyeClosureStartedAt = nil
             self.detectedBlinks = 0
             self.longClosures = 0
+            self.resetDepthMetrics()
         }
     }
 
@@ -193,6 +307,60 @@ private final class EyeCameraAnalyzer: NSObject, ObservableObject {
 
     private func publish(_ snapshot: EyeCameraSnapshot) {
         DispatchQueue.main.async { [weak self] in self?.snapshot = snapshot }
+    }
+
+    private func depthAssessment(at now: CFTimeInterval) -> (
+        enabled: Bool,
+        usable: Bool,
+        distance: Double?,
+        confidence: Double
+    ) {
+        depthStateLock.lock()
+        let enabled = trueDepthEnabled
+        let sampleTime = latestDepthTime
+        let distance = smoothedFaceDistance
+        let confidence = latestDepthConfidence
+        depthStateLock.unlock()
+
+        guard enabled else { return (false, true, nil, 0) }
+        let isFresh = now - sampleTime < 0.75
+        guard isFresh, let distance else {
+            return (true, false, nil, 0)
+        }
+        let inWorkingRange = (0.25 ... 0.82).contains(distance)
+        return (
+            true,
+            inWorkingRange && confidence >= 0.24,
+            distance,
+            confidence
+        )
+    }
+
+    private func setTrueDepthEnabled(_ enabled: Bool) {
+        depthStateLock.lock()
+        trueDepthEnabled = enabled
+        depthStateLock.unlock()
+    }
+
+    private func resetDepthMetrics() {
+        depthStateLock.lock()
+        latestDepthTime = 0
+        lastDepthAnalysisTime = 0
+        smoothedFaceDistance = nil
+        latestDepthConfidence = 0
+        depthStateLock.unlock()
+    }
+
+    private func emptySnapshot(lightLevel: Double, now: CFTimeInterval) -> EyeCameraSnapshot {
+        let depth = depthAssessment(at: now)
+        return EyeCameraSnapshot(
+            hasUsableLight: lightLevel > 0.19 && lightLevel < 0.88,
+            usesTrueDepth: depth.enabled,
+            hasUsableDepth: depth.usable,
+            faceDistanceMeters: depth.distance,
+            depthConfidence: depth.confidence,
+            lightLevel: lightLevel
+        )
     }
 }
 
@@ -223,12 +391,12 @@ extension EyeCameraAnalyzer: AVCaptureVideoDataOutputSampleBufferDelegate {
             guard let face = request.results?.max(by: {
                 $0.boundingBox.width < $1.boundingBox.width
             }) else {
-                publish(EyeCameraSnapshot(lightLevel: lightLevel))
+                publish(emptySnapshot(lightLevel: lightLevel, now: now))
                 return
             }
             analyze(face: face, pixelBuffer: pixelBuffer, lightLevel: lightLevel, now: now)
         } catch {
-            publish(EyeCameraSnapshot(lightLevel: lightLevel))
+            publish(emptySnapshot(lightLevel: lightLevel, now: now))
         }
     }
 
@@ -248,6 +416,7 @@ extension EyeCameraAnalyzer: AVCaptureVideoDataOutputSampleBufferDelegate {
             && yaw < 0.35
             && roll < 0.30
         let usableLight = lightLevel > 0.19 && lightLevel < 0.88
+        let depth = depthAssessment(at: now)
 
         guard let landmarks = face.landmarks,
               let leftEye = landmarks.leftEye,
@@ -258,6 +427,10 @@ extension EyeCameraAnalyzer: AVCaptureVideoDataOutputSampleBufferDelegate {
                     hasEyes: false,
                     isFaceAligned: isAligned,
                     hasUsableLight: usableLight,
+                    usesTrueDepth: depth.enabled,
+                    hasUsableDepth: depth.usable,
+                    faceDistanceMeters: depth.distance,
+                    depthConfidence: depth.confidence,
                     lightLevel: lightLevel
                 )
             )
@@ -316,6 +489,10 @@ extension EyeCameraAnalyzer: AVCaptureVideoDataOutputSampleBufferDelegate {
                 hasEyes: true,
                 isFaceAligned: isAligned,
                 hasUsableLight: usableLight,
+                usesTrueDepth: depth.enabled,
+                hasUsableDepth: depth.usable,
+                faceDistanceMeters: depth.distance,
+                depthConfidence: depth.confidence,
                 gazePoint: gaze,
                 eyeOpenness: relativeOpenness,
                 blinkCount: detectedBlinks,
@@ -496,6 +673,102 @@ extension EyeCameraAnalyzer: AVCaptureVideoDataOutputSampleBufferDelegate {
     }
 }
 
+extension EyeCameraAnalyzer: AVCaptureDepthDataOutputDelegate {
+    func depthDataOutput(
+        _ output: AVCaptureDepthDataOutput,
+        didOutput depthData: AVDepthData,
+        timestamp: CMTime,
+        connection: AVCaptureConnection
+    ) {
+        // The filtered depth stream can arrive at up to 15 fps, but distance
+        // guidance only needs about five samples per second. We immediately
+        // reduce each transient map to two anonymous numbers: distance and
+        // confidence. No map, image, landmark set, or biometric template is kept.
+        let now = CACurrentMediaTime()
+        depthStateLock.lock()
+        let shouldAnalyze = now - lastDepthAnalysisTime >= 0.19
+        if shouldAnalyze { lastDepthAnalysisTime = now }
+        depthStateLock.unlock()
+        guard shouldAnalyze else { return }
+
+        let metricDepth: AVDepthData
+        if depthData.depthDataType == kCVPixelFormatType_DepthFloat32 {
+            metricDepth = depthData
+        } else {
+            metricDepth = depthData.converting(toDepthDataType: kCVPixelFormatType_DepthFloat32)
+        }
+
+        guard let sample = centralHeadDepth(in: metricDepth.depthDataMap) else {
+            depthStateLock.lock()
+            latestDepthTime = now
+            latestDepthConfidence = 0
+            depthStateLock.unlock()
+            return
+        }
+
+        depthStateLock.lock()
+        if let previous = smoothedFaceDistance {
+            smoothedFaceDistance = previous * 0.72 + sample.distance * 0.28
+        } else {
+            smoothedFaceDistance = sample.distance
+        }
+        latestDepthConfidence = latestDepthConfidence * 0.58 + sample.confidence * 0.42
+        latestDepthTime = now
+        depthStateLock.unlock()
+    }
+
+    private func centralHeadDepth(
+        in pixelBuffer: CVPixelBuffer
+    ) -> (distance: Double, confidence: Double)? {
+        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
+
+        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else { return nil }
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        let floatsPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer) / MemoryLayout<Float32>.stride
+        let pointer = baseAddress.assumingMemoryBound(to: Float32.self)
+        let step = max(min(width, height) / 72, 3)
+
+        let centerX = Double(width) * 0.5
+        let centerY = Double(height) * 0.5
+        let radiusX = Double(width) * 0.24
+        let radiusY = Double(height) * 0.34
+        let minX = max(Int(centerX - radiusX), 0)
+        let maxX = min(Int(centerX + radiusX), width - 1)
+        let minY = max(Int(centerY - radiusY), 0)
+        let maxY = min(Int(centerY + radiusY), height - 1)
+        var values: [Float32] = []
+        values.reserveCapacity(2_000)
+
+        for y in stride(from: minY, through: maxY, by: step) {
+            let normalizedY = (Double(y) - centerY) / radiusY
+            let row = pointer.advanced(by: y * floatsPerRow)
+            for x in stride(from: minX, through: maxX, by: step) {
+                let normalizedX = (Double(x) - centerX) / radiusX
+                guard normalizedX * normalizedX + normalizedY * normalizedY <= 1 else { continue }
+                let value = row[x]
+                if value.isFinite, value >= 0.16, value <= 1.5 {
+                    values.append(value)
+                }
+            }
+        }
+
+        guard values.count >= 80 else { return nil }
+        values.sort()
+        // A slightly-nearer percentile favors the face over the background
+        // while remaining robust to a hand briefly entering the edge of frame.
+        let distance = Double(values[Int(Double(values.count - 1) * 0.38)])
+        let p20 = Double(values[Int(Double(values.count - 1) * 0.20)])
+        let p65 = Double(values[Int(Double(values.count - 1) * 0.65)])
+        let spread = max(p65 - p20, 0)
+        let sampleCoverage = min(Double(values.count) / 650, 1)
+        let surfaceConsistency = max(1 - spread / 0.34, 0)
+        let confidence = min(max(sampleCoverage * 0.48 + surfaceConsistency * 0.52, 0), 1)
+        return (distance, confidence)
+    }
+}
+
 private final class EyePreviewUIView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
@@ -522,6 +795,166 @@ private struct EyeCameraPreview: UIViewRepresentable {
            connection.isVideoMirroringSupported {
             connection.automaticallyAdjustsVideoMirroring = false
             connection.isVideoMirrored = true
+        }
+    }
+}
+
+private struct TrueDepthFaceScanGuide: View {
+    let size: CGSize
+    let hasFace: Bool
+    let hasEyes: Bool
+    let isAligned: Bool
+    let hasUsableDepth: Bool
+    let depthConfidence: Double
+    let reduceMotion: Bool
+
+    private var scanTone: Color {
+        if isAligned && hasUsableDepth { return Color(hex: 0x30D158) }
+        if hasFace { return Color(hex: 0x64D2FF) }
+        return .white
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: reduceMotion)) { timeline in
+            scanLayers(at: timeline.date.timeIntervalSinceReferenceDate)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func scanLayers(at elapsed: TimeInterval) -> some View {
+        let scanPhase = reduceMotion
+            ? 0.48
+            : elapsed.truncatingRemainder(dividingBy: 2.8) / 2.8
+        let pulse = reduceMotion ? 0.5 : (sin(elapsed * 2.1) + 1) / 2
+        let rotation = reduceMotion
+            ? 0.0
+            : elapsed.truncatingRemainder(dividingBy: 12) / 12 * 360
+
+        return ZStack {
+            scanGlow(pulse: pulse)
+            scanOutline(rotation: rotation)
+            scanPlane(phase: scanPhase)
+            scanNodes
+
+            if hasEyes {
+                eyeLockMarkers
+                    .transition(.opacity.combined(with: .scale(scale: 0.88)))
+            }
+        }
+        .frame(width: size.width, height: size.height)
+        .animation(.easeInOut(duration: 0.28), value: hasEyes)
+        .animation(.easeInOut(duration: 0.35), value: isAligned)
+    }
+
+    private func scanGlow(pulse: Double) -> some View {
+        ZStack {
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [scanTone.opacity(0.04 + pulse * 0.035), .clear],
+                        center: .center,
+                        startRadius: 18,
+                        endRadius: size.width * 0.56
+                    )
+                )
+            Ellipse()
+                .stroke(scanTone.opacity(0.18), lineWidth: 18)
+                .blur(radius: 14)
+        }
+    }
+
+    private func scanOutline(rotation: Double) -> some View {
+        ZStack {
+            Ellipse()
+                .stroke(
+                    AngularGradient(
+                        colors: [
+                            Color(hex: 0x64D2FF),
+                            Color(hex: 0x5E5CE6),
+                            Color(hex: 0xBF5AF2),
+                            scanTone,
+                            Color(hex: 0x64D2FF)
+                        ],
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: isAligned ? 2.4 : 1.6, lineCap: .round)
+                )
+                .rotationEffect(.degrees(rotation))
+                .opacity(hasFace ? 0.92 : 0.66)
+
+            Ellipse()
+                .inset(by: 12)
+                .stroke(
+                    Color.white.opacity(isAligned ? 0.20 : 0.30),
+                    style: StrokeStyle(lineWidth: 0.8, dash: [3, 8], dashPhase: rotation / 8)
+                )
+        }
+    }
+
+    private var scanNodes: some View {
+        ForEach(0 ..< 16, id: \.self) { index in
+            scanNode(index: index)
+        }
+    }
+
+    private func scanNode(index: Int) -> some View {
+        let angle = Double(index) / 16 * Double.pi * 2 - Double.pi / 2
+        let x = size.width / 2 + cos(angle) * (size.width / 2 - 4)
+        let y = size.height / 2 + sin(angle) * (size.height / 2 - 5)
+        let isAnchor = index.isMultiple(of: 4)
+        return Circle()
+            .fill(isAnchor ? scanTone : Color.white)
+            .frame(width: isAnchor ? 5 : 2.5, height: isAnchor ? 5 : 2.5)
+            .shadow(color: scanTone.opacity(0.6), radius: 4)
+            .position(x: x, y: y)
+            .opacity(0.38 + depthConfidence * 0.56)
+    }
+
+    private func scanPlane(phase: Double) -> some View {
+        let verticalTravel = size.height * 0.72
+        return ZStack {
+            LinearGradient(
+                colors: [.clear, scanTone.opacity(0.05), scanTone.opacity(0.22), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(width: size.width * 0.86, height: 64)
+
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [.clear, scanTone.opacity(0.94), .white.opacity(0.88), scanTone.opacity(0.94), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: size.width * 0.82, height: 1.4)
+                .shadow(color: scanTone.opacity(0.8), radius: 8)
+        }
+        .offset(y: -verticalTravel / 2 + verticalTravel * phase)
+        .mask(Ellipse().inset(by: 10))
+    }
+
+    private var eyeLockMarkers: some View {
+        HStack(spacing: size.width * 0.18) {
+            eyeMarker
+            eyeMarker
+        }
+        .offset(y: -size.height * 0.085)
+    }
+
+    private var eyeMarker: some View {
+        ZStack {
+            Circle()
+                .fill(scanTone.opacity(0.12))
+                .frame(width: 46, height: 46)
+                .blur(radius: 5)
+            Circle()
+                .stroke(scanTone.opacity(0.82), style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
+                .frame(width: 32, height: 32)
+            Circle()
+                .fill(scanTone)
+                .frame(width: 4.5, height: 4.5)
         }
     }
 }
@@ -668,6 +1101,7 @@ struct EyeComfortCameraView: View {
         ScrollView {
             VStack(spacing: 18) {
                 welcomeHero
+                trueDepthPrivacyCard
                 privacyCard
                 disclaimerCard
                 Color.clear.frame(height: 24)
@@ -746,6 +1180,62 @@ struct EyeComfortCameraView: View {
         .padding(.horizontal, 6)
         .background(DS.glassFill(0.05), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(DS.glassStroke(0.10), lineWidth: 1))
+    }
+
+    private var trueDepthPrivacyCard: some View {
+        GlassCard(padding: 17, cornerRadius: 26, style: .full, forceSystemGlass: false) {
+            VStack(alignment: .leading, spacing: 13) {
+                HStack(alignment: .center, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            .fill(DS.brandSoftGradient)
+                        Image(safeSystemName: "viewfinder.circle.fill", fallback: "viewfinder")
+                            .font(.system(size: 23, weight: .semibold))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(DS.accent)
+                    }
+                    .frame(width: 48, height: 48)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(s("eye.camera.depth_title"))
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(DS.textPrimary)
+                        Label(s("eye.camera.depth_badge"), systemImage: "person.crop.circle.badge.xmark")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color(hex: 0x30D158))
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                Text(s("eye.camera.depth_body"))
+                    .font(.footnote)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 7) {
+                    privacyFact("ruler.fill", s("eye.camera.depth_fact_distance"))
+                    privacyFact("eye.fill", s("eye.camera.depth_fact_eyes"))
+                    privacyFact("trash.slash.fill", s("eye.camera.depth_fact_ephemeral"))
+                }
+            }
+        }
+    }
+
+    private func privacyFact(_ icon: String, _ title: String) -> some View {
+        VStack(spacing: 5) {
+            Image(safeSystemName: icon, fallback: "checkmark.shield.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(DS.accent)
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DS.textTertiary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, minHeight: 60)
+        .padding(.horizontal, 4)
+        .background(DS.glassFill(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(DS.glassStroke(0.08), lineWidth: 1))
     }
 
     private var privacyCard: some View {
@@ -856,6 +1346,14 @@ struct EyeComfortCameraView: View {
                 liveStatusPill
             }
 
+            if analyzer.accessState == .authorized {
+                HStack {
+                    Spacer(minLength: 0)
+                    depthPrivacyPill
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
             if let liveToast {
                 liveToastView(liveToast)
                     .transition(
@@ -906,15 +1404,17 @@ struct EyeComfortCameraView: View {
 
     private func faceGuide(in size: CGSize) -> some View {
         let width = min(max(size.width * 0.58, 208), 280)
-        return Ellipse()
-            .stroke(
-                analyzer.snapshot.isFaceAligned ? Color.green.opacity(0.72) : Color.white.opacity(0.58),
-                style: StrokeStyle(lineWidth: 1.5, dash: analyzer.snapshot.isFaceAligned ? [] : [8, 8])
-            )
-            .frame(width: width, height: width * 1.34)
-            .shadow(color: analyzer.snapshot.isFaceAligned ? .green.opacity(0.24) : .clear, radius: 12)
-            .animation(reduceMotion ? nil : DS.motionState, value: analyzer.snapshot.isFaceAligned)
-            .accessibilityHidden(true)
+        let guideSize = CGSize(width: width, height: width * 1.34)
+        return TrueDepthFaceScanGuide(
+            size: guideSize,
+            hasFace: analyzer.snapshot.hasFace,
+            hasEyes: analyzer.snapshot.hasEyes,
+            isAligned: analyzer.snapshot.isFaceAligned,
+            hasUsableDepth: analyzer.snapshot.hasUsableDepth,
+            depthConfidence: analyzer.snapshot.depthConfidence,
+            reduceMotion: reduceMotion
+        )
+        .frame(width: guideSize.width, height: guideSize.height)
     }
 
     private var blinkOrb: some View {
@@ -983,6 +1483,47 @@ struct EyeComfortCameraView: View {
         .overlay(Capsule().stroke(.white.opacity(0.14), lineWidth: 1))
         .lippiSystemGlass(in: Capsule(), tint: statusTone.opacity(0.16), forceSystemGlass: true)
         .frame(maxWidth: 320, alignment: .trailing)
+    }
+
+    private var depthPrivacyPill: some View {
+        HStack(spacing: 9) {
+            Image(
+                safeSystemName: analyzer.snapshot.usesTrueDepth ? "viewfinder.circle.fill" : "camera.fill",
+                fallback: "camera.fill"
+            )
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Color(hex: 0x64D2FF))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(
+                    analyzer.snapshot.usesTrueDepth
+                        ? depthDistanceLabel
+                        : s("eye.camera.depth_fallback")
+                )
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+
+                Text(s("eye.camera.depth_no_identity"))
+                    .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .lineLimit(1)
+            }
+
+            Image(systemName: "lock.shield.fill")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color(hex: 0x30D158))
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 8)
+        .background(.black.opacity(reduceTransparency ? 0.78 : 0.25), in: Capsule())
+        .overlay(Capsule().stroke(.white.opacity(0.13), lineWidth: 1))
+        .lippiSystemGlass(
+            in: Capsule(),
+            tint: Color(hex: 0x64D2FF).opacity(0.11),
+            forceSystemGlass: true
+        )
+        .accessibilityElement(children: .combine)
     }
 
     private var instructionPanel: some View {
@@ -1509,6 +2050,9 @@ struct EyeComfortCameraView: View {
             if analyzer.snapshot.isReadyForExercise { return "checkmark.circle.fill" }
             if !analyzer.snapshot.hasFace { return "person.crop.circle.badge.questionmark" }
             if !analyzer.snapshot.hasUsableLight { return "sun.max.fill" }
+            if analyzer.snapshot.usesTrueDepth && !analyzer.snapshot.hasUsableDepth {
+                return "viewfinder.circle"
+            }
             return "move.3d"
         }
     }
@@ -1589,7 +2133,26 @@ struct EyeComfortCameraView: View {
         if !snapshot.hasFace { return s("eye.camera.status_no_face") }
         if !snapshot.isFaceAligned { return s("eye.camera.status_align") }
         if !snapshot.hasUsableLight { return s("eye.camera.status_light") }
+        if snapshot.usesTrueDepth, !snapshot.hasUsableDepth {
+            guard let distance = snapshot.faceDistanceMeters else {
+                return s("eye.camera.status_depth")
+            }
+            if distance < 0.25 { return s("eye.camera.status_farther") }
+            if distance > 0.82 { return s("eye.camera.status_closer") }
+            return s("eye.camera.status_depth")
+        }
         return s("eye.camera.status_ready")
+    }
+
+    private var depthDistanceLabel: String {
+        guard let distance = analyzer.snapshot.faceDistanceMeters else {
+            return s("eye.camera.depth_live")
+        }
+        return L10n.fmt(
+            "eye.camera.depth_distance",
+            lang,
+            Int((distance * 100).rounded())
+        )
     }
 
     private var statusTone: Color {

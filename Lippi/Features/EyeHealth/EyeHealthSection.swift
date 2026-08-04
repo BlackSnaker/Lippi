@@ -42,10 +42,13 @@ public struct EyeHealthHomeView: View {
     @EnvironmentObject private var healthKit: HealthKitManager
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
+    @AppStorage("lippi.eyeTechnologyIntro.seen.v1") private var hasSeenTechnologyIntro = false
     @State private var showGame = false
     @State private var showCameraGuide = false
     @State private var showStats = false
     @State private var showSettings = false
+    @State private var showTechnologyIntro = false
+    @State private var didEvaluateTechnologyIntro = false
 
     private var totalSessions: Int { eye.history.count }
     private var weekSessionsCount: Int {
@@ -128,6 +131,18 @@ public struct EyeHealthHomeView: View {
             EyeComfortCameraView()
                 .environmentObject(eye)
         }
+        .fullScreenCover(isPresented: $showTechnologyIntro) {
+            EyeTechnologyIntroView {
+                hasSeenTechnologyIntro = true
+                showTechnologyIntro = false
+            }
+        }
+        .onAppear {
+            guard !didEvaluateTechnologyIntro else { return }
+            didEvaluateTechnologyIntro = true
+            guard !hasSeenTechnologyIntro else { return }
+            DispatchQueue.main.async { showTechnologyIntro = true }
+        }
     }
 
     private var cameraComfortCard: some View {
@@ -181,6 +196,13 @@ public struct EyeHealthHomeView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .primary, allowsMultiline: true, forceSystemGlass: true))
+
+                Button { showTechnologyIntro = true } label: {
+                    Label(s("eye.intro.revisit"), systemImage: "sparkles.rectangle.stack.fill")
+                        .labelStyle(EyeActionLabelStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .secondary, allowsMultiline: true, forceSystemGlass: true))
             }
         }
     }

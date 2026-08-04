@@ -37,6 +37,8 @@
   <img alt="Local voices" src="https://img.shields.io/badge/Voice-F2%20·%20M3-BF5AF2?style=flat-square">
   <img alt="Context-aware assistant" src="https://img.shields.io/badge/Assistant-Conversational-0A84FF?style=flat-square">
   <img alt="Adaptive calendar" src="https://img.shields.io/badge/Calendar-Adaptive-64D2FF?style=flat-square">
+  <img alt="Interactive day summaries" src="https://img.shields.io/badge/Calendar-Day%20popover-0A84FF?style=flat-square">
+  <img alt="Private TrueDepth guidance" src="https://img.shields.io/badge/TrueDepth-Ephemeral-30D158?style=flat-square">
   <img alt="Natural speech formatting" src="https://img.shields.io/badge/Speech-Natural%20numbers-30D158?style=flat-square">
   <img alt="Liquid Glass themes" src="https://img.shields.io/badge/Design-Liquid%20Glass-5E5CE6?style=flat-square">
   <img alt="App Store readiness" src="https://img.shields.io/badge/App%20Store-1.0%20(2)%20prepared-0A84FF?style=flat-square">
@@ -94,12 +96,12 @@ Lippi объединяет планирование, фокус и восста�
 | Раздел | Что получает пользователь |
 |---|---|
 | **Сегодня** | Спокойный обзор дня, главный фокус и «Ритм заботы», который выбирает один уместный следующий шаг. |
-| **Календарь** | Планы, задачи и шаги дорожной карты складываются в наглядный месяц и ленту дня; Lippi замечает перегрузку и предлагает бережное расписание только с подтверждения пользователя. |
+| **Календарь** | Нажатие на дату раскрывает прямо из её ячейки стеклянную сводку с событиями, временем, заметками и прогрессом дня; кольца на числах и общая дорожка показывают движение к умной цели. |
 | **Умные цели** | Пожелания, исходная точка, ресурсы и явные ограничения превращаются в предметную дорожную карту с объяснимой последовательностью, измеримыми этапами и адаптивным ритмом. |
 | **Задачи и Pomodoro** | Персональный ритм фокуса и отдыха учитывает историю сессий, ближайший шаг умной цели, отмеченное состояние и доступные сигналы восстановления. |
 | **Здоровье** | Разрешённые показатели активности, сна, восстановления, воды и питания из HealthKit превращаются в осторожные и объяснимые рекомендации. |
 | **Apple Watch** | Отдельное приложение показывает текущую рекомендацию, фокус, шаг к цели и принимает быстрые отметки воды, еды, движения и отдыха. |
-| **Восстановление** | Дыхательные практики и упражнения для глаз; камера локально сопровождает выполнение, а Bonsai объясняет только агрегированные сигналы — без кадров, медицинских диагнозов и ослабления безопасной рекомендации. |
+| **Восстановление** | Дыхательные практики и упражнения для глаз; на совместимом iPhone TrueDepth помогает оценивать расстояние до головы, а Vision сопровождает взгляд локально — без Face ID, распознавания личности, сохранения кадров или карт глубины. |
 | **Голосовой помощник** | Составные просьбы, даты, продолжения разговора и естественный доступ к задачам, календарю, фокусу, заботе и «Умным целям»; локальные голоса F2 и M3 произносят числа и обозначения разговорно. |
 | **Знакомство с Lippi** | Четыре интерактивных шага, осмысленный выбор темпа и видимая автоматическая подготовка локальной модели уже при первом запуске. |
 | **Виджеты** | Единый новый дизайн задач, плана дня, Pomodoro и помощника на Home Screen, Lock Screen, в Live Activities и Dynamic Island. |
@@ -115,6 +117,47 @@ Lippi объединяет планирование, фокус и восста�
 [Политика конфиденциальности Lippi →](https://lippi.lenuma.ru/privacy)
 
 ## Последнее обновление · Latest release
+
+### 4 августа 2026 — Видеть путь. Беречь взгляд.
+
+Календарь Lippi теперь отвечает прямо там, где пользователь касается дня. Сводка раскрывается из выбранной даты, показывает события и прогресс, а шаги умной цели превращают месяц в живую карту движения. Тренажёр для глаз стал точнее на совместимых iPhone благодаря фронтальной системе TrueDepth — без Face ID, распознавания личности и сохранения биометрических данных.
+
+<table>
+  <tr>
+    <td width="25%" align="center" valign="top">
+      <strong>▦ День раскрывается</strong><br><br>
+      События, время и заметки появляются в стеклянной карточке прямо из нажатой даты.<br><br>
+      <sub>Touch a date. See the day.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>◎ Цель становится видимой</strong><br><br>
+      Кольца выполнения и дорожка этапов показывают не список дел, а движение вперёд.<br><br>
+      <sub>Every step has a place.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>◉ Глубина без личности</strong><br><br>
+      TrueDepth уточняет расстояние до головы, не обращаясь к Face ID и не создавая шаблон лица.<br><br>
+      <sub>More precision. No identity.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>•• Взгляд, а не портрет</strong><br><br>
+      Знакомство с технологией показывает только глаза, световые точки и движение сканирования.<br><br>
+      <sub>Eyes and depth. Nothing personal.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Сводка рождается из даты.** Нативный popover привязан к выбранному числу и появляется пружинным масштабированием. Он больше не занимает место под календарём и закрывается спокойным касанием вне карточки.
+- **Событие видно без лишнего перехода.** Заголовок, время, заметка и состояние выполнения показываются сразу; касание открывает точное редактирование выбранного плана.
+- **Каждый день объясняет свой ритм.** Кольцо сводки показывает процент завершения, а свободная дата бережно предлагает оставить место восстановлению или выбрать один небольшой шаг.
+- **Умная цель живёт в календаре.** Цветные кольца вокруг чисел отражают выполнение связанных шагов, компактная дорожка показывает этапы и общий процент, а выбранный день объясняет свой вклад в маршрут.
+- **TrueDepth используется только как измерение.** На совместимом iPhone Lippi получает краткоживущую карту глубины, сразу сводит её к расстоянию и оценке надёжности и не сохраняет исходные значения.
+- **Никакой идентификации.** Функция не обращается к Face ID, не распознаёт человека, не создаёт шаблон лица и не отправляет кадры или карты глубины. На Simulator и устройствах без TrueDepth остаётся рабочий RGB/Vision-сценарий.
+- **Точность без лишней нагрузки.** Камера ограничена 15 кадрами в секунду, а глубина анализируется примерно пять раз в секунду в отдельной очереди. Для оценки используется небольшая центральная область вместо тяжёлой 3D-реконструкции.
+- **Первое знакомство объясняет пользу.** При первом открытии раздела «Глаза» появляется четырёхшаговый Liquid Glass-сценарий; его всегда можно повторно открыть из раздела.
+- **Только глаза и анонимные точки.** Экран TrueDepth отказался от полного лица: осталось два живых глаза, естественное моргание, мягкое движение взгляда и облако глубины со сканирующей волной.
+- **Готово на четырёх языках.** Сводки календаря, объяснения TrueDepth, статусы камеры и сообщения о приватности локализованы на русском, английском, немецком и испанском.
+- **Проверено сборкой.** Generic iPhone build проходит с отключённым подписанием. Симулятор во время финальной проверки не запускался; реальная геометрия глубины остаётся сценарием проверки на физическом iPhone с TrueDepth.
 
 ### 3 августа 2026 — Больше пространства. Больше ясности.
 
@@ -520,6 +563,14 @@ The product is designed around four promises:
 - **Responsive interaction** that preserves visual quality while throttling continuous motion when resources are constrained.
 
 ### Latest release
+
+The August 4 release turns Calendar into a direct conversation with the day. Tapping a date now opens an anchored Liquid Glass summary from that exact cell, with completion, scheduled items, time, notes, and a direct path to editing. Goal-linked dates carry progress rings, while a compact milestone rail makes the whole Smart Goal journey visible without leaving the calendar.
+
+Eye guidance now prefers the front TrueDepth system on compatible iPhones. Lippi uses transient depth only to estimate head distance and confidence, then immediately discards the map. It never accesses Face ID, identifies the person, creates a face template, or saves or sends frames and depth data. Devices without TrueDepth and Simulator keep the existing RGB and on-device Vision fallback.
+
+A new four-step introduction explains the technology, its practical benefit, and its privacy boundaries the first time Eye Care opens. The TrueDepth illustration deliberately avoids a portrait: two expressive eyes, natural blinking, anonymous depth points, and a gentle scan wave communicate the experience without depicting a full face. The introduction can be replayed at any time.
+
+All new Calendar summaries, goal-journey labels, TrueDepth explanations, camera states, and privacy copy are available in Russian, English, German, and Spanish. A generic iPhone build succeeds with code signing disabled; no Simulator was launched for the final verification, and real depth capture remains a physical-TrueDepth-iPhone check.
 
 The August 3 release gives Lippi's most conversational experiences more room to breathe. Voice assistance, Smart Goals, Calendar, and camera-guided eye care now share one coherent Liquid Glass language: native system glass where available, stable readable fallbacks elsewhere, and motion that communicates state without becoming constant decoration.
 

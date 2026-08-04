@@ -51,7 +51,7 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Lippi saves completed breathing practices as mindful sessions in Apple Health.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Lippi uses the front camera during an eye exercise to follow eye movements and estimate visible signs of strain. Frames are processed on this iPhone and are never saved or sent.</string>
+	<string>Lippi uses the front camera and, when available, anonymous TrueDepth geometry during an eye exercise to estimate head distance and follow eye movements. It never accesses Face ID, identifies you, creates a face template, or saves or sends frames and depth maps.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Speech recognition is used to process voice assistant commands.</string>
 	<key>NSSupportsLiveActivities</key>

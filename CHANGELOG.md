@@ -12,7 +12,9 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-August%203%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-August%204%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Anchored day summaries" src="https://img.shields.io/badge/Calendar-Anchored%20day%20summary-64D2FF?style=for-the-badge">
+    <img alt="Private TrueDepth guidance" src="https://img.shields.io/badge/TrueDepth-No%20identity-30D158?style=for-the-badge">
     <img alt="System Liquid Glass" src="https://img.shields.io/badge/Interface-System%20Glass-BF5AF2?style=for-the-badge">
     <img alt="Animated assistant text" src="https://img.shields.io/badge/Text-Living%20reveal-64D2FF?style=for-the-badge">
     <img alt="Full-screen eye exercise" src="https://img.shields.io/badge/Eye%20Camera-Full%20screen-30D158?style=for-the-badge">
@@ -52,32 +54,77 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>One material language</strong><br>
-      <sub>Native glass across conversation and control.</sub>
+      <strong>The day, right where you touch</strong><br>
+      <sub>An anchored glass summary from every date.</sub>
       <br><br>
-      <strong>Один язык материалов</strong><br>
-      <sub>Системное стекло в разговоре и управлении.</sub>
+      <strong>День — там, где вы коснулись</strong><br>
+      <sub>Стеклянная сводка раскрывается из даты.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>A calendar you can act in</strong><br>
-      <sub>Month, week, filters, and direct edits.</sub>
+      <strong>A goal you can see</strong><br>
+      <sub>Progress rings and a living milestone rail.</sub>
       <br><br>
-      <strong>Календарь для действий</strong><br>
-      <sub>Месяц, неделя, фильтры и быстрые изменения.</sub>
+      <strong>Цель, которую видно</strong><br>
+      <sub>Кольца прогресса и живая дорожка этапов.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Eye care, edge to edge</strong><br>
-      <sub>Camera guidance with calm glass notices.</sub>
+      <strong>Depth without identity</strong><br>
+      <sub>TrueDepth precision without Face ID.</sub>
       <br><br>
-      <strong>Забота о глазах — во весь экран</strong><br>
-      <sub>Камера и спокойные стеклянные подсказки.</sub>
+      <strong>Глубина без личности</strong><br>
+      <sub>Точность TrueDepth без Face ID.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Goals as a conversation</strong><br>
-      <sub>More air, clearer turns, gentle text motion.</sub>
+      <strong>Eyes, not a portrait</strong><br>
+      <sub>Anonymous points, gaze, and a scan wave.</sub>
       <br><br>
-      <strong>Цели как разговор</strong><br>
-      <sub>Больше воздуха, яснее реплики, мягче текст.</sub>
+      <strong>Глаза, а не портрет</strong><br>
+      <sub>Анонимные точки, взгляд и волна сканирования.</sub>
+    </td>
+  </tr>
+</table>
+
+### August 4, 2026 — See the path. Care for the eyes. / Видеть путь. Беречь взгляд.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Calendar now reveals the meaning of a day from the date itself, while TrueDepth gives eye guidance a more reliable sense of distance without giving Lippi an identity.</strong></p>
+      <ul>
+        <li><strong>An anchored day summary:</strong> tapping a date opens a native popover from that exact calendar cell instead of placing the summary below the month. A spring reveal, transparent presentation background, and Liquid Glass surface make the transition feel continuous.</li>
+        <li><strong>The useful detail is immediate:</strong> the selected day shows completion, scheduled items, times, and notes. Each visible item opens directly in the task editor, while additional plans remain counted and available in the full day section.</li>
+        <li><strong>Empty days have meaning too:</strong> the summary distinguishes an intentionally open day from an unfinished one and suggests preserving recovery space or choosing one small step.</li>
+        <li><strong>Goal progress lives on dates:</strong> every day with Smart Goal-linked tasks receives a progress ring. Completed steps resolve to green, active movement remains blue, and ordinary task-state dots continue to preserve the day’s practical status.</li>
+        <li><strong>A journey, not just a percentage:</strong> the selected day includes the overall goal percentage, milestone nodes, the current stage, the number of goal steps assigned to the day, or the next meaningful action when no step is scheduled there.</li>
+        <li><strong>TrueDepth is preferred, never required:</strong> compatible iPhones use the front TrueDepth camera for transient head-distance guidance. Simulator and devices without depth continue through the regular front camera and on-device Vision.</li>
+        <li><strong>Depth becomes two anonymous values:</strong> a short-lived depth map is reduced immediately to estimated distance and confidence. The map, frames, landmarks, and any biometric template are not retained or transmitted.</li>
+        <li><strong>No Face ID and no identification:</strong> the feature does not access Face ID, recognize a person, or create a face profile. Updated permission copy and in-product explanations state these boundaries before the exercise.</li>
+        <li><strong>Precision with bounded cost:</strong> capture is capped at 15 fps, depth is sampled about five times per second on a separate utility queue, and only a central elliptical region is evaluated instead of constructing a 3D face.</li>
+        <li><strong>A first-run technology story:</strong> the first visit to Eye Care opens a four-step Liquid Glass introduction covering usefulness, TrueDepth, private processing, and adaptive care. It can be replayed from the section at any time.</li>
+        <li><strong>Eyes, not a portrait:</strong> the depth page uses two expressive eyes, natural blinking, subtle gaze motion, anonymous depth points, contour bands, and a scanning wave. No full face, nose, mouth, or head outline is drawn.</li>
+        <li><strong>Accessible and localized:</strong> Reduce Motion and Reduce Transparency receive calm alternatives. All new Calendar and eye-technology copy is complete in Russian, English, German, and Spanish.</li>
+        <li><strong>Verification:</strong> a generic iPhone build succeeds with code signing disabled. No Simulator was launched for the final verification; live TrueDepth capture remains a physical compatible-iPhone checkpoint.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Календарь теперь раскрывает смысл дня прямо из выбранной даты, а TrueDepth даёт тренажёру для глаз более надёжное ощущение расстояния — не давая Lippi никакой информации о личности.</strong></p>
+      <ul>
+        <li><strong>Сводка привязана к дате:</strong> нажатие открывает нативный popover из конкретной ячейки вместо блока под месяцем. Пружинное появление, прозрачный фон presentation и Liquid Glass делают переход непрерывным.</li>
+        <li><strong>Полезные детали видны сразу:</strong> выбранный день показывает выполнение, планы, время и заметки. Каждое видимое событие напрямую открывает редактор, а остальные планы остаются посчитанными и доступны в полном разделе дня.</li>
+        <li><strong>Свободный день тоже имеет смысл:</strong> сводка отличает осознанно свободную дату от незавершённой и предлагает сохранить пространство для восстановления или выбрать один небольшой шаг.</li>
+        <li><strong>Прогресс цели живёт на числах:</strong> даты со связанными задачами умной цели получают кольцо выполнения. Завершение становится зелёным, активное движение остаётся голубым, а обычные точки продолжают показывать состояние остальных планов.</li>
+        <li><strong>Маршрут вместо сухого процента:</strong> выбранный день показывает общий прогресс, узлы этапов, текущую стадию, количество назначенных шагов цели или ближайшее осмысленное действие, если конкретный шаг на эту дату не поставлен.</li>
+        <li><strong>TrueDepth предпочтителен, но не обязателен:</strong> совместимый iPhone использует фронтальную систему глубины для оценки расстояния до головы. Simulator и устройства без глубины продолжают работать через обычную фронтальную камеру и Vision на устройстве.</li>
+        <li><strong>Глубина превращается в два анонимных числа:</strong> краткоживущая карта сразу сводится к расстоянию и оценке надёжности. Карта, кадры, ориентиры лица и любой биометрический шаблон не сохраняются и не передаются.</li>
+        <li><strong>Без Face ID и идентификации:</strong> функция не обращается к Face ID, не узнаёт человека и не создаёт профиль лица. Обновлённый текст разрешения и объяснения внутри приложения сообщают об этих границах до упражнения.</li>
+        <li><strong>Точность с ограниченной нагрузкой:</strong> захват ограничен 15 кадрами в секунду, глубина анализируется примерно пять раз в секунду в отдельной utility-очереди, а вместо построения 3D-лица оценивается только центральная эллиптическая область.</li>
+        <li><strong>Первое знакомство с технологией:</strong> первый вход в раздел «Глаза» открывает четыре Liquid Glass-шага о пользе, TrueDepth, приватной обработке и адаптивной заботе. Рассказ всегда можно открыть повторно.</li>
+        <li><strong>Глаза вместо портрета:</strong> экран глубины показывает два выразительных глаза, естественное моргание, мягкое движение взгляда, анонимные точки, контурные слои и волну сканирования. Полного лица, носа, губ и контура головы больше нет.</li>
+        <li><strong>Доступно и локализовано:</strong> Reduce Motion и Reduce Transparency получают спокойные альтернативы. Новые тексты календаря и технологии глаз полностью готовы на русском, английском, немецком и испанском.</li>
+        <li><strong>Проверка:</strong> generic-сборка для iPhone проходит с отключённым подписанием. Simulator во время финальной проверки не запускался; живой TrueDepth остаётся этапом проверки на совместимом физическом iPhone.</li>
+      </ul>
     </td>
   </tr>
 </table>

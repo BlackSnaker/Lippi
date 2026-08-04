@@ -39,6 +39,7 @@ struct LippiCalendarView: View {
     @State private var adaptationResult: String?
     @State private var scope: LippiCalendarScope = .month
     @State private var taskFilter: LippiCalendarTaskFilter = .all
+    @State private var presentedDaySummary: Date?
     @State private var editingTask: TaskItem?
     @State private var isPresentingTaskEditor = false
     @Namespace private var calendarGlassNamespace
@@ -137,6 +138,7 @@ struct LippiCalendarView: View {
         ToolbarItem(placement: .primaryAction) {
             Button {
                 withAnimation(reduceMotion ? nil : DS.motionState) {
+                    presentedDaySummary = nil
                     selectedDate = .now
                     displayedMonth = monthStart(for: .now)
                 }
@@ -283,6 +285,7 @@ struct LippiCalendarView: View {
                         }
                     }
                 }
+
             }
         }
         .simultaneousGesture(
@@ -301,6 +304,7 @@ struct LippiCalendarView: View {
                 ForEach(LippiCalendarScope.allCases) { item in
                     Button {
                         withAnimation(reduceMotion ? nil : DS.motionState) {
+                            presentedDaySummary = nil
                             scope = item
                             displayedMonth = monthStart(for: selectedDate)
                         }
@@ -334,6 +338,7 @@ struct LippiCalendarView: View {
         guard let destination = calendar.date(byAdding: component, value: direction, to: anchor) else { return }
 
         withAnimation(reduceMotion ? nil : DS.motionState) {
+            presentedDaySummary = nil
             if scope == .month {
                 displayedMonth = monthStart(for: destination)
                 selectedDate = monthStart(for: destination)
@@ -371,16 +376,37 @@ struct LippiCalendarView: View {
         let plans = tasks(on: date)
         let unfinished = plans.filter { !$0.isCompleted }.count
         let completed = plans.contains(where: \.isCompleted)
+        let goalProgress = goalDayProgress(on: date)
 
         return Button {
             withAnimation(reduceMotion ? nil : DS.motionQuick) {
                 selectedDate = date
+                presentedDaySummary = date
             }
         } label: {
             VStack(spacing: 3) {
-                Text("\(calendar.component(.day, from: date))")
-                    .font(.subheadline.weight(isSelected || isToday ? .bold : .medium))
-                    .foregroundStyle(isSelected ? DS.accent : DS.textPrimary)
+                ZStack {
+                    if let goalProgress {
+                        Circle()
+                            .stroke(Color(hex: 0x64D2FF).opacity(0.16), lineWidth: 1.6)
+
+                        if goalProgress > 0 {
+                            Circle()
+                                .trim(from: 0, to: max(0.03, goalProgress))
+                                .stroke(
+                                    goalProgress >= 1 ? Color(hex: 0x30D158) : Color(hex: 0x64D2FF),
+                                    style: StrokeStyle(lineWidth: 2.2, lineCap: .round)
+                                )
+                                .rotationEffect(.degrees(-90))
+                        }
+                    }
+
+                    Text("\(calendar.component(.day, from: date))")
+                        .font(.subheadline.weight(isSelected || isToday ? .bold : .medium))
+                        .foregroundStyle(isSelected ? DS.accent : DS.textPrimary)
+                        .contentTransition(.numericText())
+                }
+                .frame(width: 30, height: 30)
 
                 HStack(spacing: 2) {
                     if unfinished > 0 {
@@ -396,12 +422,40 @@ struct LippiCalendarView: View {
                 }
                 .frame(height: 5)
             }
-            .frame(maxWidth: .infinity, minHeight: 45)
+            .frame(maxWidth: .infinity, minHeight: 50)
             .background { daySelectionSurface(isSelected: isSelected, isToday: isToday) }
             .contentShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(dayAccessibilityLabel(date: date, planCount: plans.count))
+        .popover(
+            isPresented: daySummaryPresentation(for: date),
+            attachmentAnchor: .rect(.bounds),
+            arrowEdge: .top
+        ) {
+            CalendarDaySummaryPopover {
+                selectedDayPreview
+                    .frame(width: 330)
+            }
+            .presentationCompactAdaptation(.popover)
+            .presentationBackground(.clear)
+        }
+    }
+
+    private func daySummaryPresentation(for date: Date) -> Binding<Bool> {
+        Binding(
+            get: {
+                guard let presentedDaySummary else { return false }
+                return calendar.isDate(presentedDaySummary, inSameDayAs: date)
+            },
+            set: { isPresented in
+                if !isPresented,
+                   let presentedDaySummary,
+                   calendar.isDate(presentedDaySummary, inSameDayAs: date) {
+                    self.presentedDaySummary = nil
+                }
+            }
+        )
     }
 
     @ViewBuilder
@@ -430,6 +484,252 @@ struct LippiCalendarView: View {
         } else {
             Color.clear
         }
+    }
+
+    private var selectedDayPreview: some View {
+        let plans = tasks(on: selectedDate)
+        let completedCount = plans.filter(\.isCompleted).count
+        let dayProgress = plans.isEmpty ? 0 : Double(completedCount) / Double(plans.count)
+
+        return VStack(alignment: .leading, spacing: 13) {
+            HStack(spacing: 12) {
+                VStack(spacing: 1) {
+                    Text(selectedDate.formatted(
+                        .dateTime.locale(Locale(identifier: lang.localeIdentifier)).day()
+                    ))
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+
+                    Text(selectedDate.formatted(
+                        .dateTime.locale(Locale(identifier: lang.localeIdentifier)).weekday(.short)
+                    ).uppercased())
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(DS.accent)
+                }
+                .frame(width: 48, height: 52)
+                .background(DS.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .lippiSystemGlass(
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                    tint: DS.accent.opacity(0.10),
+                    forceSystemGlass: true
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(s("calendar.day.summary.title"))
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(DS.textPrimary)
+
+                    Text(daySummaryText(plans: plans, completedCount: completedCount))
+                        .font(.caption)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 4)
+
+                dayCompletionRing(progress: dayProgress, hasPlans: !plans.isEmpty)
+            }
+
+            if !plans.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(s("calendar.day.events"))
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.7)
+                        .foregroundStyle(DS.textTertiary)
+
+                    ForEach(plans.prefix(2)) { task in
+                        dayEventPreview(task)
+                    }
+
+                    if plans.count > 2 {
+                        Text(L10n.fmt("calendar.day.more", lang, plans.count - 2))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(DS.accent)
+                            .padding(.leading, 42)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            if let roadmap {
+                selectedGoalJourney(roadmap)
+            }
+        }
+        .padding(14)
+        .background(DS.glassFill(0.055), in: RoundedRectangle(cornerRadius: 21, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 21, style: .continuous)
+                .stroke(DS.glassStroke(0.10), lineWidth: 1)
+        )
+        .lippiSystemGlass(
+            in: RoundedRectangle(cornerRadius: 21, style: .continuous),
+            tint: DS.accent.opacity(0.045),
+            forceSystemGlass: true
+        )
+        .id(calendar.startOfDay(for: selectedDate))
+        .transition(.opacity.combined(with: .scale(scale: 0.985)))
+    }
+
+    private func dayCompletionRing(progress: Double, hasPlans: Bool) -> some View {
+        ZStack {
+            Circle()
+                .stroke(DS.glassFill(0.11), lineWidth: 5)
+
+            if hasPlans {
+                Circle()
+                    .trim(from: 0, to: max(0.025, min(progress, 1)))
+                    .stroke(
+                        progress >= 1 ? Color(hex: 0x30D158) : DS.accent,
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+            }
+
+            if hasPlans {
+                Text("\(Int((progress * 100).rounded()))%")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(progress >= 1 ? Color(hex: 0x30D158) : DS.textPrimary)
+                    .contentTransition(.numericText())
+            } else {
+                Image(safeSystemName: "leaf.fill", fallback: "circle")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Color(hex: 0x30D158))
+            }
+        }
+        .frame(width: 48, height: 48)
+        .accessibilityHidden(true)
+    }
+
+    private func dayEventPreview(_ task: TaskItem) -> some View {
+        Button {
+            presentEditor(for: task)
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(task.isCompleted ? Color(hex: 0x30D158).opacity(0.15) : task.category.tint.opacity(0.13))
+                    Image(
+                        safeSystemName: task.isCompleted ? "checkmark" : task.category.symbol,
+                        fallback: "circle.fill"
+                    )
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(task.isCompleted ? Color(hex: 0x30D158) : task.category.tint)
+                }
+                .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(task.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(DS.textPrimary)
+                            .strikethrough(task.isCompleted, color: DS.textTertiary)
+                            .lineLimit(2)
+
+                        Spacer(minLength: 3)
+
+                        if let dueDate = task.dueDate {
+                            Text(dueDate, format: .dateTime.locale(Locale(identifier: lang.localeIdentifier)).hour().minute())
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                    }
+
+                    let notes = task.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !notes.isEmpty {
+                        Text(notes)
+                            .font(.caption2)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(2)
+                    }
+                }
+
+                Image(safeSystemName: "chevron.right", fallback: "chevron.right")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.top, 4)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(s("calendar.action.edit"))
+    }
+
+    private func selectedGoalJourney(_ roadmap: GoalRoadmap) -> some View {
+        let progress = roadmapProgress(roadmap)
+        let selectedGoalTasks = goalTasks(on: selectedDate, roadmap: roadmap)
+        let currentIndex = currentMilestoneIndex(roadmap)
+
+        return VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 8) {
+                Image(safeSystemName: "point.topleft.down.curvedto.point.bottomright.up", fallback: "scope")
+                    .foregroundStyle(Color(hex: 0x64D2FF))
+
+                Text(s("calendar.day.goal.title"))
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
+
+                Spacer()
+
+                Text("\(Int((progress * 100).rounded()))%")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color(hex: 0x64D2FF))
+                    .contentTransition(.numericText())
+            }
+
+            goalJourneyRail(roadmap, progress: progress)
+
+            if !selectedGoalTasks.isEmpty {
+                Text(L10n.fmt("calendar.day.goal.steps", lang, selectedGoalTasks.count))
+                    .font(.caption)
+                    .foregroundStyle(DS.textSecondary)
+            } else if let nextStep = intelligence.nextGoalStep {
+                Text(L10n.fmt("calendar.day.goal.next", lang, nextStep))
+                    .font(.caption)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+            } else {
+                Text(s("calendar.day.goal.none"))
+                    .font(.caption)
+                    .foregroundStyle(DS.textSecondary)
+            }
+
+            if let currentIndex, roadmap.milestones.indices.contains(currentIndex) {
+                HStack(spacing: 6) {
+                    Text(s("calendar.day.goal.current_stage"))
+                        .foregroundStyle(DS.textTertiary)
+                    Text(roadmap.milestones[currentIndex].title)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                }
+                .font(.caption2.weight(.semibold))
+            }
+
+            Label(s("calendar.day.goal.legend"), systemImage: "circle.dotted.circle")
+                .font(.caption2)
+                .foregroundStyle(DS.textTertiary)
+        }
+        .padding(12)
+        .background(
+            Color(hex: 0x64D2FF).opacity(0.055),
+            in: RoundedRectangle(cornerRadius: 17, style: .continuous)
+        )
+    }
+
+    private func goalJourneyRail(_ roadmap: GoalRoadmap, progress: Double) -> some View {
+        CalendarGoalJourneyRail(
+            progress: progress,
+            milestoneProgress: roadmap.milestones.map {
+                milestoneCompletion($0, roadmap: roadmap)
+            }
+        )
+    }
+
+    private func daySummaryText(plans: [TaskItem], completedCount: Int) -> String {
+        guard !plans.isEmpty else { return s("calendar.day.summary.free") }
+        if completedCount == plans.count {
+            return s("calendar.day.summary.complete")
+        }
+        return L10n.fmt("calendar.day.summary.planned", lang, plans.count, completedCount)
     }
 
     private var intelligenceCard: some View {
@@ -699,6 +999,7 @@ struct LippiCalendarView: View {
         Button {
             guard let date = calendar.date(byAdding: .day, value: direction, to: selectedDate) else { return }
             withAnimation(reduceMotion ? nil : DS.motionQuick) {
+                presentedDaySummary = nil
                 selectedDate = date
                 displayedMonth = monthStart(for: date)
             }
@@ -1062,6 +1363,20 @@ struct LippiCalendarView: View {
             }
     }
 
+    private func goalTasks(on date: Date, roadmap: GoalRoadmap) -> [TaskItem] {
+        tasks(on: date).filter { task in
+            GoalPlanProgressAudit.isLinked(task, to: roadmap)
+        }
+    }
+
+    private func goalDayProgress(on date: Date) -> Double? {
+        guard let roadmap else { return nil }
+        let linked = goalTasks(on: date, roadmap: roadmap)
+        guard !linked.isEmpty else { return nil }
+        let completed = linked.filter(\.isCompleted).count
+        return min(max(Double(completed) / Double(linked.count), 0), 1)
+    }
+
     private func matchesTaskFilter(_ task: TaskItem) -> Bool {
         switch taskFilter {
         case .all:
@@ -1207,5 +1522,96 @@ struct LippiCalendarView: View {
         #if os(iOS)
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         #endif
+    }
+}
+
+private struct CalendarDaySummaryPopover<Content: View>: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isVisible = false
+
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(8)
+            .opacity(isVisible ? 1 : 0)
+            .scaleEffect(isVisible ? 1 : 0.92, anchor: .top)
+            .offset(y: isVisible ? 0 : -8)
+            .shadow(color: DS.accent.opacity(isVisible ? 0.14 : 0), radius: 22, y: 10)
+            .onAppear {
+                if reduceMotion {
+                    isVisible = true
+                } else {
+                    withAnimation(.spring(response: 0.46, dampingFraction: 0.82, blendDuration: 0.16)) {
+                        isVisible = true
+                    }
+                }
+            }
+    }
+}
+
+private struct CalendarGoalJourneyRail: View {
+    let progress: Double
+    let milestoneProgress: [Double]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let nodeCount = milestoneProgress.count
+            let usableWidth = max(0, proxy.size.width - 12)
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(DS.glassFill(0.12))
+                    .frame(height: 4)
+                    .padding(.horizontal, 6)
+
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [DS.accent, Color(hex: 0x64D2FF), Color(hex: 0x30D158)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: usableWidth * min(max(progress, 0), 1), height: 4)
+                    .padding(.leading, 6)
+
+                ForEach(0 ..< nodeCount, id: \.self) { index in
+                    journeyNode(
+                        completion: milestoneProgress[index],
+                        x: nodeX(index: index, count: nodeCount, usableWidth: usableWidth, fullWidth: proxy.size.width)
+                    )
+                }
+            }
+        }
+        .frame(height: 20)
+        .accessibilityHidden(true)
+    }
+
+    private func journeyNode(completion: Double, x: CGFloat) -> some View {
+        ZStack {
+            Circle()
+                .fill(DS.contentSurface)
+                .frame(width: 15, height: 15)
+
+            Circle()
+                .fill(completion >= 1 ? Color(hex: 0x30D158) : Color(hex: 0x64D2FF).opacity(0.46))
+                .frame(width: completion >= 1 ? 9 : 7, height: completion >= 1 ? 9 : 7)
+        }
+        .position(x: x, y: 10)
+    }
+
+    private func nodeX(
+        index: Int,
+        count: Int,
+        usableWidth: CGFloat,
+        fullWidth: CGFloat
+    ) -> CGFloat {
+        guard count > 1 else { return fullWidth / 2 }
+        return 6 + usableWidth * CGFloat(index) / CGFloat(count - 1)
     }
 }
