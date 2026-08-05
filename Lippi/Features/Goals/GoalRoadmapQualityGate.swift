@@ -28,6 +28,56 @@ enum GoalRoadmapQualityGate {
         return normalized
     }
 
+    static func repairedWithLocalFallback(
+        _ roadmap: GoalRoadmap,
+        fallback: GoalRoadmap,
+        input: GoalPlannerInput,
+        lang: AppLang,
+        evidence: [GoalEvidenceSource] = []
+    ) -> GoalRoadmap {
+        let candidate = normalizedForDisplay(roadmap, input: input, lang: lang)
+        let safeFallback = normalizedForDisplay(fallback, input: input, lang: lang)
+        let expectedMilestones = input.horizon.weeks == 12 ? 4 : 3
+        guard !safeFallback.milestones.isEmpty else { return candidate }
+        var repaired = candidate
+        var usedTitles = Set<String>()
+        var usedTasks = Set<String>()
+
+        repaired.milestones = (0..<expectedMilestones).map { index in
+            let fallbackMilestone = safeFallback.milestones[min(index, safeFallback.milestones.count - 1)]
+            guard candidate.milestones.indices.contains(index) else {
+                register(fallbackMilestone, titles: &usedTitles, tasks: &usedTasks)
+                return fallbackMilestone
+            }
+
+            let proposed = candidate.milestones[index]
+            guard milestoneIsUseful(proposed, usedTitles: usedTitles, usedTasks: usedTasks) else {
+                register(fallbackMilestone, titles: &usedTitles, tasks: &usedTasks)
+                return fallbackMilestone
+            }
+            register(proposed, titles: &usedTitles, tasks: &usedTasks)
+            return proposed
+        }
+
+        if !actionsAreUseful(repaired.successCriteria, expectedCount: 2) {
+            repaired.successCriteria = safeFallback.successCriteria
+        }
+        if !actionsAreUseful(repaired.firstActions, expectedCount: 2) {
+            repaired.firstActions = safeFallback.firstActions
+        }
+        if !insightsAreUseful(repaired.personalizedInsights ?? [], input: input) {
+            repaired.personalizedInsights = safeFallback.personalizedInsights
+        }
+        if !questionsAreUseful(repaired.clarifyingQuestions ?? []) {
+            repaired.clarifyingQuestions = safeFallback.clarifyingQuestions
+        }
+
+        if let validated = validated(repaired, input: input, lang: lang, evidence: evidence) {
+            return validated
+        }
+        return validated(safeFallback, input: input, lang: lang, evidence: evidence) ?? safeFallback
+    }
+
     static func feedback(for roadmap: GoalRoadmap?, input: GoalPlannerInput, evidence: [GoalEvidenceSource] = []) -> String {
         guard let roadmap else {
             return "The previous answer did not match the required JSON schema. Return every required field with grounded, non-empty values."
@@ -80,6 +130,10 @@ enum GoalRoadmapQualityGate {
         let normalizedTitles = roadmap.milestones.map { normalized($0.title) }
         if Set(normalizedTitles).count != normalizedTitles.count {
             findings.append("Give every milestone a distinct purpose and title.")
+        }
+
+        if roadmap.milestones.contains(where: isAbstractMilestone) {
+            findings.append("Replace abstract phase labels with the exact result, visible completion proof, and work that produces it.")
         }
 
         let allTasks = roadmap.milestones.flatMap(\.tasks)
@@ -143,7 +197,64 @@ enum GoalRoadmapQualityGate {
             }
         }
 
+        let domain = OpenRoadmapCatalog.profile(for: input).domain
+        if !routeIsSpecificToDomain(roadmap, domain: domain) {
+            findings.append("Use the real vocabulary and work of the goal domain instead of a reusable productivity template.")
+        }
+
         return findings
+    }
+
+    private static func milestoneIsUseful(
+        _ milestone: GoalMilestone,
+        usedTitles: Set<String>,
+        usedTasks: Set<String>
+    ) -> Bool {
+        let title = normalized(milestone.title)
+        let tasks = milestone.tasks.map(normalized)
+        guard title.count >= 5,
+              !usedTitles.contains(title),
+              normalized(milestone.target).count >= 12,
+              milestone.tasks.count == 2,
+              Set(tasks).count == tasks.count,
+              tasks.allSatisfy({ !usedTasks.contains($0) }),
+              !isAbstractMilestone(milestone),
+              milestone.tasks.allSatisfy({ !isVagueTask($0) && !lacksConcreteOutput($0) }) else {
+            return false
+        }
+        return true
+    }
+
+    private static func register(
+        _ milestone: GoalMilestone,
+        titles: inout Set<String>,
+        tasks: inout Set<String>
+    ) {
+        titles.insert(normalized(milestone.title))
+        milestone.tasks.forEach { tasks.insert(normalized($0)) }
+    }
+
+    private static func actionsAreUseful(_ values: [String], expectedCount: Int) -> Bool {
+        values.count == expectedCount
+            && Set(values.map(normalized)).count == expectedCount
+            && values.allSatisfy { !isVagueTask($0) && !lacksConcreteOutput($0) }
+    }
+
+    private static func insightsAreUseful(_ insights: [String], input: GoalPlannerInput) -> Bool {
+        guard insights.count == 2,
+              Set(insights.map(normalized)).count == 2,
+              insights.allSatisfy({ normalized($0).count >= 18 }) else { return false }
+
+        let contextTerms = meaningfulTerms(in: input.context)
+        guard !contextTerms.isEmpty else { return true }
+        let insightTerms = normalized(insights.joined(separator: " ")).split(separator: " ").map(String.init)
+        return contextTerms.contains { anchor in
+            insightTerms.contains { looselyMatches(anchor, $0) }
+        }
+    }
+
+    private static func questionsAreUseful(_ questions: [String]) -> Bool {
+        questions.count >= 2 && questions.allSatisfy { !isVagueQuestion($0) }
     }
 
     private static func milestoneSlots(totalWeeks: Int, count: Int) -> [(start: Int, end: Int)] {
@@ -288,7 +399,62 @@ enum GoalRoadmapQualityGate {
             "улучшить навыки",
             "изучить тему"
         ]
-        return vagueTasks.contains(value)
+        let vagueFragments = [
+            "make progress", "work on", "learn more", "prepare everything", "continue learning",
+            "practice more", "improve skills", "build a rhythm", "strengthen progress",
+            "продвигаться к", "работать над", "изучить материалы", "подготовить все",
+            "заниматься больше", "улучшить навыки", "собрать ритм", "усилить прогресс"
+        ]
+        return vagueTasks.contains(value) || vagueFragments.contains(where: value.contains)
+    }
+
+    private static func isAbstractMilestone(_ milestone: GoalMilestone) -> Bool {
+        let value = normalized("\(milestone.title) \(milestone.target)")
+        let abstractFragments = [
+            "define a measurable outcome", "remove the extra scope", "build a regular action rhythm",
+            "first proof of progress", "strengthen what works", "remove weak points",
+            "lock in the result", "prepare the next cycle", "сформулировать измеримый результат", "убрать лишнее",
+            "собрать регулярный ритм", "первые доказательства прогресса", "усилить то что работает",
+            "убрать слабые места", "закрепить результат", "подготовить следующий цикл",
+            "устойчивое выполнение", "steady execution"
+        ]
+        return abstractFragments.contains(where: value.contains)
+    }
+
+    private static func routeIsSpecificToDomain(_ roadmap: GoalRoadmap, domain: GoalEvidenceDomain) -> Bool {
+        guard domain != .general else { return true }
+        let routeText = normalized(
+            roadmap.milestones.flatMap { [$0.title, $0.target] + $0.tasks }.joined(separator: " ")
+        )
+        let signals: [String]
+
+        switch domain {
+        case .language:
+            signals = [
+                "vocabulary", "grammar", "listening", "speaking", "reading", "writing", "dialogue", "conversation", "phrase", "recording", "retell",
+                "лексик", "граммат", "аудирован", "реч", "чтен", "письм", "диалог", "разговор", "фраз", "запис", "пересказ"
+            ]
+        case .software:
+            signals = ["code", "implementation", "build", "test", "project", "api", "data", "error", "код", "реализ", "сборк", "тест", "проект", "данн", "ошиб"]
+        case .product:
+            signals = ["problem", "scenario", "prototype", "acceptance", "feedback", "release", "scope", "проблем", "сценари", "прототип", "приемк", "обратн", "релиз", "границ"]
+        case .design:
+            signals = ["user flow", "prototype", "accessibility", "usability", "contrast", "design decision", "сценари", "прототип", "доступност", "удобств", "контраст", "дизаин решен"]
+        case .learning:
+            signals = ["topic", "retrieval", "exercise", "knowledge", "lesson", "exam", "тем", "воспроизвед", "задан", "знан", "урок", "экзам"]
+        case .career:
+            signals = ["role", "portfolio", "case", "interview", "application", "outreach", "рол", "портфолио", "кеис", "интервью", "отклик", "вакан"]
+        case .creative:
+            signals = ["draft", "scene", "voice", "revision", "publish", "черновик", "сцен", "голос", "редак", "публикац"]
+        case .health:
+            signals = ["routine", "load", "recovery", "comfort", "activity", "режим", "нагруз", "восстанов", "самочувств", "активност"]
+        case .business:
+            signals = ["assumption", "customer", "offer", "channel", "operation", "demand", "предполож", "клиент", "предложен", "канал", "операцион", "спрос"]
+        case .general:
+            signals = []
+        }
+
+        return signals.filter { routeText.contains($0) }.prefix(2).count == 2
     }
 
     private static func lacksConcreteOutput(_ text: String) -> Bool {

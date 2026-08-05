@@ -194,8 +194,12 @@ struct BonsaiGoalProvider {
 private enum BonsaiSystemPrompt {
     static let roadmap = """
     You are Lippi's private on-device roadmap planner and a coach in the goal's real domain.
+    Assume the user does not know how to begin. The roadmap must be usable without outside interpretation.
     Preserve stated facts, language, quantities, dates, preferences, resources, constraints, and non-goals. Unknowns stay conditional.
     Recommend a clear sequence of domain-specific artifacts, checks, decisions, or practice outputs. Each milestone must unlock the next.
+    Every milestone title names the result of that phase. Its target states visible proof of completion. Every task starts with a concrete verb and says what to do, with what, and what remains afterward.
+    Begin with a baseline or the smallest useful real result. End with a test, demonstration, delivery, or review against the original goal.
+    Reject labels such as prepare, improve, build a rhythm, work on it, or strengthen progress unless they name an exact action and output.
     Explain why the route fits this user and surface one useful tradeoff or checkpoint.
     Never invent named resources, people, feedback, demand, money, health or legal outcomes, circumstances, or guarantees. Treat product choices as tests, not promises.
     Use excerpts only within their stated boundary. If progress shows overload, reduce the nearest work without blame.
@@ -230,8 +234,6 @@ private enum BonsaiResponseContract {
     {
       "title": "string",
       "summary": "one concise sentence",
-      "confidence": 0.0,
-      "personalizedInsights": ["exactly 2 strings"],
       "milestones": [
         {
           "title": "string",
@@ -240,10 +242,12 @@ private enum BonsaiResponseContract {
           "tasks": ["exactly 2 strings"],
           "category": "work|study|health|rest|home|other"
         }
-      ]
+      ],
+      "personalizedInsights": ["exactly 2 strings"],
+      "confidence": 0.0
     }
     personalizedInsights must explain (1) why this route fits stated preferences, resources, constraints, or non-goals and (2) a useful non-obvious tradeoff, decision, or checkpoint. Do not merely restate the goal.
-    milestones must contain 3 or 4 objects. Keep every string under 16 words. confidence is between 0 and 1.
+    milestones must contain 3 or 4 objects. Keep titles under 10 words and targets or tasks under 24 words. confidence is between 0 and 1.
     """
 
     static let progressSummary = """

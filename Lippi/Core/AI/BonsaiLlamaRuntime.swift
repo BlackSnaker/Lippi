@@ -31,20 +31,94 @@ enum BonsaiGenerationSafetyStopReason: Equatable, Sendable {
     case timeLimit
 }
 
+struct BonsaiGenerationWorkloadProfile: Equatable, Sendable {
+    let outputTokenLimit: Int32
+    let decodeThreads: Int32
+    let promptThreads: Int32
+    let promptChunkSize: Int
+    let safetyCheckInterval: Int
+    let tokenPauseInterval: Int
+    let tokenPause: TimeInterval
+    let promptChunkPause: TimeInterval
+}
+
+struct BonsaiDeviceState: Equatable, Sendable {
+    let thermalLevel: BonsaiDeviceThermalLevel
+    let isLowPowerModeEnabled: Bool
+
+    static var current: BonsaiDeviceState {
+        let processInfo = ProcessInfo.processInfo
+        return BonsaiDeviceState(
+            thermalLevel: processInfo.bonsaiThermalLevel,
+            isLowPowerModeEnabled: processInfo.isLowPowerModeEnabled
+        )
+    }
+}
+
 enum BonsaiGenerationSafetyPolicy {
-    static let roadmapMaximumDuration: TimeInterval = 80
+    // The compact roadmap contract should finish comfortably inside this
+    // window. A shorter hard ceiling prevents a stalled local decode from
+    // keeping the device under sustained load.
+    static let roadmapMaximumDuration: TimeInterval = 72
     static let progressMaximumDuration: TimeInterval = 45
     static let personalRecommendationMaximumDuration: TimeInterval = 24
     static let eyeHealthMaximumDuration: TimeInterval = 18
     static let minimumUsefulPartialTokens = 24
+    static let contextTokenCapacity: UInt32 = 3_072
+    static let batchTokenCapacity: UInt32 = 256
+    static let microBatchTokenCapacity: UInt32 = 128
 
     static func roadmapOutputTokenBudget(forWeeks weeks: Int) -> Int32 {
-        weeks == 12 ? 760 : 640
+        weeks == 12 ? 640 : 520
     }
 
     static func effectiveOutputTokenLimit(requested: Int32, thermalLevel: BonsaiDeviceThermalLevel) -> Int32 {
         guard thermalLevel == .fair else { return requested }
-        return max(128, Int32((Double(requested) * 0.75).rounded(.down)))
+        return max(160, Int32((Double(requested) * 0.82).rounded(.down)))
+    }
+
+    static func workloadProfile(
+        requestedOutputTokens: Int32,
+        thermalLevel: BonsaiDeviceThermalLevel,
+        processorCount: Int
+    ) -> BonsaiGenerationWorkloadProfile {
+        let availableThreads = max(1, processorCount - 2)
+        let preferredThreads = thermalLevel == .nominal ? 3 : 2
+        let threads = Int32(max(1, min(preferredThreads, availableThreads)))
+
+        if thermalLevel == .fair {
+            return BonsaiGenerationWorkloadProfile(
+                outputTokenLimit: effectiveOutputTokenLimit(
+                    requested: requestedOutputTokens,
+                    thermalLevel: thermalLevel
+                ),
+                decodeThreads: threads,
+                promptThreads: threads,
+                promptChunkSize: 96,
+                safetyCheckInterval: 2,
+                tokenPauseInterval: 4,
+                tokenPause: 0.018,
+                promptChunkPause: 0.016
+            )
+        }
+
+        return BonsaiGenerationWorkloadProfile(
+            outputTokenLimit: requestedOutputTokens,
+            decodeThreads: threads,
+            promptThreads: threads,
+            promptChunkSize: 192,
+            safetyCheckInterval: 4,
+            tokenPauseInterval: 16,
+            tokenPause: 0.002,
+            promptChunkPause: 0.004
+        )
+    }
+
+    static func shouldRetrieveSupplementalEvidence(
+        thermalLevel: BonsaiDeviceThermalLevel,
+        isLowPowerModeEnabled: Bool
+    ) -> Bool {
+        !isLowPowerModeEnabled && thermalLevel == .nominal
     }
 
     static func stopReason(
@@ -55,7 +129,10 @@ enum BonsaiGenerationSafetyPolicy {
     ) -> BonsaiGenerationSafetyStopReason? {
         if isLowPowerModeEnabled { return .lowPowerMode }
         if thermalLevel == .serious || thermalLevel == .critical { return .thermal }
-        let effectiveDuration = thermalLevel == .fair ? min(maximumDuration, 45) : maximumDuration
+        // Fair is a signal to slow down, not to discard useful work. Serious
+        // and critical states still stop immediately above. The extra time lets
+        // paced decoding finish the compact core without defeating protection.
+        let effectiveDuration = thermalLevel == .fair ? min(maximumDuration, 62) : maximumDuration
         return elapsed >= effectiveDuration ? .timeLimit : nil
     }
 
@@ -137,8 +214,8 @@ actor BonsaiInferenceEngine {
         #endif
     }
 
-    /// Loads the model without spending tokens. Roadmap research can run in
-    /// parallel with this cold-start work, so neither step blocks the other.
+    /// Loads the model without spending output tokens. Callers keep retrieval
+    /// separate from this cold-start work to avoid stacking their peak loads.
     func prepare() throws {
         guard BonsaiModelStorage.isInstalled else { throw BonsaiRuntimeError.modelMissing }
         try Self.ensureDeviceCanStartGeneration()
@@ -199,7 +276,7 @@ actor BonsaiInferenceEngine {
     private func scheduleIdleUnload() {
         idleUnloadTask?.cancel()
         idleUnloadTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(90))
+            try? await Task.sleep(for: .seconds(45))
             guard !Task.isCancelled else { return }
             await self?.unload()
         }
@@ -254,11 +331,12 @@ private struct BonsaiGeneratedText {
 }
 
 private final class BonsaiLlamaContext {
-    // The planner prompt is deliberately compact. A 4K context leaves enough
-    // space for a complete roadmap while halving the KV-cache of the previous
-    // 8K setup on memory-constrained iPhones.
-    private static let contextSize: UInt32 = 4_096
-    private static let batchSize: UInt32 = 512
+    // The planner uses a compact contract and lets deterministic Swift code
+    // complete support fields. A 3K context and a smaller micro-batch reduce
+    // KV-cache and prompt-evaluation peaks on iPhone without reducing the
+    // amount of user context that reaches the model.
+    private static let contextSize = BonsaiGenerationSafetyPolicy.contextTokenCapacity
+    private static let batchSize = BonsaiGenerationSafetyPolicy.batchTokenCapacity
 
     private let model: OpaquePointer
     private let context: OpaquePointer
@@ -266,6 +344,8 @@ private final class BonsaiLlamaContext {
     private let sampler: UnsafeMutablePointer<llama_sampler>
     private var batch: llama_batch
     private var pendingUTF8: [CChar] = []
+    private var activeDecodeThreads: Int32 = 0
+    private var activePromptThreads: Int32 = 0
 
     init(modelURL: URL) throws {
         llama_backend_init()
@@ -285,15 +365,17 @@ private final class BonsaiLlamaContext {
         }
 
         let processInfo = ProcessInfo.processInfo
-        let isThermallyConstrained = processInfo.bonsaiThermalLevel != .nominal
-        let preferredThreads = (processInfo.isLowPowerModeEnabled || isThermallyConstrained) ? 2 : 4
-        let threads = Int32(max(2, min(preferredThreads, processInfo.processorCount - 2)))
+        let workload = BonsaiGenerationSafetyPolicy.workloadProfile(
+            requestedOutputTokens: 1,
+            thermalLevel: processInfo.bonsaiThermalLevel,
+            processorCount: processInfo.processorCount
+        )
         var contextParameters = llama_context_default_params()
         contextParameters.n_ctx = Self.contextSize
         contextParameters.n_batch = Self.batchSize
-        contextParameters.n_ubatch = Self.batchSize
-        contextParameters.n_threads = threads
-        contextParameters.n_threads_batch = threads
+        contextParameters.n_ubatch = BonsaiGenerationSafetyPolicy.microBatchTokenCapacity
+        contextParameters.n_threads = workload.decodeThreads
+        contextParameters.n_threads_batch = workload.promptThreads
 
         guard let context = llama_init_from_model(model, contextParameters) else {
             llama_model_free(model)
@@ -318,6 +400,8 @@ private final class BonsaiLlamaContext {
         self.vocab = llama_model_get_vocab(model)
         self.sampler = sampler
         self.batch = llama_batch_init(Int32(Self.batchSize), 0, 1)
+        self.activeDecodeThreads = workload.decodeThreads
+        self.activePromptThreads = workload.promptThreads
     }
 
     deinit {
@@ -330,11 +414,14 @@ private final class BonsaiLlamaContext {
 
     func generate(prompt: String, options: BonsaiGenerationOptions) throws -> BonsaiGeneratedText {
         let startedAt = Date()
-        let initialThermalLevel = ProcessInfo.processInfo.bonsaiThermalLevel
-        let effectiveOutputTokens = BonsaiGenerationSafetyPolicy.effectiveOutputTokenLimit(
-            requested: options.maximumOutputTokens,
-            thermalLevel: initialThermalLevel
+        let processInfo = ProcessInfo.processInfo
+        var workload = BonsaiGenerationSafetyPolicy.workloadProfile(
+            requestedOutputTokens: options.maximumOutputTokens,
+            thermalLevel: processInfo.bonsaiThermalLevel,
+            processorCount: processInfo.processorCount
         )
+        var effectiveOutputTokens = workload.outputTokenLimit
+        apply(workload)
         let promptTokens = try tokenize(prompt)
         let availablePromptTokens = Int(Self.contextSize) - Int(effectiveOutputTokens) - 8
         guard promptTokens.count <= availablePromptTokens else {
@@ -356,18 +443,35 @@ private final class BonsaiLlamaContext {
         var generatedTokens = 0
         var safetyStopReason: BonsaiGenerationSafetyStopReason?
 
-        for tokenIndex in 0..<effectiveOutputTokens {
+        for tokenIndex in 0..<options.maximumOutputTokens {
             if Task.isCancelled { throw CancellationError() }
-            if tokenIndex.isMultiple(of: 8),
-               let stopReason = currentSafetyStopReason(
+            if tokenIndex >= effectiveOutputTokens {
+                break
+            }
+
+            if tokenIndex.isMultiple(of: Int32(workload.safetyCheckInterval)) {
+                if let stopReason = currentSafetyStopReason(
                    startedAt: startedAt,
                    maximumDuration: options.maximumDuration
-               ) {
-                guard BonsaiGenerationSafetyPolicy.canReturnPartial(result, generatedTokens: generatedTokens) else {
-                    throw runtimeError(for: stopReason)
+                ) {
+                    guard BonsaiGenerationSafetyPolicy.canReturnPartial(result, generatedTokens: generatedTokens) else {
+                        throw runtimeError(for: stopReason)
+                    }
+                    safetyStopReason = stopReason
+                    break
                 }
-                safetyStopReason = stopReason
-                break
+
+                let currentProcessInfo = ProcessInfo.processInfo
+                let currentWorkload = BonsaiGenerationSafetyPolicy.workloadProfile(
+                    requestedOutputTokens: options.maximumOutputTokens,
+                    thermalLevel: currentProcessInfo.bonsaiThermalLevel,
+                    processorCount: currentProcessInfo.processorCount
+                )
+                // A run may become warmer, but never expands again after it has
+                // entered the paced profile. This avoids a second thermal peak.
+                effectiveOutputTokens = min(effectiveOutputTokens, currentWorkload.outputTokenLimit)
+                workload = currentWorkload
+                apply(workload)
             }
 
             let token = llama_sampler_sample(sampler, context, -1)
@@ -390,6 +494,10 @@ private final class BonsaiLlamaContext {
                 throw BonsaiRuntimeError.evaluationFailed
             }
             currentPosition += 1
+
+            if generatedTokens.isMultiple(of: workload.tokenPauseInterval) {
+                Thread.sleep(forTimeInterval: workload.tokenPause)
+            }
         }
 
         if !pendingUTF8.isEmpty {
@@ -421,7 +529,14 @@ private final class BonsaiLlamaContext {
             ) {
                 throw runtimeError(for: stopReason)
             }
-            let end = min(offset + Int(Self.batchSize), tokens.count)
+            let processInfo = ProcessInfo.processInfo
+            let workload = BonsaiGenerationSafetyPolicy.workloadProfile(
+                requestedOutputTokens: 1,
+                thermalLevel: processInfo.bonsaiThermalLevel,
+                processorCount: processInfo.processorCount
+            )
+            apply(workload)
+            let end = min(offset + workload.promptChunkSize, tokens.count)
             bonsaiBatchClear(&batch)
 
             for index in offset..<end {
@@ -437,7 +552,18 @@ private final class BonsaiLlamaContext {
                 throw BonsaiRuntimeError.evaluationFailed
             }
             offset = end
+            if offset < tokens.count {
+                Thread.sleep(forTimeInterval: workload.promptChunkPause)
+            }
         }
+    }
+
+    private func apply(_ workload: BonsaiGenerationWorkloadProfile) {
+        guard workload.decodeThreads != activeDecodeThreads
+                || workload.promptThreads != activePromptThreads else { return }
+        llama_set_n_threads(context, workload.decodeThreads, workload.promptThreads)
+        activeDecodeThreads = workload.decodeThreads
+        activePromptThreads = workload.promptThreads
     }
 
     private func currentSafetyStopReason(

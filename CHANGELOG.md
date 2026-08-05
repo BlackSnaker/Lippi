@@ -12,7 +12,11 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-August%204%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-August%205%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Actionable roadmaps" src="https://img.shields.io/badge/Roadmaps-Actionable-30D158?style=for-the-badge">
+    <img alt="Thermally adaptive Bonsai" src="https://img.shields.io/badge/Bonsai-Thermally%20adaptive-FF9F0A?style=for-the-badge">
+    <img alt="Goal generation Liquid Glass" src="https://img.shields.io/badge/Generation-Liquid%20Glass-BF5AF2?style=for-the-badge">
+    <img alt="Clean eye camera" src="https://img.shields.io/badge/Eye%20Camera-Clean%20view-64D2FF?style=for-the-badge">
     <img alt="Anchored day summaries" src="https://img.shields.io/badge/Calendar-Anchored%20day%20summary-64D2FF?style=for-the-badge">
     <img alt="Private TrueDepth guidance" src="https://img.shields.io/badge/TrueDepth-No%20identity-30D158?style=for-the-badge">
     <img alt="System Liquid Glass" src="https://img.shields.io/badge/Interface-System%20Glass-BF5AF2?style=for-the-badge">
@@ -27,7 +31,7 @@
     <img alt="Adaptive Pomodoro" src="https://img.shields.io/badge/Pomodoro-Adaptive-0A84FF?style=for-the-badge">
     <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=for-the-badge">
     <img alt="Complete app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=for-the-badge">
-    <img alt="Tests" src="https://img.shields.io/badge/Tests-125-30D158?style=for-the-badge">
+    <img alt="Tests" src="https://img.shields.io/badge/Tests-131-30D158?style=for-the-badge">
     <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=for-the-badge">
     <img alt="Apple Watch companion" src="https://img.shields.io/badge/Apple%20Watch-Companion-30D158?style=for-the-badge">
     <img alt="Widgets redesigned" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=for-the-badge">
@@ -39,7 +43,7 @@
     <img alt="On-device speech" src="https://img.shields.io/badge/TTS-On--device-30D158?style=for-the-badge">
     <img alt="On-device intelligence" src="https://img.shields.io/badge/Bonsai-Device%20tested-64D2FF?style=for-the-badge">
     <img alt="Bonsai thermal protection" src="https://img.shields.io/badge/Bonsai-Guarded-FF375F?style=for-the-badge">
-    <img alt="Bounded decoding" src="https://img.shields.io/badge/Decode-80s%20cap-FF9F0A?style=for-the-badge">
+    <img alt="Bounded decoding" src="https://img.shields.io/badge/Decode-72s%20cap-FF9F0A?style=for-the-badge">
     <img alt="Personalized roadmaps" src="https://img.shields.io/badge/Roadmaps-Personalized-30D158?style=for-the-badge">
     <img alt="JSON recovery" src="https://img.shields.io/badge/JSON-Recovery-FF9F0A?style=for-the-badge">
     <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=for-the-badge">
@@ -54,32 +58,81 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>The day, right where you touch</strong><br>
-      <sub>An anchored glass summary from every date.</sub>
+      <strong>A beginning you can act on</strong><br>
+      <sub>The first step is visible before opening the stage.</sub>
       <br><br>
-      <strong>День — там, где вы коснулись</strong><br>
-      <sub>Стеклянная сводка раскрывается из даты.</sub>
+      <strong>Начало, которое понятно</strong><br>
+      <sub>Первое действие видно прямо на карточке этапа.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>A goal you can see</strong><br>
-      <sub>Progress rings and a living milestone rail.</sub>
+      <strong>A route that knows its subject</strong><br>
+      <sub>Language stays language. Product stays product.</sub>
       <br><br>
-      <strong>Цель, которую видно</strong><br>
-      <sub>Кольца прогресса и живая дорожка этапов.</sub>
+      <strong>Маршрут знает свой предмет</strong><br>
+      <sub>Язык остаётся языком. Продукт — продуктом.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Depth without identity</strong><br>
-      <sub>TrueDepth precision without Face ID.</sub>
+      <strong>Intelligence that stays cooler</strong><br>
+      <sub>Bonsai adapts its workload as iPhone warms.</sub>
       <br><br>
-      <strong>Глубина без личности</strong><br>
-      <sub>Точность TrueDepth без Face ID.</sub>
+      <strong>Интеллект, который бережёт iPhone</strong><br>
+      <sub>Bonsai мягко снижает нагрузку при нагреве.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Eyes, not a portrait</strong><br>
-      <sub>Anonymous points, gaze, and a scan wave.</sub>
+      <strong>Guidance without the frame</strong><br>
+      <sub>The live camera no longer draws over the face.</sub>
       <br><br>
-      <strong>Глаза, а не портрет</strong><br>
-      <sub>Анонимные точки, взгляд и волна сканирования.</sub>
+      <strong>Подсказки без рамки на лице</strong><br>
+      <sub>Живая камера стала спокойнее и чище.</sub>
+    </td>
+  </tr>
+</table>
+
+### August 5, 2026 — A clear beginning. A path you can follow. / Понятный первый шаг. Путь, по которому можно идти.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Smart Goals now begin where the person actually is. Lippi turns an unfamiliar ambition into concrete work, protects the route from vague generated language, and keeps local intelligence responsive without trading away thermal safety.</strong></p>
+      <ul>
+        <li><strong>Designed for someone who does not know the route:</strong> every milestone title names a result, every target describes visible completion evidence, and every task states an action, its object, and the output or check that remains afterward.</li>
+        <li><strong>A baseline at the beginning:</strong> the first stage records the current state or produces the smallest useful real result. The last stage tests, demonstrates, delivers, or reassesses the original goal.</li>
+        <li><strong>The first action is visible:</strong> a collapsed milestone card now shows its immediate concrete step, so the user no longer has to open a generic phase just to discover what to do.</li>
+        <li><strong>The goal outranks incidental context:</strong> explicit language signals, including CEFR levels and language names, are classified before work-related motivation. “Learn German to A1 for work” remains a language route rather than becoming a career portfolio.</li>
+        <li><strong>Domain-aware local routes:</strong> the deterministic fallback now contains purpose-built phases, evidence, and task banks for language learning, general learning, software, design, product, career, creative work, business, health, and open-ended goals.</li>
+        <li><strong>A useful fallback instead of a placeholder:</strong> when a generated answer is incomplete, malformed, interrupted, or safely stopped, the local route still provides a baseline, two concrete tasks per stage, a final reassessment, success criteria, and first actions.</li>
+        <li><strong>Quality before presentation:</strong> the roadmap gate rejects abstract targets, repeated actions, generic progress labels, and routes whose vocabulary does not match the detected domain. A usable partial answer can be repaired with domain-specific local steps.</li>
+        <li><strong>A smaller, steadier Bonsai workload:</strong> local inference now uses a 3,072-token context, 256-token batch, 128-token micro-batch, three normal decode threads, and two when thermally constrained. Output budgets are compact and horizon-aware.</li>
+        <li><strong>Warm means slower, not immediately unavailable:</strong> at a fair thermal level, prompt chunks become smaller, safety checks become more frequent, and brief pauses spread the work over time. Serious and critical heat, Low Power Mode, cancellation, and the wall-clock limit remain hard safety boundaries.</li>
+        <li><strong>No stacked peak:</strong> lightweight evidence retrieval completes before model preparation, and supplemental retrieval is skipped when the device is already warm or in Low Power Mode.</li>
+        <li><strong>Less retained load:</strong> the model unloads sooner after inactivity, the roadmap decode ceiling is 72 seconds, and a warming run can only reduce its workload—it never expands again mid-generation.</li>
+        <li><strong>Liquid Glass that reflects progress:</strong> a compact generation sphere changes palette and rhythm across research, preparation, planning, checking, refinement, and finalization. Motion drops to 8 fps when warm and pauses for serious heat, Low Power Mode, or Reduce Motion.</li>
+        <li><strong>A cleaner live eye exercise:</strong> the animated face oval, rotating outline, scan line, and perimeter dots have been removed from the camera. Vision and TrueDepth analysis remain unchanged, while the guidance now simply asks the user to stay centered.</li>
+        <li><strong>Accessible and localized:</strong> the first-action label and updated camera guidance are available in Russian, English, German, and Spanish. Reduce Motion and Reduce Transparency continue to receive calm, readable alternatives.</li>
+        <li><strong>Verification:</strong> the generic physical-iPhone build and the complete iOS Simulator test bundle compile successfully with signing disabled. The repository now contains <strong>131 tests</strong>; no Simulator was launched.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>«Умные цели» теперь начинаются там, где действительно находится человек. Lippi превращает незнакомую большую цель в конкретную работу, не пропускает расплывчатые формулировки и сохраняет локальный интеллект отзывчивым — без отказа от защиты устройства.</strong></p>
+      <ul>
+        <li><strong>Маршрут для человека, который не знает дороги:</strong> заголовок каждого этапа называет результат, цель этапа описывает видимое доказательство готовности, а задача содержит действие, объект и сохраняемый результат или проверку.</li>
+        <li><strong>Исходная точка в начале:</strong> первый этап фиксирует текущее состояние или создаёт самый маленький полезный результат. Последний проверяет, демонстрирует, передаёт или повторно оценивает первоначальную цель.</li>
+        <li><strong>Первое действие видно сразу:</strong> свёрнутая карточка этапа теперь показывает ближайший конкретный шаг. Открывать абстрактную фазу только для понимания старта больше не нужно.</li>
+        <li><strong>Смысл цели важнее случайного контекста:</strong> названия языков и уровни CEFR определяются раньше рабочей мотивации. «Выучить немецкий до A1 для работы» остаётся языковым маршрутом, а не превращается в карьерное портфолио.</li>
+        <li><strong>Предметные локальные маршруты:</strong> резервная логика получила отдельные этапы, критерии и наборы действий для языков, обучения, разработки, дизайна, продукта, карьеры, творчества, бизнеса, здоровья и общих целей.</li>
+        <li><strong>Полезный запасной путь вместо заглушки:</strong> если сгенерированный ответ неполон, повреждён, прерван или безопасно остановлен, Lippi всё равно выдаёт исходную проверку, два конкретных действия на этап, финальную переоценку, критерии успеха и первые шаги.</li>
+        <li><strong>Сначала качество, потом показ:</strong> контроль дорожной карты отклоняет абстрактные цели этапов, повторяющиеся действия, пустые формулировки прогресса и маршруты, не соответствующие выбранной области. Полезный частичный ответ можно дополнить предметной локальной логикой.</li>
+        <li><strong>Меньше и стабильнее нагрузка Bonsai:</strong> локальный вывод использует контекст на 3 072 токена, batch на 256, micro-batch на 128, три потока в обычном состоянии и два при температурном ограничении. Бюджет ответа остаётся компактным и учитывает горизонт цели.</li>
+        <li><strong>Тёплый iPhone замедляется, а не сразу отказывает:</strong> при уровне fair уменьшаются части обработки промпта, чаще проверяется безопасность и добавляются короткие паузы. Serious и critical, режим энергосбережения, отмена и лимит времени остаются жёсткими границами.</li>
+        <li><strong>Без общего пика нагрузки:</strong> лёгкий поиск материалов завершается до подготовки модели, а при уже тёплом устройстве или Low Power Mode дополнительные источники не загружаются.</li>
+        <li><strong>Нагрузка не задерживается:</strong> после бездействия модель выгружается раньше, лимит генерации маршрута сокращён до 72 секунд, а нагревшийся запуск может только уменьшить профиль работы — но не повысить его снова.</li>
+        <li><strong>Liquid Glass показывает ход мысли:</strong> компактная стеклянная сфера меняет палитру и ритм на этапах исследования, подготовки, планирования, проверки, уточнения и завершения. При нагреве частота снижается до 8 fps, а serious, critical, Low Power Mode и Reduce Motion останавливают непрерывное движение.</li>
+        <li><strong>Чистый экран тренажёра для глаз:</strong> с живой камеры убраны овал лица, вращающийся контур, сканирующая линия и внешние точки. Анализ Vision и TrueDepth не изменился, а подсказка теперь просит просто держать лицо по центру.</li>
+        <li><strong>Доступно и локализовано:</strong> подпись первого действия и новая камерная подсказка готовы на русском, английском, немецком и испанском. Reduce Motion и Reduce Transparency по-прежнему получают спокойные и читаемые состояния.</li>
+        <li><strong>Проверка:</strong> generic-сборка для физического iPhone и полный test bundle для iOS Simulator успешно компилируются без подписания. В репозитории теперь <strong>131 тест</strong>; Simulator не запускался.</li>
+      </ul>
     </td>
   </tr>
 </table>

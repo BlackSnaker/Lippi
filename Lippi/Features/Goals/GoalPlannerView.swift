@@ -1286,10 +1286,23 @@ struct GoalPlannerView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(DS.glassFill(0.08))
-                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(DS.brandSoftGradient).opacity(0.16))
+                .overlay(
+                    RadialGradient(
+                        colors: [
+                            DS.accent.opacity(reduceTransparency ? 0.08 : 0.18),
+                            Color.clear
+                        ],
+                        center: .top,
+                        startRadius: 2,
+                        endRadius: 230
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                )
 
-            VStack(spacing: 18) {
-                processingEmblem.scaleEffect(0.78)
+            VStack(spacing: 16) {
+                GoalGenerationLiquidGlassView(stage: generationStage)
+                    .frame(width: 122, height: 122)
+                    .accessibilityLabel(generationStage.title(lang: lang))
 
                 VStack(spacing: 6) {
                     Text(generationStage.title(lang: lang))
@@ -1304,19 +1317,12 @@ struct GoalPlannerView: View {
                         .lineSpacing(3)
                         .contentTransition(.opacity)
                 }
+                .animation(reduceMotion ? nil : DS.motionState, value: generationStage)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(Array(processingSteps.enumerated()), id: \.offset) { index, step in
-                        processingStepRow(
-                            step,
-                            isActive: index == activeProcessingStepIndex,
-                            isComplete: index < activeProcessingStepIndex
-                        )
-                    }
-                }
-                .animation(.snappy(duration: 0.34), value: generationStage)
+                processingStageRail
             }
-            .padding(20)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 20)
         }
         .lippiSystemGlass(
             in: RoundedRectangle(cornerRadius: 26, style: .continuous),
@@ -1368,9 +1374,16 @@ struct GoalPlannerView: View {
         VStack(spacing: 9) {
             if isGenerating {
                 HStack(spacing: 9) {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(DS.accent)
+                    Image(safeSystemName: generationStage.symbol, fallback: "sparkles")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.accent)
+                        .frame(width: 26, height: 26)
+                        .background(DS.accent.opacity(0.10), in: Circle())
+                        .lippiSystemGlass(
+                            in: Circle(),
+                            tint: DS.accent.opacity(0.08),
+                            forceSystemGlass: false
+                        )
 
                     Text(generationStage.title(lang: lang))
                         .font(.callout.weight(.semibold))
@@ -1418,39 +1431,6 @@ struct GoalPlannerView: View {
         .background(DS.glassFill(0.055))
     }
 
-    private var processingEmblem: some View {
-        ZStack {
-            Circle()
-                .stroke(DS.accent.opacity(0.18), lineWidth: 7)
-
-            ProgressView()
-                .controlSize(.large)
-                .tint(DS.accent)
-
-            Image(safeSystemName: "sparkles", fallback: "wand.and.stars")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(DS.textPrimary)
-        }
-        .frame(width: 74, height: 74)
-        .lippiSystemGlass(
-            in: Circle(),
-            tint: DS.accent.opacity(0.12),
-            forceSystemGlass: false
-        )
-    }
-
-    private var processingSteps: [(title: String, icon: String)] {
-        [
-            (s("goals.processing.prepare"), "cpu.fill"),
-            (s("goals.processing.route"), "point.topleft.down.curvedto.point.bottomright.up"),
-            (s("goals.processing.check"), "checklist.checked"),
-            (
-                generationStage == .refining ? s("goals.processing.refine") : s("goals.processing.finalize"),
-                generationStage == .refining ? "wand.and.stars" : "checkmark.seal.fill"
-            )
-        ]
-    }
-
     private var activeProcessingStepIndex: Int {
         switch generationStage {
         case .preparing, .research: return 0
@@ -1460,29 +1440,34 @@ struct GoalPlannerView: View {
         }
     }
 
-    private func processingStepRow(_ step: (title: String, icon: String), isActive: Bool, isComplete: Bool) -> some View {
-        let tone = isActive || isComplete ? DS.accent : DS.textTertiary
+    private var processingStageRail: some View {
+        HStack(spacing: 7) {
+            ForEach(0..<4, id: \.self) { index in
+                ZStack {
+                    Capsule(style: .continuous)
+                        .fill(DS.glassFill(index > activeProcessingStepIndex ? 0.12 : 0.18))
 
-        return HStack(spacing: 10) {
-            Image(safeSystemName: isComplete ? "checkmark.circle.fill" : step.icon, fallback: "circle")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(tone)
-                .frame(width: 20)
-
-            Text(step.title)
-                .font(.subheadline.weight(isActive ? .semibold : .medium))
-                .foregroundStyle(isActive ? DS.textPrimary : DS.textSecondary)
-
-            Spacer(minLength: 0)
-
-            if isActive {
-                ProgressView()
-                    .controlSize(.small)
-                    .tint(DS.accent)
+                    if index < activeProcessingStepIndex {
+                        Capsule(style: .continuous)
+                            .fill(DS.accent.opacity(0.58))
+                    } else if index == activeProcessingStepIndex {
+                        Capsule(style: .continuous)
+                            .fill(DS.brand)
+                    }
+                }
+                .frame(height: index == activeProcessingStepIndex ? 7 : 5)
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(DS.glassStroke(index == activeProcessingStepIndex ? 0.20 : 0.10), lineWidth: 0.7)
+                )
+                .scaleEffect(x: index == activeProcessingStepIndex ? 1 : 0.96)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityLabel(step.title)
+        .frame(maxWidth: 224)
+        .animation(reduceMotion ? nil : DS.motionState, value: activeProcessingStepIndex)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(generationStage.title(lang: lang))
+        .accessibilityValue("\(activeProcessingStepIndex + 1) / 4")
     }
 
     private var inputCard: some View {
@@ -2426,6 +2411,36 @@ struct GoalPlannerView: View {
                         .foregroundStyle(DS.textSecondary)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if let firstTask = milestone.tasks.first {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(s("goals.roadmap.first_step"))
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(tone)
+                                .textCase(.uppercase)
+
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(safeSystemName: "arrow.right", fallback: "chevron.right")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(tone)
+                                    .padding(.top, 2)
+
+                                Text(firstTask)
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(DS.text(0.82))
+                                    .lineSpacing(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(tone.opacity(0.075), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(tone.opacity(0.14), lineWidth: 0.8)
+                        )
+                        .padding(.top, 3)
+                    }
 
                     HStack(spacing: 7) {
                         infoPill(title: milestone.timeframe, icon: "clock")
@@ -3518,6 +3533,42 @@ struct GoalRequestBrief: Codable, Hashable {
         """
     }
 
+    func compactPromptSection() -> String {
+        var seen = Set<String>()
+        var lines = [
+            "Language: \(outputLanguageName)",
+            "Objective: \(objective)"
+        ]
+
+        func append(_ label: String, _ values: [String], limit: Int) {
+            let uniqueValues = values.compactMap { value -> String? in
+                let clean = value.trimmed
+                guard !clean.isEmpty else { return nil }
+                let key = clean.folding(
+                    options: [.diacriticInsensitive, .caseInsensitive],
+                    locale: .current
+                ).lowercased()
+                guard seen.insert(key).inserted else { return nil }
+                return clean
+            }.prefixArray(limit)
+            guard !uniqueValues.isEmpty else { return }
+            lines.append("\(label): \(uniqueValues.joined(separator: "; "))")
+        }
+
+        append("Constraints", constraints, limit: 2)
+        append("Avoid", avoidances, limit: 2)
+        append("Preferences", preferences, limit: 2)
+        append("Starting resources", startingPoint, limit: 2)
+        append("Known facts", contextFacts, limit: 3)
+        append("Numbers/dates", quantitiesAndDates, limit: 3)
+        append("Unknowns", missingContextHints, limit: 2)
+
+        if lines.count == 2, !userNote.trimmed.isEmpty {
+            lines.append("User context: \(String(userNote.prefix(360)))")
+        }
+        return lines.joined(separator: "\n")
+    }
+
     func calibratedConfidence(proposed: Double?) -> Double {
         var ceiling = 0.56
         if !contextFacts.isEmpty { ceiling += 0.06 }
@@ -3904,6 +3955,20 @@ struct GoalPlanProgressAudit: Codable, Hashable {
 
         Adaptation instruction:
         The user skipped or missed one or more planned Lippi tasks based only on due-date facts. Preserve the goal, name the missed items as factual task-progress signals, reduce the immediate workload, split or reschedule blocked tasks, make the next 48 hours easier to start, and ask whether the skipped items are still relevant if needed. Do not blame the user, infer motivation, or invent reasons for the delay.
+        """
+    }
+
+    func compactPromptSection() -> String {
+        guard shouldSuggestAdjustment else {
+            return "Progress: no correction signal."
+        }
+
+        let examples = overdueExamples.prefixArray(2).joined(separator: "; ")
+        let next = nextActiveTask?.trimmed.nonEmpty(or: "none") ?? "none"
+        return """
+        Progress: \(completedTasks)/\(trackedTasks) complete; \(activeTasks) active; \(overdueTasks) overdue; plan age \(daysSinceRoadmapCreated)d.
+        Overdue: \(examples.nonEmpty(or: "none")). Next active: \(next).
+        Adaptation: preserve the goal; reduce and split the nearest load; do not infer reasons.
         """
     }
 
@@ -4374,11 +4439,23 @@ struct GoalRoadmapEngine {
 
         if configuration.isEnabled {
             do {
-                await onStage(.preparing)
                 let provider = BonsaiGoalProvider()
-                async let evidenceTask = OpenRoadmapRetriever().research(for: input)
-                async let preparationTask: Void = provider.prepare(configuration: configuration)
-                let (evidence, _) = try await (evidenceTask, preparationTask)
+                let deviceState = BonsaiDeviceState.current
+                let shouldResearch = BonsaiGenerationSafetyPolicy.shouldRetrieveSupplementalEvidence(
+                    thermalLevel: deviceState.thermalLevel,
+                    isLowPowerModeEnabled: deviceState.isLowPowerModeEnabled
+                )
+
+                await onStage(.research)
+                let evidence = shouldResearch
+                    ? await OpenRoadmapRetriever().research(for: input, maximumSources: 1)
+                    : []
+
+                // Avoid combining HTML parsing and model mapping in one CPU,
+                // GPU, and memory peak. The prepared model remains cached for
+                // the generation immediately following this step.
+                await onStage(.preparing)
+                try await provider.prepare(configuration: configuration)
 
                 let roadmap = try await generateBonsaiRoadmap(
                     input: input,
@@ -4530,10 +4607,16 @@ struct GoalRoadmapEngine {
 
         await onStage(.finalizing)
         if let initialCandidate {
-            return GoalRoadmapQualityGate.normalizedForDisplay(
+            return GoalRoadmapQualityGate.repairedWithLocalFallback(
                 initialCandidate,
+                fallback: buildDraftRoadmap(
+                    input: input,
+                    lang: brief.responseLanguage,
+                    progressAudit: progressAudit
+                ),
                 input: input,
-                lang: brief.responseLanguage
+                lang: brief.responseLanguage,
+                evidence: evidence
             )
         }
         return buildDraftRoadmap(input: input, lang: brief.responseLanguage, progressAudit: progressAudit)
@@ -4546,30 +4629,24 @@ struct GoalRoadmapEngine {
         progressAudit: GoalPlanProgressAudit?
     ) -> String {
         """
-        Build Lippi's grounded roadmap from this request. Return only the JSON schema attached by the app.
+        Build one grounded Lippi roadmap. JSON only.
+        Plan: \(input.horizon.weeks) weeks; pace \(input.intensity.rawValue); slots \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
 
-        Horizon: \(input.horizon.weeks) weeks. Pace: \(input.intensity.rawValue). Output: \(brief.outputLanguageName).
-        Fixed milestone slots: \(milestoneSlotInstructions(totalWeeks: input.horizon.weeks)).
+        \(brief.compactPromptSection())
+        \(OpenRoadmapCatalog.profile(for: input).compactPromptSection())
+        \(progressAudit?.compactPromptSection() ?? "Progress: none.")
+        \(compactEvidencePromptSection(evidence))
 
-        \(brief.promptSection())
-        \(OpenRoadmapCatalog.profile(for: input).promptSection())
-
-        Previous Lippi progress:
-        \(progressAuditPromptSection(progressAudit))
-
-        Optional references (never extend their claims):
-        \(evidencePromptSection(evidence))
-
-        Rules:
-        - Use the structured request as truth; preserve its facts, quantities, dates, constraints, language, names, and domain. Unknowns become assumptions or questions.
-        - Make a confident recommendation about sequence, not outcomes. Distinguish user facts, planner recommendations, and assumptions.
-        - Use every relevant stated preference, starting resource, constraint, or non-goal in a route decision, task, or personalized insight.
-        - Use exactly \(input.horizon.weeks == 12 ? 4 : 3) distinct milestones in the fixed slots. Each milestone must unlock the next and needs a reviewable domain-specific target plus exactly 2 different action-plus-output tasks.
-        - Return only the compact core schema attached by the app: title, one-sentence summary, confidence, exactly 2 personalizedInsights, and milestones. Lippi completes support fields locally. Keep every string under 16 words.
-        - personalizedInsights[0] explains why this route fits the user's stated preferences, resources, constraints, or non-goals. personalizedInsights[1] gives a useful non-obvious tradeoff, decision, or checkpoint. Do not restate the goal generically.
-        - Do not invent named books, podcasts, courses, apps, brands, people, or communities. Use a specific name only when it appears in the user request or supplied references. Describe product choices as hypotheses to test, not as things that will attract, motivate, validate, or work.
-        - If progress shows missed work, keep the goal but reduce and split the nearest load; never invent the reason.
-        - Do not invent metrics, people, demand, money, feedback, resources, outcomes, or guarantees. Health/legal/financial steps stay non-diagnostic.
+        Requirements:
+        - Preserve stated facts, quantities, dates, preferences, resources, constraints, non-goals, names, domain, and output language.
+        - Assume the user does not know how to start; the route must be executable without guessing what a label means.
+        - Return exactly \(input.horizon.weeks == 12 ? 4 : 3) sequential milestones in the fixed slots. The first creates a baseline or smallest useful result; the last tests completion against the original goal.
+        - Each title names the phase result. Each target names visible proof of completion. Each milestone has exactly 2 distinct tasks that say: action + object + saved output or check.
+        - Never use abstract substitutes such as "prepare", "improve", "build a rhythm", "strengthen progress", or "work on it" without the exact action and output.
+        - Put milestones before supporting insights. Keep titles under 10 words and targets or tasks under 24 words. Lippi fills support fields locally.
+        - Insight 1 explains the personal fit. Insight 2 names a non-obvious tradeoff, decision, or checkpoint.
+        - Unknowns stay conditional. Never invent resources, people, evidence, demand, money, outcomes, guarantees, or diagnoses.
+        - Named resources are allowed only when supplied above. Product choices are tests, not promises.
         - Categories: work, study, health, rest, home, other.
         """
     }
@@ -4802,6 +4879,8 @@ struct GoalRoadmapEngine {
         Treat source excerpts as orientation and evidence boundaries. Prefer official or specialist references over broad roadmaps; never claim that a source proves facts outside its excerpt.
         Recommend a clear sequence confidently while keeping unknown outcomes conditional. Distinguish user facts, planner recommendations, and assumptions.
         Build a small route with distinct, reviewable milestones where each stage unlocks the next. Use domain-specific artifacts, checks, experiments, decisions, or practice outputs.
+        Assume the user does not know where to start. A milestone title must name its result, its target must state visible proof of completion, and each task must say what to do, with what, and what remains afterward.
+        Start with a baseline or the smallest useful real result. Finish with a test, demonstration, delivery, or review against the original goal. Reject abstract labels that require the user to invent the actual work.
         Use every relevant stated preference, starting resource, constraint, and non-goal in a planning decision. Include two personalized insights: why the route fits this user, and one non-obvious tradeoff, decision, or checkpoint.
         Never invent named books, podcasts, courses, apps, brands, people, or communities. Frame recommendations as choices or tests, not claims that they will attract, motivate, validate, or work.
         Unknown facts belong in assumptions or clarifying questions.
@@ -4846,7 +4925,7 @@ struct GoalRoadmapEngine {
 
         JSON shape: {"title":"string","summary":"string","confidence":0.7,"successCriteria":["string","string"],"firstActions":["string","string"],"assumptions":["string"],"personalizedInsights":["why this route fits the stated context","non-obvious tradeoff or checkpoint"],"clarifyingQuestions":["guiding question","guiding question"],"milestones":[{"title":"string","timeframe":"string","target":"reviewable output","tasks":["action plus artifact","action plus decision"],"category":"work"}],"habits":[{"title":"string","detail":"cadence"}],"risks":[{"title":"string","mitigation":"specific response"}]}
 
-        Rules: use 3 milestones for 4 or 8 weeks and 4 for 12 weeks; every milestone has exactly two concise action-plus-artifact tasks and unlocks the next; return exactly two success criteria, first actions, personalized insights, and clarifying questions; return exactly one habit and one risk; explicitly use relevant preferences, resources, constraints, and non-goals; use assumptions instead of invented facts; translate relevant source concepts into concrete steps without adding unsupported claims; if the progress audit lists missed tasks, make the nearest milestone smaller, reschedule the skipped items, and ask what blocked them without inventing a reason; all human-readable JSON strings must be in \(brief.outputLanguageName); no vague tasks, performance predictions, medical/legal/financial instructions, or guarantees. Categories: work, study, health, rest, home, other.
+        Rules: use 3 milestones for 4 or 8 weeks and 4 for 12 weeks; every milestone title names a result, every target names visible completion evidence, and every milestone has exactly two tasks stating action + object + saved output or check; the first milestone creates a baseline or smallest useful result and the last tests the original goal; return exactly two success criteria, first actions, personalized insights, and clarifying questions; return exactly one habit and one risk; explicitly use relevant preferences, resources, constraints, and non-goals; use assumptions instead of invented facts; translate relevant source concepts into concrete steps without adding unsupported claims; if the progress audit lists missed tasks, make the nearest milestone smaller, reschedule the skipped items, and ask what blocked them without inventing a reason; all human-readable JSON strings must be in \(brief.outputLanguageName); no vague tasks, abstract progress labels, performance predictions, medical/legal/financial instructions, or guarantees. Categories: work, study, health, rest, home, other.
         """
     }
 
@@ -4907,7 +4986,7 @@ struct GoalRoadmapEngine {
 
         Previous answer:
         \(String(original.prefix(5_000)))
-        The repaired answer must include exactly two personalizedInsights and two or three useful clarifyingQuestions in \(brief.outputLanguageName). Use references only for concepts they actually support and keep unknowns as assumptions or questions.
+        The repaired answer must be executable by a beginner without interpreting abstract labels. Titles name results; targets name visible proof; tasks state action + object + saved output or check. Start with a baseline or smallest useful result and finish with a test against the original goal. Include exactly two personalizedInsights and two or three useful clarifyingQuestions in \(brief.outputLanguageName). Use references only for concepts they actually support and keep unknowns as assumptions or questions.
         """
     }
 
@@ -4923,6 +5002,17 @@ struct GoalRoadmapEngine {
               source excerpt: \(source.excerpt)
             """
         }.joined(separator: "\n")
+    }
+
+    private func compactEvidencePromptSection(_ evidence: [GoalEvidenceSource]) -> String {
+        guard let source = evidence.first else {
+            return "Reference: none; keep uncertainty explicit."
+        }
+        return """
+        Reference boundary: \(source.title) [\(source.sourceType ?? "reference")].
+        Use only if relevant: \(source.planningUse ?? "ground the route without extending claims").
+        Excerpt: \(String(source.excerpt.prefix(220)))
+        """
     }
 
     private func progressAuditPromptSection(_ audit: GoalPlanProgressAudit?) -> String {
@@ -4969,10 +5059,13 @@ struct GoalRoadmapEngine {
         let domain = OpenRoadmapCatalog.profile(for: input).domain
         let brief = GoalRequestBrief.make(input: input, fallbackLang: outputLang)
         let phaseTitles = localPhaseTitles(for: domain, fallback: profile.category, lang: outputLang)
-        var tasks = localTaskBank(for: domain, fallback: profile.category, lang: outputLang, intensity: input.intensity)
-        if let anchor = (brief.preferences + brief.avoidances + brief.constraints + brief.startingPoint).first {
-            tasks[0] = L10n.fmt("goals.local.personalized_brief", outputLang, String(anchor.prefix(130)))
-        }
+        let tasks = localTaskBank(
+            for: domain,
+            fallback: profile.category,
+            lang: outputLang,
+            intensity: input.intensity,
+            goal: input.goal
+        )
         let weeks = input.horizon.weeks
         let phaseCount = weeks == 12 ? 4 : 3
         let chunk = max(1, weeks / phaseCount)
@@ -4981,13 +5074,23 @@ struct GoalRoadmapEngine {
         var milestones = (0..<phaseCount).map { index in
             let startWeek = index * chunk + 1
             let endWeek = index == phaseCount - 1 ? weeks : min(weeks, (index + 1) * chunk)
-            let title = phaseTitles[safe: index] ?? phaseTitles.last ?? L10n.tr("goals.local.phase", lang)
-            let phaseTasks = rotated(tasks, offset: index * 2).prefixArray(2)
+            let sourceIndex = localPhaseSourceIndex(index: index, phaseCount: phaseCount)
+            let title = phaseTitles[safe: sourceIndex] ?? phaseTitles.last ?? L10n.tr("goals.local.phase", lang)
+            let taskOffset = localTaskOffset(index: index, phaseCount: phaseCount, taskCount: tasks.count)
+            let phaseTasks = Array(tasks.dropFirst(taskOffset).prefix(2)).ifEmpty(
+                rotated(tasks, offset: taskOffset).prefixArray(2)
+            )
 
             return GoalMilestone(
                 title: title,
                 timeframe: timeframe(start: startWeek, end: endWeek, lang: outputLang),
-                target: targetText(goal: input.goal, index: index, category: profile.category, lang: outputLang),
+                target: localTargetText(
+                    for: domain,
+                    goal: input.goal,
+                    phaseIndex: sourceIndex,
+                    fallbackCategory: profile.category,
+                    lang: outputLang
+                ),
                 tasks: phaseTasks,
                 category: profile.category
             )
@@ -4996,7 +5099,10 @@ struct GoalRoadmapEngine {
         if let progressAudit, isAdaptive, !milestones.isEmpty {
             milestones[0].title = L10n.tr("goals.adapt.milestone.title", outputLang)
             milestones[0].target = L10n.tr("goals.adapt.milestone.target", outputLang)
-            milestones[0].tasks = progressAudit.suggestions(lang: outputLang).prefixArray(2) + milestones[0].tasks.prefixArray(1)
+            milestones[0].tasks = (
+                progressAudit.suggestions(lang: outputLang).prefixArray(2)
+                    + milestones[0].tasks.prefixArray(1)
+            ).prefixArray(2)
         }
 
         var habits = localHabits(for: profile.category, lang: outputLang, intensity: input.intensity)
@@ -5021,13 +5127,26 @@ struct GoalRoadmapEngine {
             title: input.goal,
             summary: isAdaptive
                 ? L10n.fmt("goals.adapt.summary", outputLang, input.goal, progressAudit?.overdueTasks ?? 0, progressAudit?.activeTasks ?? 0)
-                : summaryText(goal: input.goal, horizon: input.horizon, intensity: input.intensity, category: profile.category, lang: outputLang),
+                : localSummaryText(
+                    for: domain,
+                    goal: input.goal,
+                    horizon: input.horizon,
+                    intensity: input.intensity,
+                    category: profile.category,
+                    lang: outputLang
+                ),
             source: .localPlanner,
             confidence: isAdaptive ? 0.58 : 0.52,
-            successCriteria: draftSuccessCriteria(goal: input.goal, category: profile.category, lang: outputLang),
+            successCriteria: localSuccessCriteria(
+                for: domain,
+                goal: input.goal,
+                milestones: milestones,
+                category: profile.category,
+                lang: outputLang
+            ),
             firstActions: isAdaptive
-                ? ((progressAudit?.suggestions(lang: outputLang).prefixArray(2) ?? []) + rotated(tasks, offset: 0).prefixArray(2)).prefixArray(2)
-                : rotated(tasks, offset: 0).prefixArray(2),
+                ? ((progressAudit?.suggestions(lang: outputLang).prefixArray(2) ?? []) + (milestones.first?.tasks ?? [])).prefixArray(2)
+                : (milestones.first?.tasks.prefixArray(2) ?? []),
             assumptions: assumptions.prefixArray(2),
             personalizedInsights: personalizedInsights,
             clarifyingQuestions: guidanceQuestions,
@@ -5067,6 +5186,223 @@ struct GoalRoadmapEngine {
         return String(format: templates[safe: index] ?? templates[0], locale: Locale(identifier: lang.localeIdentifier), goal)
     }
 
+    private func localPhaseSourceIndex(index: Int, phaseCount: Int) -> Int {
+        phaseCount == 3 && index == 2 ? 3 : index
+    }
+
+    private func localTaskOffset(index: Int, phaseCount: Int, taskCount: Int) -> Int {
+        guard taskCount > 2, phaseCount > 1 else { return 0 }
+        let lastStart = max(0, taskCount - 2)
+        return Int((Double(index) * Double(lastStart) / Double(phaseCount - 1)).rounded())
+    }
+
+    private func localSummaryText(
+        for domain: GoalEvidenceDomain,
+        goal: String,
+        horizon: GoalPlanningHorizon,
+        intensity: GoalPlanningIntensity,
+        category: TaskCategory,
+        lang: AppLang
+    ) -> String {
+        switch (domain, lang) {
+        case (.language, .ru):
+            return "Сначала фиксируем текущий уровень, затем тренируем реальные ситуации и завершаем маршрут повторной проверкой."
+        case (.language, .en):
+            return "First capture the current level, then practise real situations and finish with an observable reassessment."
+        default:
+            return summaryText(goal: goal, horizon: horizon, intensity: intensity, category: category, lang: lang)
+        }
+    }
+
+    private func localSuccessCriteria(
+        for domain: GoalEvidenceDomain,
+        goal: String,
+        milestones: [GoalMilestone],
+        category: TaskCategory,
+        lang: AppLang
+    ) -> [String] {
+        guard let finalMilestone = milestones.last else {
+            return draftSuccessCriteria(goal: goal, category: category, lang: lang).prefixArray(2)
+        }
+
+        let finalCheck = finalMilestone.tasks.last ?? finalMilestone.target
+        switch (domain, lang) {
+        case (.language, .ru):
+            return [
+                finalMilestone.target,
+                "Стартовый и итоговый речевые образцы сравнены по одному сохранённому чек-листу."
+            ]
+        case (.language, .en):
+            return [
+                finalMilestone.target,
+                "The baseline and final speaking samples are compared with one saved checklist."
+            ]
+        default:
+            return [finalMilestone.target, finalCheck]
+        }
+    }
+
+    private func localTargetText(
+        for domain: GoalEvidenceDomain,
+        goal: String,
+        phaseIndex: Int,
+        fallbackCategory: TaskCategory,
+        lang: AppLang
+    ) -> String {
+        let compactGoal = String(goal.prefix(92))
+        let targets: [String]?
+
+        switch (domain, lang) {
+        case (.language, .ru):
+            targets = [
+                "Сохранены стартовая речевая запись, мини-проверка четырёх навыков и три ситуации для практики.",
+                "Собраны недельное расписание, карточки из собственных ошибок и первые понятные пересказы.",
+                "Проведены два диалога без готового текста; повторяющиеся ошибки внесены в журнал.",
+                "Выполнена повторная проверка уровня и записан следующий пробел относительно цели «\(compactGoal)»."
+            ]
+        case (.language, .en):
+            targets = [
+                "A baseline speaking sample, four-skill check, and three practice situations are saved.",
+                "A weekly schedule, cards from personal errors, and the first clear retellings are completed.",
+                "Two conversations are completed without a script and recurring errors are logged.",
+                "A repeat level check is completed and the next gap toward “\(compactGoal)” is recorded."
+            ]
+        case (.software, .ru):
+            targets = [
+                "Настроена рабочая среда и создан минимальный проект, проверяющий ключевую технологию.",
+                "Работает один сквозной сценарий от входных данных до видимого результата.",
+                "Ключевой сценарий проходит сохранённый чек-лист ошибок и граничных случаев.",
+                "Собран демонстрируемый результат по цели «\(compactGoal)» и список следующего технического шага."
+            ]
+        case (.software, .en):
+            targets = [
+                "The working environment and a minimal project testing the key technology are ready.",
+                "One end-to-end flow works from input to a visible result.",
+                "The core flow passes a saved checklist of errors and edge cases.",
+                "A demonstrable result for “\(compactGoal)” and the next technical step are documented."
+            ]
+        case (.design, .ru):
+            targets = [
+                "Готов одностраничный бриф с пользователем, ограничениями и критерием качества.",
+                "Собран кликабельный прототип одного критического сценария.",
+                "Записаны результаты проверки доступности и наблюдения по использованию сценария.",
+                "Обновлён финальный прототип и сохранён журнал принятых дизайн-решений."
+            ]
+        case (.design, .en):
+            targets = [
+                "A one-page brief defines the user, constraints, and quality criterion.",
+                "A clickable prototype covers one critical user flow.",
+                "Accessibility checks and observed usability findings are recorded.",
+                "The final prototype and a decision log are ready for handoff."
+            ]
+        case (.learning, .ru):
+            targets = [
+                "Сохранены стартовая проверка и карта тем: известно, что учить сначала и что отложить.",
+                "По ключевым темам созданы конспекты и задания на воспроизведение без подсказок.",
+                "Ошибки из практических заданий разобраны и превращены в повторение слабых тем.",
+                "Выполнена итоговая работа по цели «\(compactGoal)» и сохранён разбор пробелов."
+            ]
+        case (.learning, .en):
+            targets = [
+                "A baseline check and topic map show what to learn first and what to defer.",
+                "Key topics have concise notes and retrieval exercises completed without prompts.",
+                "Practice errors are reviewed and converted into targeted revision of weak topics.",
+                "A final demonstration for “\(compactGoal)” and a gap review are saved."
+            ]
+        case (.product, .ru):
+            targets = [
+                "Готов бриф проблемы, одного ключевого сценария и явной границы первого результата.",
+                "Работает сквозной прототип выбранного сценария с чек-листом приёмки.",
+                "Наблюдения и обратная связь собраны в журнал с критерием следующего решения.",
+                "Зафиксированы граница первого релиза и список отложенных возможностей."
+            ]
+        case (.product, .en):
+            targets = [
+                "A brief defines the problem, one core flow, and the boundary of the first result.",
+                "An end-to-end prototype of the chosen flow works against an acceptance checklist.",
+                "Observations and feedback are recorded with a criterion for the next decision.",
+                "The first-release boundary and deferred capabilities are documented."
+            ]
+        case (.career, .ru):
+            targets = [
+                "Сохранена карта требований выбранной роли и имеющихся доказательств навыков.",
+                "Оформлены два кейса, показывающие разные решения и компромиссы.",
+                "Подготовлены истории решений и замечания после пробного интервью или разбора.",
+                "Создан трекер точечных откликов и правило еженедельной корректировки поиска."
+            ]
+        case (.career, .en):
+            targets = [
+                "A map links the chosen role requirements to existing skill evidence.",
+                "Two cases show different decisions, artifacts, and tradeoffs.",
+                "Decision stories and notes from a practice interview or review are ready.",
+                "A focused outreach tracker and weekly search-adjustment rule are in use."
+            ]
+        case (.creative, .ru):
+            targets = [
+                "Записаны замысел, нужное ощущение, структура и ограничения будущей работы.",
+                "Завершён цельный черновик без пропущенных частей.",
+                "Выполнены отдельные проходы по структуре и авторскому голосу с журналом правок.",
+                "Собрана финальная версия и принято явное решение о публикации или архиве."
+            ]
+        case (.creative, .en):
+            targets = [
+                "The intent, desired feeling, structure, and creative constraints are documented.",
+                "A complete rough version exists with no missing sections.",
+                "Separate structure and voice revisions are completed with a change log.",
+                "The final version is assembled with an explicit share-or-archive decision."
+            ]
+        case (.business, .ru):
+            targets = [
+                "Сохранена карта ключевых предположений, ограничений и самого рискованного вопроса.",
+                "Проведена проверка проблемы; наблюдения отделены от предположений в журнале.",
+                "Выполнен небольшой тест предложения или канала с заранее записанным критерием решения.",
+                "Собран операционный чек-лист и принято решение продолжить, изменить или остановить тест."
+            ]
+        case (.business, .en):
+            targets = [
+                "A map records key assumptions, constraints, and the riskiest unanswered question.",
+                "Problem learning is completed with observations separated from assumptions in a log.",
+                "A small offer or channel test runs against a prewritten decision criterion.",
+                "An operating checklist and a continue, change, or stop decision are recorded."
+            ]
+        case (.health, .ru):
+            targets = [
+                "Сохранена безопасная стартовая неделя наблюдений за режимом, нагрузкой и самочувствием.",
+                "Выбран минимальный выполнимый ритм и версия действия для сложного дня.",
+                "Отмечены выполнение, восстановление и сигналы для осторожной корректировки нагрузки.",
+                "Проведён обзор журнала и записан безопасный следующий цикл без диагноза и обещаний."
+            ]
+        case (.health, .en):
+            targets = [
+                "A safe baseline week records routine, load, and self-reported comfort.",
+                "A minimum sustainable routine and a difficult-day version are selected.",
+                "Completion, recovery, and signals for cautious load adjustment are recorded.",
+                "The log is reviewed and a safe next cycle is documented without diagnosis or guarantees."
+            ]
+        case (.general, .ru):
+            targets = [
+                "Записаны текущая точка и три наблюдаемых признака завершения цели «\(compactGoal)».",
+                "Создан самый маленький полезный результат и сохранён список открытых вопросов.",
+                "Результат проверен по исходному чек-листу и исправлено главное несоответствие.",
+                "Финальный результат собран; готовность и оставшиеся вопросы записаны в короткой сводке."
+            ]
+        case (.general, .en):
+            targets = [
+                "The current state and three observable completion signs for “\(compactGoal)” are recorded.",
+                "The smallest useful result exists with a saved list of open questions.",
+                "The result is checked against the original checklist and its main gap is corrected.",
+                "The final result is assembled with a short readiness and remaining-questions review."
+            ]
+        default:
+            targets = nil
+        }
+
+        guard let targets else {
+            return targetText(goal: goal, index: phaseIndex, category: fallbackCategory, lang: lang)
+        }
+        return targets[safe: phaseIndex] ?? targets.last ?? compactGoal
+    }
+
     private func localPhaseTitles(for category: TaskCategory, lang: AppLang) -> [String] {
         switch category {
         case .health:
@@ -5086,6 +5422,18 @@ struct GoalRoadmapEngine {
         lang: AppLang
     ) -> [String] {
         switch (domain, lang) {
+        case (.software, .ru):
+            return ["Среда и техническая проба", "Рабочий сквозной сценарий", "Надёжность и границы", "Демонстрация результата"]
+        case (.software, .en):
+            return ["Environment and technical probe", "Working end-to-end flow", "Reliability and boundaries", "Result demonstration"]
+        case (.design, .ru):
+            return ["Пользователь и критерий качества", "Критический сценарий", "Проверка доступности и удобства", "Финальный прототип"]
+        case (.design, .en):
+            return ["User and quality criterion", "Critical flow", "Accessibility and usability check", "Final prototype"]
+        case (.learning, .ru):
+            return ["Стартовая проверка и карта тем", "Активное изучение", "Практика слабых мест", "Итоговая демонстрация"]
+        case (.learning, .en):
+            return ["Baseline and topic map", "Active learning", "Weak-area practice", "Final demonstration"]
         case (.product, .ru):
             return ["Проблема и границы", "Рабочий вертикальный срез", "Проверка и решение", "Граница релиза"]
         case (.product, .en):
@@ -5102,6 +5450,18 @@ struct GoalRoadmapEngine {
             return ["Текущая точка и ситуации", "Интересный цикл практики", "Живая речь", "Повторная проверка"]
         case (.language, .en):
             return ["Baseline and situations", "Engaging practice loop", "Real output", "Reassessment"]
+        case (.business, .ru):
+            return ["Предположения и границы", "Проверка проблемы", "Малый тест предложения", "Операционное решение"]
+        case (.business, .en):
+            return ["Assumptions and boundaries", "Problem learning", "Small offer test", "Operating decision"]
+        case (.health, .ru):
+            return ["Безопасная стартовая неделя", "Минимальный устойчивый ритм", "Восстановление и корректировка", "Обзор следующего цикла"]
+        case (.health, .en):
+            return ["Safe baseline week", "Minimum sustainable rhythm", "Recovery and adjustment", "Next-cycle review"]
+        case (.general, .ru):
+            return ["Точка старта и финиша", "Первый полезный результат", "Проверка и исправление", "Финальная проверка"]
+        case (.general, .en):
+            return ["Start and finish definition", "First useful result", "Check and correction", "Final review"]
         default:
             return localPhaseTitles(for: category, lang: lang)
         }
@@ -5129,9 +5489,77 @@ struct GoalRoadmapEngine {
         for domain: GoalEvidenceDomain,
         fallback category: TaskCategory,
         lang: AppLang,
-        intensity: GoalPlanningIntensity
+        intensity: GoalPlanningIntensity,
+        goal: String
     ) -> [String] {
+        let compactGoal = String(goal.prefix(80))
         switch (domain, lang) {
+        case (.software, .ru):
+            return [
+                "Составь карту известных и неизвестных технологий для первого рабочего сценария",
+                "Настрой минимальный проект и сохрани результат успешного запуска",
+                "Реализуй один сквозной сценарий от входных данных до видимого результата",
+                "Запиши критерии готовности сценария и явно отложенные возможности",
+                "Пройди сценарий с обычными, пустыми и ошибочными данными; сохрани дефекты",
+                "Исправь самый критичный дефект и повтори сохранённый чек-лист",
+                "Подготовь демонстрацию результата и короткую инструкцию запуска",
+                "Сохрани технический обзор: что готово, что отложено и что делать следующим"
+            ]
+        case (.software, .en):
+            return [
+                "Map known and unknown technologies for the first working flow",
+                "Set up a minimal project and save proof of a successful run",
+                "Implement one end-to-end flow from input to a visible result",
+                "Write completion checks and explicitly deferred capabilities for the flow",
+                "Run normal, empty, and error inputs and save the observed defects",
+                "Fix the most critical defect and repeat the saved checklist",
+                "Prepare a result demonstration and a short run guide",
+                "Save a technical review of what is ready, deferred, and next"
+            ]
+        case (.design, .ru):
+            return [
+                "Запиши пользователя, задачу, ограничения и один критерий качества в одностраничный бриф",
+                "Нарисуй основной путь пользователя и отметь самое рискованное место",
+                "Собери кликабельный прототип критического сценария от входа до результата",
+                "Сохрани состояния ошибки, пустого экрана и успешного завершения сценария",
+                "Проверь контраст, размеры касания и чтение интерфейса; запиши нарушения",
+                "Проведи короткий сценарный тест и сохрани наблюдения без догадок о причинах",
+                "Исправь две самые заметные проблемы и обнови прототип",
+                "Собери журнал дизайн-решений и подготовь финальный файл к передаче"
+            ]
+        case (.design, .en):
+            return [
+                "Write the user, task, constraints, and one quality criterion in a one-page brief",
+                "Map the primary user path and mark its riskiest point",
+                "Build a clickable prototype of the critical flow from entry to result",
+                "Save error, empty, and successful states for the flow",
+                "Check contrast, tap sizes, and readability and record violations",
+                "Run a short scenario test and save observations without guessing causes",
+                "Fix the two clearest problems and update the prototype",
+                "Assemble a decision log and prepare the final file for handoff"
+            ]
+        case (.learning, .ru):
+            return [
+                "Выполни стартовую самопроверку и сохрани список уверенных и слабых тем",
+                "Собери карту тем для цели «\(compactGoal)» и отметь порядок изучения",
+                "Изучи первую ключевую тему и напиши конспект своими словами",
+                "Ответь на вопросы по теме без подсказок и сохрани ошибки",
+                "Реши практическое задание по двум слабым темам и запиши ход решения",
+                "Преврати ошибки в короткий список вопросов для следующего повторения",
+                "Выполни итоговую работу без подсказок и сохрани результат",
+                "Сравни итог со стартовой проверкой и запиши следующий пробел"
+            ]
+        case (.learning, .en):
+            return [
+                "Complete a baseline self-check and save strong and weak topics",
+                "Build a topic map for “\(compactGoal)” and mark the learning order",
+                "Study the first key topic and write notes in your own words",
+                "Answer topic questions without prompts and save errors",
+                "Complete an applied exercise on two weak topics and record the solution",
+                "Turn errors into a short question list for the next review",
+                "Complete a final demonstration without prompts and save the result",
+                "Compare it with the baseline and record the next knowledge gap"
+            ]
         case (.product, .ru):
             return [
                 "Составь одностраничный бриф проблемы, обещания и явных не-целей",
@@ -5200,25 +5628,91 @@ struct GoalRoadmapEngine {
             ]
         case (.language, .ru):
             return [
-                "Запиши текущую точку и три реальные ситуации, где нужен язык",
-                "Собери короткий набор интересных материалов и чек-лист активного просмотра",
-                "Создай карточки извлечения из собственных ошибок, а не из случайных списков",
-                "Запиши короткий устный пересказ и отметь места, где не хватило слов",
-                "Проведи живую или имитационную беседу по выбранному сценарию",
-                "Собери журнал понятных ошибок и выбери одну тему для следующей практики",
-                "Повтори исходное речевое задание без подсказок и сохрани запись",
-                "Сравни две записи по чек-листу и обнови следующий цикл практики"
+                "Запиши двухминутный рассказ о себе и сохрани запись как стартовый образец",
+                "Выбери три реальные ситуации и составь для каждой список нужных фраз",
+                "Собери недельное расписание из коротких блоков лексики, грамматики, аудирования и речи",
+                "Создай карточки по словам из выбранных ситуаций с собственными примерами",
+                "Прослушай короткий материал нужного уровня, выпиши понятные фразы и перескажи смысл",
+                "Разыграй выбранный диалог без готового текста и внеси ошибки в журнал",
+                "Выполни пробную проверку чтения, аудирования, письма и речи; сохрани результаты",
+                "Перезапиши стартовый рассказ, сравни записи по чек-листу и выбери следующий пробел"
             ]
         case (.language, .en):
             return [
-                "Record the baseline and three real situations where the language is needed",
-                "Build a short set of engaging material with an active-listening checklist",
-                "Create retrieval cards from your own errors rather than random word lists",
-                "Record a short spoken retelling and mark where words were missing",
-                "Run a real or simulated conversation for the chosen situation",
-                "Keep an error log and select one theme for the next practice block",
-                "Repeat the baseline speaking task without prompts and save the recording",
-                "Compare both recordings with a checklist and update the next practice cycle"
+                "Record a two-minute self-introduction and save it as the baseline sample",
+                "Choose three real situations and list the phrases needed for each one",
+                "Build a weekly schedule with short vocabulary, grammar, listening, and speaking blocks",
+                "Create retrieval cards from words in the chosen situations with personal examples",
+                "Listen to level-appropriate material, note understood phrases, and retell the meaning",
+                "Run the chosen dialogue without a script and add errors to the review log",
+                "Complete a practice check for reading, listening, writing, and speaking and save results",
+                "Repeat the baseline recording, compare both with a checklist, and select the next gap"
+            ]
+        case (.business, .ru):
+            return [
+                "Запиши ключевые предположения о проблеме, аудитории, предложении и ограничениях",
+                "Выбери самое рискованное предположение и заранее задай критерий решения",
+                "Подготовь вопросы проверки проблемы без продажи и подсказки желаемого ответа",
+                "Проведи доступные разговоры или наблюдения и отдели факты от интерпретаций",
+                "Собери минимальное предложение или тест канала с явной границей затрат",
+                "Запиши наблюдаемый результат теста без выдуманных выводов о спросе",
+                "Составь повторяемый чек-лист следующего малого цикла",
+                "Прими и сохрани решение продолжить, изменить или остановить проверку"
+            ]
+        case (.business, .en):
+            return [
+                "Record key assumptions about the problem, audience, offer, and constraints",
+                "Choose the riskiest assumption and write its decision criterion in advance",
+                "Prepare problem-learning questions that avoid selling or leading the answer",
+                "Run available conversations or observations and separate facts from interpretations",
+                "Build a minimal offer or channel test with an explicit cost boundary",
+                "Record the observed test result without inventing conclusions about demand",
+                "Write a repeatable checklist for the next small operating cycle",
+                "Save a continue, change, or stop decision for the test"
+            ]
+        case (.health, .ru):
+            return [
+                "Веди семь дней простой журнал режима, нагрузки и субъективного самочувствия",
+                "Запиши ограничения и признаки, при которых нужна пауза или профессиональная консультация",
+                "Выбери одно безопасное действие и его минимальную версию для сложного дня",
+                "Поставь действие в конкретное место распорядка и отмечай только факт выполнения",
+                "После каждого выполнения отмечай комфорт и восстановление в журнале",
+                "Сравни обычные и сложные дни без диагноза и поиска скрытых причин",
+                "Оставь рабочую минимальную версию и убери действие, создающее лишнюю нагрузку",
+                "Запиши следующий осторожный цикл и условие его пересмотра"
+            ]
+        case (.health, .en):
+            return [
+                "Keep a seven-day log of routine, load, and self-reported comfort",
+                "Record limitations and signs for pausing or seeking professional advice",
+                "Choose one safe action and its minimum version for a difficult day",
+                "Place the action in a specific routine slot and track only completion",
+                "Record comfort and recovery in the log after each action",
+                "Compare ordinary and difficult days without diagnosis or hidden-cause assumptions",
+                "Keep the workable minimum and remove the action creating unnecessary load",
+                "Write the next cautious cycle and the condition for reviewing it"
+            ]
+        case (.general, .ru):
+            return [
+                "Опиши текущую точку по цели «\(compactGoal)» одним абзацем без оценочных слов",
+                "Составь чек-лист из трёх наблюдаемых признаков завершения цели",
+                "Выбери самый маленький полезный результат и запиши его границы",
+                "Создай первый результат и сохрани возникшие вопросы в отдельном списке",
+                "Проверь результат по чек-листу и выбери одно исправление с наибольшим эффектом",
+                "Внеси выбранное исправление и запиши, что сознательно не входит в маршрут",
+                "Собери финальный результат и пройди исходный чек-лист полностью",
+                "Сохрани короткий итог: что готово, что осталось и нужен ли следующий цикл"
+            ]
+        case (.general, .en):
+            return [
+                "Describe the current state of “\(compactGoal)” in one factual paragraph",
+                "Write a checklist with three observable signs that the goal is complete",
+                "Choose the smallest useful result and document its boundary",
+                "Create the first result and save open questions in a separate list",
+                "Check the result against the checklist and choose one high-impact correction",
+                "Apply the correction and record what is deliberately outside the route",
+                "Assemble the final result and complete the original checklist",
+                "Save a short review of what is ready, remaining, and whether another cycle is needed"
             ]
         default:
             return localTaskBank(for: category, lang: lang, intensity: intensity)

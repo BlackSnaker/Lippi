@@ -396,6 +396,7 @@ enum L10n {
         "goals.preview.step_3": "Превратить старт в задачи Lippi",
         "goals.roadmap.title": "Дорожная карта",
         "goals.roadmap.subtitle": "Этапы, результаты и ближайшие шаги",
+        "goals.roadmap.first_step": "Первое действие",
         "goals.support.title": "Поддержка плана",
         "goals.support.subtitle": "Привычки и риски, которые держат маршрут живым",
         "goals.clarity.title": "Как понять маршрут",
@@ -1453,7 +1454,7 @@ enum L10n {
         "eye.camera.summary_comfort": "Комфорт",
         "eye.camera.done": "Готово",
         "eye.camera.status_requesting": "Ждём разрешение камеры",
-        "eye.camera.status_no_face": "Поместите лицо в овал",
+        "eye.camera.status_no_face": "Держите лицо по центру экрана",
         "eye.camera.status_align": "Держите iPhone прямо",
         "eye.camera.status_light": "Добавьте мягкий свет",
         "eye.camera.status_depth": "Уточняем глубину лица",
@@ -2135,6 +2136,7 @@ enum L10n {
         "goals.preview.step_3": "Turn the start into Lippi tasks",
         "goals.roadmap.title": "Roadmap",
         "goals.roadmap.subtitle": "Phases, outcomes, and next steps",
+        "goals.roadmap.first_step": "First action",
         "goals.support.title": "Plan support",
         "goals.support.subtitle": "Habits and risks that keep the route alive",
         "goals.clarity.title": "How to read the route",
@@ -3192,7 +3194,7 @@ enum L10n {
         "eye.camera.summary_comfort": "Comfort",
         "eye.camera.done": "Done",
         "eye.camera.status_requesting": "Waiting for camera permission",
-        "eye.camera.status_no_face": "Place your face inside the oval",
+        "eye.camera.status_no_face": "Keep your face centered on screen",
         "eye.camera.status_align": "Hold iPhone straight",
         "eye.camera.status_light": "Add soft, even light",
         "eye.camera.status_depth": "Refining face depth",
@@ -3650,6 +3652,7 @@ enum L10n {
         "healthkit.diagnostics.attention.subtitle": "Lippi found a specific stage that can be restored without resetting plans or pairing the Watch again."
     ]
     private static let extraLooseDE: [String: String] = [
+        "goals.roadmap.first_step": "Erste Aktion",
         "calendar.nav_title": "Kalender",
         "calendar.open": "Kalender öffnen",
         "calendar.open_hint": "Pläne, adaptiver Rhythmus und Roadmap",
@@ -3840,7 +3843,7 @@ enum L10n {
         "eye.camera.summary_comfort": "Komfort",
         "eye.camera.done": "Fertig",
         "eye.camera.status_requesting": "Kamerazugriff wird angefragt",
-        "eye.camera.status_no_face": "Gesicht im Oval positionieren",
+        "eye.camera.status_no_face": "Gesicht mittig im Bildschirm halten",
         "eye.camera.status_align": "iPhone gerade halten",
         "eye.camera.status_light": "Weiches Licht hinzufügen",
         "eye.camera.status_depth": "Gesichtstiefe wird erfasst",
@@ -4214,6 +4217,7 @@ enum L10n {
         "assistant.response.clarify_action": "Ich habe das Thema verstanden: „%@“. Soll daraus eine Aufgabe oder ein smartes Ziel werden?"
     ]
     private static let extraLooseES: [String: String] = [
+        "goals.roadmap.first_step": "Primera acción",
         "calendar.nav_title": "Calendario",
         "calendar.open": "Abrir calendario",
         "calendar.open_hint": "Planes, ritmo adaptativo y hoja de ruta",
@@ -4404,7 +4408,7 @@ enum L10n {
         "eye.camera.summary_comfort": "Confort",
         "eye.camera.done": "Listo",
         "eye.camera.status_requesting": "Esperando permiso de cámara",
-        "eye.camera.status_no_face": "Coloca el rostro dentro del óvalo",
+        "eye.camera.status_no_face": "Mantén el rostro centrado en la pantalla",
         "eye.camera.status_align": "Mantén el iPhone recto",
         "eye.camera.status_light": "Añade una luz suave",
         "eye.camera.status_depth": "Afinando la profundidad facial",

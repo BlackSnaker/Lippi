@@ -116,6 +116,7 @@ struct GoalRequestBriefTests {
 
         #expect(roadmap.milestones.count == 3)
         #expect(roadmap.milestones.allSatisfy { $0.tasks.count == 2 })
+        #expect(roadmap.successCriteria.count == 2)
         #expect(roadmap.firstActions.count == 2)
         #expect(tasks.localizedCaseInsensitiveContains("prototype"))
         #expect(tasks.localizedCaseInsensitiveContains("acceptance checklist"))

@@ -799,166 +799,6 @@ private struct EyeCameraPreview: UIViewRepresentable {
     }
 }
 
-private struct TrueDepthFaceScanGuide: View {
-    let size: CGSize
-    let hasFace: Bool
-    let hasEyes: Bool
-    let isAligned: Bool
-    let hasUsableDepth: Bool
-    let depthConfidence: Double
-    let reduceMotion: Bool
-
-    private var scanTone: Color {
-        if isAligned && hasUsableDepth { return Color(hex: 0x30D158) }
-        if hasFace { return Color(hex: 0x64D2FF) }
-        return .white
-    }
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: reduceMotion)) { timeline in
-            scanLayers(at: timeline.date.timeIntervalSinceReferenceDate)
-        }
-        .accessibilityHidden(true)
-    }
-
-    private func scanLayers(at elapsed: TimeInterval) -> some View {
-        let scanPhase = reduceMotion
-            ? 0.48
-            : elapsed.truncatingRemainder(dividingBy: 2.8) / 2.8
-        let pulse = reduceMotion ? 0.5 : (sin(elapsed * 2.1) + 1) / 2
-        let rotation = reduceMotion
-            ? 0.0
-            : elapsed.truncatingRemainder(dividingBy: 12) / 12 * 360
-
-        return ZStack {
-            scanGlow(pulse: pulse)
-            scanOutline(rotation: rotation)
-            scanPlane(phase: scanPhase)
-            scanNodes
-
-            if hasEyes {
-                eyeLockMarkers
-                    .transition(.opacity.combined(with: .scale(scale: 0.88)))
-            }
-        }
-        .frame(width: size.width, height: size.height)
-        .animation(.easeInOut(duration: 0.28), value: hasEyes)
-        .animation(.easeInOut(duration: 0.35), value: isAligned)
-    }
-
-    private func scanGlow(pulse: Double) -> some View {
-        ZStack {
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [scanTone.opacity(0.04 + pulse * 0.035), .clear],
-                        center: .center,
-                        startRadius: 18,
-                        endRadius: size.width * 0.56
-                    )
-                )
-            Ellipse()
-                .stroke(scanTone.opacity(0.18), lineWidth: 18)
-                .blur(radius: 14)
-        }
-    }
-
-    private func scanOutline(rotation: Double) -> some View {
-        ZStack {
-            Ellipse()
-                .stroke(
-                    AngularGradient(
-                        colors: [
-                            Color(hex: 0x64D2FF),
-                            Color(hex: 0x5E5CE6),
-                            Color(hex: 0xBF5AF2),
-                            scanTone,
-                            Color(hex: 0x64D2FF)
-                        ],
-                        center: .center
-                    ),
-                    style: StrokeStyle(lineWidth: isAligned ? 2.4 : 1.6, lineCap: .round)
-                )
-                .rotationEffect(.degrees(rotation))
-                .opacity(hasFace ? 0.92 : 0.66)
-
-            Ellipse()
-                .inset(by: 12)
-                .stroke(
-                    Color.white.opacity(isAligned ? 0.20 : 0.30),
-                    style: StrokeStyle(lineWidth: 0.8, dash: [3, 8], dashPhase: rotation / 8)
-                )
-        }
-    }
-
-    private var scanNodes: some View {
-        ForEach(0 ..< 16, id: \.self) { index in
-            scanNode(index: index)
-        }
-    }
-
-    private func scanNode(index: Int) -> some View {
-        let angle = Double(index) / 16 * Double.pi * 2 - Double.pi / 2
-        let x = size.width / 2 + cos(angle) * (size.width / 2 - 4)
-        let y = size.height / 2 + sin(angle) * (size.height / 2 - 5)
-        let isAnchor = index.isMultiple(of: 4)
-        return Circle()
-            .fill(isAnchor ? scanTone : Color.white)
-            .frame(width: isAnchor ? 5 : 2.5, height: isAnchor ? 5 : 2.5)
-            .shadow(color: scanTone.opacity(0.6), radius: 4)
-            .position(x: x, y: y)
-            .opacity(0.38 + depthConfidence * 0.56)
-    }
-
-    private func scanPlane(phase: Double) -> some View {
-        let verticalTravel = size.height * 0.72
-        return ZStack {
-            LinearGradient(
-                colors: [.clear, scanTone.opacity(0.05), scanTone.opacity(0.22), .clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(width: size.width * 0.86, height: 64)
-
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [.clear, scanTone.opacity(0.94), .white.opacity(0.88), scanTone.opacity(0.94), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(width: size.width * 0.82, height: 1.4)
-                .shadow(color: scanTone.opacity(0.8), radius: 8)
-        }
-        .offset(y: -verticalTravel / 2 + verticalTravel * phase)
-        .mask(Ellipse().inset(by: 10))
-    }
-
-    private var eyeLockMarkers: some View {
-        HStack(spacing: size.width * 0.18) {
-            eyeMarker
-            eyeMarker
-        }
-        .offset(y: -size.height * 0.085)
-    }
-
-    private var eyeMarker: some View {
-        ZStack {
-            Circle()
-                .fill(scanTone.opacity(0.12))
-                .frame(width: 46, height: 46)
-                .blur(radius: 5)
-            Circle()
-                .stroke(scanTone.opacity(0.82), style: StrokeStyle(lineWidth: 1.2, dash: [5, 4]))
-                .frame(width: 32, height: 32)
-            Circle()
-                .fill(scanTone)
-                .frame(width: 4.5, height: 4.5)
-        }
-    }
-}
-
 struct EyeComfortCameraView: View {
     private enum Stage: Hashable {
         case welcome
@@ -1324,8 +1164,6 @@ struct EyeComfortCameraView: View {
             .allowsHitTesting(false)
 
             if analyzer.accessState == .authorized {
-                faceGuide(in: proxy.size)
-
                 if stage == .blinking {
                     blinkOrb
                 } else if stage == .following {
@@ -1400,21 +1238,6 @@ struct EyeComfortCameraView: View {
             forceSystemGlass: true
         )
         .accessibilityLabel(Text(s("eye.camera.close")))
-    }
-
-    private func faceGuide(in size: CGSize) -> some View {
-        let width = min(max(size.width * 0.58, 208), 280)
-        let guideSize = CGSize(width: width, height: width * 1.34)
-        return TrueDepthFaceScanGuide(
-            size: guideSize,
-            hasFace: analyzer.snapshot.hasFace,
-            hasEyes: analyzer.snapshot.hasEyes,
-            isAligned: analyzer.snapshot.isFaceAligned,
-            hasUsableDepth: analyzer.snapshot.hasUsableDepth,
-            depthConfidence: analyzer.snapshot.depthConfidence,
-            reduceMotion: reduceMotion
-        )
-        .frame(width: guideSize.width, height: guideSize.height)
     }
 
     private var blinkOrb: some View {

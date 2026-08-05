@@ -98,6 +98,71 @@ struct GoalRoadmapQualityGateTests {
         #expect(secondInsight.localizedCaseInsensitiveContains("decision"))
     }
 
+    @Test("Repairs a weak thermal partial with domain-specific local steps")
+    func repairsWeakPartialWithoutDiscardingUsefulModelWork() {
+        let input = GoalPlannerInput(
+            goal: "Launch an iOS habit tracker MVP",
+            context: "Solo Swift developer with 8 hours per week and a $300 budget",
+            horizon: .eightWeeks,
+            intensity: .balanced
+        )
+        var partial = sampleRoadmap()
+        partial.milestones[0].tasks = ["Work on the project", "Do research"]
+        partial.milestones[1].tasks = ["Continue learning", "Improve skills"]
+        partial.personalizedInsights = ["Good route", "Keep going"]
+        let fallback = GoalRoadmapEngine().buildDraftRoadmap(input: input, lang: .en)
+
+        let repaired = GoalRoadmapQualityGate.repairedWithLocalFallback(
+            partial,
+            fallback: fallback,
+            input: input,
+            lang: .en
+        )
+
+        #expect(GoalRoadmapQualityGate.validated(repaired, input: input, lang: .en) != nil)
+        #expect(!repaired.milestones.flatMap(\.tasks).contains("Work on the project"))
+        #expect(repaired.milestones.allSatisfy { $0.tasks.count == 2 })
+        #expect(repaired.personalizedInsights?.count == 2)
+    }
+
+    @Test("Rejects abstract milestones that leave the work to the user")
+    func rejectsAbstractMilestoneLanguage() {
+        let input = GoalPlannerInput(
+            goal: "Выучить немецкий на уровне A1",
+            context: "Начинаю с нуля",
+            horizon: .eightWeeks,
+            intensity: .balanced
+        )
+        var roadmap = sampleRoadmap()
+        roadmap.title = input.goal
+        roadmap.summary = "Маршрут по немецкому языку на восемь недель."
+        roadmap.milestones[0].title = "Уточнение результата"
+        roadmap.milestones[0].target = "Сформулировать измеримый результат и убрать лишнее."
+
+        #expect(GoalRoadmapQualityGate.validated(roadmap, input: input, lang: .ru) == nil)
+    }
+
+    @Test("Local language fallback starts with a baseline and ends with reassessment")
+    func buildsActionableLanguageFallback() throws {
+        let input = GoalPlannerInput(
+            goal: "Выучить немецкий на уровне A1",
+            context: "Немецкий нужен для работы, начинаю с нуля",
+            horizon: .eightWeeks,
+            intensity: .balanced
+        )
+
+        let roadmap = GoalRoadmapEngine().buildDraftRoadmap(input: input, lang: .ru)
+        let first = try #require(roadmap.milestones.first)
+        let last = try #require(roadmap.milestones.last)
+
+        #expect(first.title.localizedCaseInsensitiveContains("текущая точка"))
+        #expect(first.tasks.first?.localizedCaseInsensitiveContains("запись") == true)
+        #expect(last.title.localizedCaseInsensitiveContains("повторная проверка"))
+        #expect(last.tasks.contains { $0.localizedCaseInsensitiveContains("чтения") })
+        #expect(roadmap.firstActions == first.tasks)
+        #expect(GoalRoadmapQualityGate.validated(roadmap, input: input, lang: .ru) != nil)
+    }
+
     private func sampleRoadmap() -> GoalRoadmap {
         GoalRoadmap(
             title: "Habit tracker MVP",

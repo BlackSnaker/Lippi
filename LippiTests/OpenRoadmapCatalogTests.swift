@@ -59,6 +59,21 @@ struct OpenRoadmapCatalogTests {
         #expect(profile.personalizationFocus.contains("conditions they do not want"))
     }
 
+    @Test("Keeps a language goal in the language domain even when work is the motivation")
+    func languageGoalOutranksCareerContext() {
+        let input = GoalPlannerInput(
+            goal: "Выучить немецкий на уровне A1",
+            context: "Немецкий нужен для новой работы, начинаю с нуля",
+            horizon: .eightWeeks,
+            intensity: .balanced
+        )
+
+        let profile = OpenRoadmapCatalog.profile(for: input)
+
+        #expect(profile.domain == .language)
+        #expect(profile.routeLogic.contains("observable reassessment"))
+    }
+
     @Test("Uses a creative route for a distinctive writing project")
     func selectsCreativeProfile() {
         let input = GoalPlannerInput(

@@ -60,11 +60,34 @@ struct GoalDomainProfile: Hashable, Sendable {
         - useful non-obvious angles: \(usefulAngles)
         """
     }
+
+    func compactPromptSection() -> String {
+        """
+        Domain: \(domain.rawValue).
+        Route: \(routeLogic).
+        Personalize with: \(personalizationFocus).
+        Guardrail: \(planningWarning).
+        Useful angle: \(usefulAngles).
+        """
+    }
 }
 
 enum OpenRoadmapCatalog {
     static func profile(for input: GoalPlannerInput) -> GoalDomainProfile {
         let text = "\(input.goal) \(input.context)".foldedForMatching
+        let goalText = input.goal.foldedForMatching
+
+        // The goal itself carries more weight than incidental context. Someone
+        // learning German "for work" still needs a language route, not a
+        // portfolio or job-search route.
+        if goalText.containsAny([
+            "англий", "english", "немец", "german", "испан", "spanish",
+            "француз", "french", "итальян", "italian", "китай", "chinese",
+            "япон", "japanese", "корей", "korean", "язык", "language",
+            "a1", "a2", "b1", "b2", "c1", "c2", "cefr", "ielts", "toefl"
+        ]) {
+            return languageProfile
+        }
 
         if text.containsAny(["работ", "job", "career", "карьер", "собесед", "interview", "резюме", "resume", "cv", "портфолио", "portfolio", "повышен", "promotion", "фриланс", "freelance"]) {
             return GoalDomainProfile(
@@ -121,16 +144,13 @@ enum OpenRoadmapCatalog {
                 usefulAngles: "one design principle to protect, a critical flow, a testable prototype question, and a reusable decision or component"
             )
         }
-        if text.containsAny(["англий", "english", "язык", "language", "a1", "a2", "b1", "b2", "cefr", "ielts", "toefl"]) {
-            return GoalDomainProfile(
-                domain: .language,
-                intent: "reach a language level or improve language ability",
-                sourceNeed: "prefer CEFR and study-practice references",
-                planningWarning: "plan observable language practice and checks; do not guarantee a certified level without assessment",
-                routeLogic: "current baseline -> high-frequency input -> guided output -> real communication practice -> observable reassessment",
-                personalizationFocus: "the situations the user wants the language for, preferred content, current level, disliked study formats, available cadence, and confidence barriers they stated",
-                usefulAngles: "a personally interesting content loop, retrieval rather than passive review, a real-world output artifact, and a lightweight reassessment"
-            )
+        if text.containsAny([
+            "англий", "english", "немец", "german", "испан", "spanish",
+            "француз", "french", "итальян", "italian", "китай", "chinese",
+            "япон", "japanese", "корей", "korean", "язык", "language",
+            "a1", "a2", "b1", "b2", "c1", "c2", "cefr", "ielts", "toefl"
+        ]) {
+            return languageProfile
         }
         if text.containsAny(["книг", "роман", "рассказ", "write", "writing", "писат", "музык", "music", "рисов", "illustr", "фото", "photo", "видео", "video", "контент", "content", "подкаст", "podcast", "творч", "creative"]) {
             return GoalDomainProfile(
@@ -174,6 +194,18 @@ enum OpenRoadmapCatalog {
             routeLogic: "desired change and current state -> smallest visible result -> repeatable working rhythm -> review and adjustment -> completion or next decision",
             personalizationFocus: "the user's own definition of a good result, preferred pace, available support, constraints, interests, and explicit non-goals",
             usefulAngles: "the smallest meaningful proof, one tradeoff, an easy-to-miss dependency, and a review question that changes the next step"
+        )
+    }
+
+    private static var languageProfile: GoalDomainProfile {
+        GoalDomainProfile(
+            domain: .language,
+            intent: "reach a language level or improve language ability",
+            sourceNeed: "prefer CEFR and study-practice references",
+            planningWarning: "plan observable language practice and checks; do not guarantee a certified level without assessment",
+            routeLogic: "current baseline -> high-frequency input -> guided output -> real communication practice -> observable reassessment",
+            personalizationFocus: "the situations the user wants the language for, preferred content, current level, disliked study formats, available cadence, and confidence barriers they stated",
+            usefulAngles: "a personally interesting content loop, retrieval rather than passive review, a real-world output artifact, and a lightweight reassessment"
         )
     }
 
@@ -316,7 +348,12 @@ enum OpenRoadmapCatalog {
             domain: .language,
             sourceType: "assessment framework",
             planningUse: "map language goals to observable level descriptors and assessment checkpoints",
-            triggers: ["англий", "english", "язык", "language", "a1", "a2", "b1", "b2", "cefr", "ielts", "toefl"],
+            triggers: [
+                "англий", "english", "немец", "german", "испан", "spanish",
+                "француз", "french", "итальян", "italian", "китай", "chinese",
+                "япон", "japanese", "корей", "korean", "язык", "language",
+                "a1", "a2", "b1", "b2", "c1", "c2", "cefr", "ielts", "toefl"
+            ],
             excerptHints: ["cefr", "language", "level", "english", "a1", "b1"],
             priority: 4
         ),
@@ -363,8 +400,8 @@ struct OpenRoadmapRetriever {
         self.session = session
     }
 
-    func research(for input: GoalPlannerInput) async -> [GoalEvidenceSource] {
-        let candidates = OpenRoadmapCatalog.candidates(for: input)
+    func research(for input: GoalPlannerInput, maximumSources: Int = 2) async -> [GoalEvidenceSource] {
+        let candidates = Array(OpenRoadmapCatalog.candidates(for: input).prefix(max(0, maximumSources)))
         guard !candidates.isEmpty else { return [] }
 
         return await withTaskGroup(of: (Int, GoalEvidenceSource?).self, returning: [GoalEvidenceSource].self) { group in
@@ -399,7 +436,7 @@ struct OpenRoadmapRetriever {
             guard let httpResponse = response as? HTTPURLResponse,
                   (200..<300).contains(httpResponse.statusCode),
                   !data.isEmpty,
-                  let excerpt = extractExcerpt(from: Data(data.prefix(600_000)), hints: source.excerptHints) else {
+                  let excerpt = extractExcerpt(from: Data(data.prefix(240_000)), hints: source.excerptHints) else {
                 return nil
             }
 
@@ -448,7 +485,7 @@ struct OpenRoadmapRetriever {
         let ranked = sorted.prefix(2).map { $0.sentence }
         guard !ranked.isEmpty else { return nil }
 
-        return String(ranked.joined(separator: ". ").prefix(360)).trimmingCharacters(in: .whitespacesAndNewlines)
+        return String(ranked.joined(separator: ". ").prefix(280)).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func relevance(of sentence: String, hints: [String]) -> Int {
