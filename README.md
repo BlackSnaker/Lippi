@@ -35,6 +35,8 @@
   <img alt="Automatic model setup" src="https://img.shields.io/badge/Model-Auto%20Setup-0A84FF?style=flat-square">
   <img alt="Thermally adaptive Bonsai" src="https://img.shields.io/badge/Bonsai-Thermally%20adaptive-FF375F?style=flat-square">
   <img alt="Local voices" src="https://img.shields.io/badge/Voice-F2%20·%20M3-BF5AF2?style=flat-square">
+  <img alt="Adaptive voice" src="https://img.shields.io/badge/Voice-Context%20adaptive-30D158?style=flat-square">
+  <img alt="Expressive prosody" src="https://img.shields.io/badge/Prosody-Phoneme%20aware-64D2FF?style=flat-square">
   <img alt="Context-aware assistant" src="https://img.shields.io/badge/Assistant-Conversational-0A84FF?style=flat-square">
   <img alt="Adaptive calendar" src="https://img.shields.io/badge/Calendar-Adaptive-64D2FF?style=flat-square">
   <img alt="Interactive day summaries" src="https://img.shields.io/badge/Calendar-Day%20popover-0A84FF?style=flat-square">
@@ -49,7 +51,9 @@
   <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=flat-square">
   <img alt="Lippi app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-131-30D158?style=flat-square">
+  <img alt="Eye break Live Activity" src="https://img.shields.io/badge/Live%20Activity-Eye%20break-30D158?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-147-30D158?style=flat-square">
+  <img alt="Simulator verification" src="https://img.shields.io/badge/Tested-iPhone%2017%20·%20iOS%2026.1-0A84FF?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
 </p>
@@ -101,8 +105,8 @@ Lippi объединяет планирование, фокус и восста�
 | **Задачи и Pomodoro** | Персональный ритм фокуса и отдыха учитывает историю сессий, ближайший шаг умной цели, отмеченное состояние и доступные сигналы восстановления. |
 | **Здоровье** | Разрешённые показатели активности, сна, восстановления, воды и питания из HealthKit превращаются в осторожные и объяснимые рекомендации. |
 | **Apple Watch** | Отдельное приложение показывает текущую рекомендацию, фокус, шаг к цели и принимает быстрые отметки воды, еды, движения и отдыха. |
-| **Восстановление** | Дыхательные практики и упражнения для глаз; на совместимом iPhone TrueDepth помогает оценивать расстояние до головы, а Vision сопровождает взгляд локально — без Face ID, распознавания личности, сохранения кадров или карт глубины. |
-| **Голосовой помощник** | Составные просьбы, даты, продолжения разговора и естественный доступ к задачам, календарю, фокусу, заботе и «Умным целям»; локальные голоса F2 и M3 произносят числа и обозначения разговорно. |
+| **Восстановление** | Дыхательные практики и упражнения для глаз; iOS 26 заранее выводит короткую паузу в Live Activity и Dynamic Island, а совместимый iPhone может локально уточнять дистанцию через TrueDepth — без Face ID, распознавания личности, сохранения кадров или карт глубины. |
+| **Голосовой помощник** | Составные просьбы, даты и продолжения разговора; локальные голоса F2 и M3 меняют темп, паузы, мелодику, динамику и артикуляцию по осторожно оценённому физиологическому контексту, а при недостатке данных остаются нейтральными. |
 | **Знакомство с Lippi** | Четыре интерактивных шага, осмысленный выбор темпа и видимая автоматическая подготовка локальной модели уже при первом запуске. |
 | **Виджеты** | Единый новый дизайн задач, плана дня, Pomodoro и помощника на Home Screen, Lock Screen, в Live Activities и Dynamic Island. |
 
@@ -117,6 +121,46 @@ Lippi объединяет планирование, фокус и восста�
 [Политика конфиденциальности Lippi →](https://lippi.lenuma.ru/privacy)
 
 ## Последнее обновление · Latest release
+
+### 10 августа 2026 — Голос, который слышит контекст. Забота, которая приходит вовремя.
+
+Lippi больше не накладывает на весь ответ одну «эмоцию». Она осторожно оценивает физиологический контекст по разрешённым данным HealthKit и Apple Watch, выбирает манеру взаимодействия и затем собирает фразу по смысловым сегментам — с живой мелодикой, паузами, акцентами и артикуляцией. Одновременно длительная фокус-сессия получила системную паузу для глаз в Live Activity и Dynamic Island.
+
+<table>
+  <tr>
+    <td width="25%" align="center" valign="top">
+      <strong>〰 Голос живёт внутри фразы</strong><br><br>
+      Вопрос, утверждение, продолжение и восклицание получают собственную мелодику.<br><br>
+      <sub>Meaning shapes melody.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>♡ Контекст, не диагноз</strong><br><br>
+      Пульс, HRV, сон и движение сравниваются с личной нормой и свежестью данных.<br><br>
+      <sub>Signals, confidence, restraint.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>◉ Интонации можно услышать</strong><br><br>
+      Шесть режимов доступны в настройках на одной тестовой фразе и максимальном качестве.<br><br>
+      <sub>Hear every interaction style.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>◌ Пауза приходит сама</strong><br><br>
+      Dynamic Island и экран блокировки мягко сопровождают минутное упражнение для глаз.<br><br>
+      <sub>Eye care without interruption.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Физиология не превращается в ярлык.** Lippi использует отклонение пульса покоя, свежий пульс, HRV, сон, недавнюю активность и тренировку как независимые сигналы. Высокий пульс после движения не интерпретируется как перегрузка сам по себе.
+- **Личная норма важнее универсального порога.** Оценка строится относительно доступного baseline пользователя, учитывает возраст каждого измерения и постепенно теряет уверенность, когда данные устаревают.
+- **Низкая уверенность возвращает нейтральный голос.** Адаптация включается только при достаточном количестве согласованных сигналов. Состояния сглаживаются во времени, поэтому случайный скачок показателя не меняет голос мгновенно.
+- **Шесть мягких стратегий общения.** `calm`, `neutral`, `focused`, `fatigued`, `elevated` и `recovering` управляют не актёрской эмоцией, а темпом, длиной пауз, высотой и диапазоном тона, интенсивностью, ритмом, акцентированием, артикуляцией и длиной ответа.
+- **Просодический движок работает внутри высказывания.** Текст делится по смысловым границам; вопросы получают подъём, утверждения — разрешение, многоточия — задумчивое завершение. Редкое дыхание, плавные переходы и поиск тихих точек склейки не дают сегментам звучать механически.
+- **Фонетика влияет на реальный звук.** Для русского, английского, немецкого и испанского учитываются позиции гласных и взрывных согласных: гласные локально получают время, атаки согласных — собранность, а слоговая динамика и главный смысловой акцент формируют естественный ритм.
+- **Максимальный тест интонаций.** В настройках локального голоса можно сравнить все шесть контекстов на одной фразе. Preview использует 12 шагов Supertonic; повседневный синтез адаптивно выбирает 7–10 шагов, чтобы не превращать каждый ответ в долгое ожидание.
+- **Пауза для глаз встроена в фокус.** Длинная Pomodoro-сессия заранее планирует минутное упражнение через Live Activity на iOS 26. Оно работает на экране блокировки и в Dynamic Island, открывает режим с камерой только при доступном разрешении и имеет вариант без камеры.
+- **Без повторного вмешательства.** Если системная пауза уже была показана, Lippi не раскрывает поверх пользователя вторую подсказку. При недоступной Live Activity остаётся локальное уведомление с точным deep link.
+- **Проверено владельцем проекта.** Полное обновление интерактивно протестировано в **Simulator: iPhone 17, iOS 26.1**. Дополнительно проходят целевые тесты просодии, физиологической оценки, confidence-fallback и сглаживания; generic iPhone build успешен. В репозитории **147 тестов**.
 
 ### 5 августа 2026 — Понять первый шаг. Видеть весь путь.
 
@@ -603,6 +647,16 @@ The product is designed around four promises:
 - **Responsive interaction** that preserves visual quality while throttling continuous motion when resources are constrained.
 
 ### Latest release
+
+The August 10 release gives Lippi a voice that responds to context without pretending to diagnose emotion. With permission, the on-device estimator compares fresh heart rate, resting-heart-rate deviation, HRV, sleep, movement, and recent workouts with the person's available baseline. A single elevated reading is never enough: signal freshness, activity, evidence weight, confidence fallback, and temporal smoothing decide whether adaptation is appropriate. When evidence is weak or stale, speech remains neutral.
+
+Six soft interaction strategies—calm, neutral, focused, fatigued, elevated, and recovering—control delivery rather than theatrical emotion. They shape tempo, pauses, pitch and pitch range, intensity, dynamic range, rhythm, emphasis, articulation, vowel timing, consonant attacks, and response length. The speech planner gives statements, questions, exclamations, continuations, and reflective endings distinct contours, then joins phrase audio at low-energy boundaries with restrained breathing and microdynamics.
+
+The neural-voice settings now include an intonation lab where every context can be compared on the same phrase. Preview synthesis uses Supertonic's 12-step maximum-quality path, while normal conversation adapts between 7 and 10 steps according to response length. The phonetic layer recognizes vowel and plosive positions in Russian, English, German, and Spanish and applies local timing and articulation changes to the rendered PCM audio.
+
+Long focus sessions also receive a native eye-break experience on iOS 26. A scheduled Live Activity presents a one-minute gaze path on the Lock Screen and in Dynamic Island, provides camera and camera-free routes, and falls back to a local time-sensitive notification when needed. Lippi suppresses the older duplicate prompt after the system break has already been handled.
+
+The owner interactively tested the complete update in **iPhone 17 Simulator running iOS 26.1**. Targeted expressive-speech, physiological-estimation, confidence-fallback, smoothing, and health-voice tests pass; the generic iPhone build also succeeds. The repository now contains **147 tests**.
 
 The August 4 release turns Calendar into a direct conversation with the day. Tapping a date now opens an anchored Liquid Glass summary from that exact cell, with completion, scheduled items, time, notes, and a direct path to editing. Goal-linked dates carry progress rings, while a compact milestone rail makes the whole Smart Goal journey visible without leaving the calendar.
 

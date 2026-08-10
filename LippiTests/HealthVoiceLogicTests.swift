@@ -18,6 +18,7 @@ struct HealthVoiceLogicTests {
     func voicePreferencesDefaults() {
         #expect(HealthVoicePreferences.defaultEnabled == true)
         #expect(HealthVoicePreferences.defaultAutoSpeak == false)
+        #expect(HealthVoicePreferences.defaultAdaptiveEnabled == true)
         #expect(HealthVoicePlaybackSpeed.defaultSpeed == .balanced)
     }
 
@@ -29,6 +30,14 @@ struct HealthVoiceLogicTests {
             "health.voice.button.play",
             "health.voice.button.stop",
             "health.voice.status.ready",
+            "health.voice.adaptive.neutral",
+            "health.voice.adaptive.status",
+            "health.voice.state.calm",
+            "health.voice.state.neutral",
+            "health.voice.state.focused",
+            "health.voice.state.fatigued",
+            "health.voice.state.elevated",
+            "health.voice.state.recovering",
             "health.voice.report.summary",
             "health.voice.speed.calm",
             "health.voice.speed.balanced",
@@ -37,6 +46,8 @@ struct HealthVoiceLogicTests {
             "settings.voice.enabled_title",
             "settings.voice.auto_title",
             "settings.voice.speed_title",
+            "settings.voice.adaptive_title",
+            "settings.voice.adaptive_subtitle",
             "settings.neural_voice.enabled_hint",
             "settings.neural_voice.profile.f2",
             "settings.neural_voice.profile.m3",
@@ -46,6 +57,16 @@ struct HealthVoiceLogicTests {
             "settings.neural_voice.installation_complete_hint",
             "settings.neural_voice.preview_playing",
             "settings.neural_voice.preview_error",
+            "settings.neural_voice.intonation_title",
+            "settings.neural_voice.intonation_subtitle",
+            "settings.neural_voice.intonation_play",
+            "settings.neural_voice.intonation_phrase",
+            "settings.neural_voice.intonation.calm",
+            "settings.neural_voice.intonation.neutral",
+            "settings.neural_voice.intonation.focused",
+            "settings.neural_voice.intonation.fatigued",
+            "settings.neural_voice.intonation.elevated",
+            "settings.neural_voice.intonation.recovering",
             "settings.neural_voice.downloading_hint",
             "settings.neural_voice.paused_hint",
             "settings.neural_voice.retrying",

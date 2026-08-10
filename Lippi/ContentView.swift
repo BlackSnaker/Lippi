@@ -9,6 +9,7 @@ import Charts
 #if os(iOS)
 import UIKit
 import AudioToolbox
+import AVFoundation
 #endif
 
 // =======================================================
@@ -223,6 +224,51 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
             self.center.add(req) { error in
                 if let error { print("🔔 add request error:", error, "id:", id) }
+            }
+        }
+    }
+
+    /// Резервный сценарий для iOS до 26 или когда Live Activities выключены.
+    /// На iOS 26+ тот же alert доставляет запланированная Live Activity без
+    /// дублирующего уведомления.
+    func scheduleEyeBreak(at date: Date, opensCamera: Bool) {
+        ensureAuthorized { [weak self] ok in
+            guard let self, ok else { return }
+
+            let id = "lippi-eye-break"
+            self.cancel(ids: [id])
+
+            let content = UNMutableNotificationContent()
+            content.title = L10n.trCurrent("eye.live.notification.title")
+            content.body = L10n.trCurrent(
+                opensCamera
+                    ? "eye.live.notification.body_camera"
+                    : "eye.live.notification.body_point"
+            )
+            content.sound = .default
+            content.threadIdentifier = "lippi-eye-care"
+            content.userInfo = [
+                "url": opensCamera
+                    ? "lippi://eye?mode=camera"
+                    : "lippi://eye?mode=point"
+            ]
+            if #available(iOS 15.0, *) {
+                content.interruptionLevel = .timeSensitive
+                content.relevanceScore = 0.72
+            }
+
+            let now = Date()
+            let fireDate = date > now.addingTimeInterval(1) ? date : now.addingTimeInterval(2)
+            var components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute, .second],
+                from: fireDate
+            )
+            components.timeZone = TimeZone.current
+
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
+            self.center.add(request) { error in
+                if let error { print("🔔 eye break request error:", error) }
             }
         }
     }
@@ -1812,6 +1858,11 @@ extension Notification.Name {
 // =======================================================
 enum PomodoroPhase: String, Codable, Hashable { case focus, shortBreak, longBreak, paused, stopped }
 
+enum EyeBreakLiveActivityMode: String, Codable, Hashable {
+    case pointOnly
+    case cameraAvailable
+}
+
 struct PomodoroConfig: Codable, Hashable {
     var focusMinutes: Int = 25
     var shortBreakMinutes: Int = 5
@@ -1844,8 +1895,22 @@ final class PomodoroManager: ObservableObject {
     private var movementScheduledAt: Date?
     private var accumulatedSessionSeconds: TimeInterval = 0
     private let movementNotificationID = "pomodoro-movement-safety"
+    private let eyeBreakNotificationID = "lippi-eye-break"
+    private var eyeBreakAutoSuggestEnabled = true
+    private var eyeBreakThresholdMinutes = 40
+    private var eyeBreakDuration: TimeInterval = 60
+    private var eyeBreakPlanID: UUID?
+    private var eyeBreakSchedulingTask: Task<Void, Never>?
+    private var eyeBreakScheduledForCurrentSession = false
+    private var eyeBreakWasPresentedForCurrentSession = false
+    private var plannedEyeBreakStartDate: Date?
 
     var pausedSessionRemaining: TimeInterval? { pausedRemaining }
+
+    func configureEyeBreaks(_ settings: EyeExerciseSettings) {
+        eyeBreakAutoSuggestEnabled = settings.autoSuggestEnabled
+        eyeBreakThresholdMinutes = min(max(settings.suggestThresholdMinutes, 5), 180)
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -1884,7 +1949,15 @@ final class PomodoroManager: ObservableObject {
     }
 
     private func beginFocus(minutes: Int) {
+        let replacesWithAnotherEyeBreak = eyeBreakAutoSuggestEnabled
+            && minutes >= eyeBreakThresholdMinutes
+        cancelEyeBreakPlan(
+            resetSession: true,
+            endLiveActivity: !replacesWithAnotherEyeBreak
+        )
         accumulatedSessionSeconds = 0
+        eyeBreakWasPresentedForCurrentSession = false
+        eyeBreakScheduledForCurrentSession = false
         phase = .focus
         start(
             for: min(max(minutes, 1), 180),
@@ -1895,6 +1968,7 @@ final class PomodoroManager: ObservableObject {
     }
 
     private func beginBreak(long: Bool) {
+        cancelEyeBreakPlan(resetSession: true)
         accumulatedSessionSeconds = 0
         phase = long ? .longBreak : .shortBreak
         start(
@@ -1913,6 +1987,10 @@ final class PomodoroManager: ObservableObject {
         }
         pausedPhase = activePhase
         pausedRemaining = max(end.timeIntervalSinceNow, 0)
+        if let plannedEyeBreakStartDate, plannedEyeBreakStartDate <= .now {
+            eyeBreakWasPresentedForCurrentSession = true
+        }
+        cancelEyeBreakPlan(resetSession: false)
         endDate = nil
         phase = .paused
         cancelTimerNotifications()
@@ -1946,6 +2024,7 @@ final class PomodoroManager: ObservableObject {
 
         if restorePhase == .focus {
             scheduleMovementIfNeeded()
+            prepareEyeBreakIfNeeded()
         }
         syncPomodoroWidget()
 
@@ -1975,6 +2054,7 @@ final class PomodoroManager: ObservableObject {
         sessionTotalDuration = nil
         cancelTimerNotifications()
         cancelMovementNotification()
+        cancelEyeBreakPlan(resetSession: true)
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *) { Task { await PomodoroLiveManager.endAll() } }
         #endif
@@ -1992,6 +2072,12 @@ final class PomodoroManager: ObservableObject {
 
         if let endDate {
             scheduleTimerNotification(title: title, body: notifBody, at: endDate)
+        }
+
+        if phase == .focus {
+            prepareEyeBreakIfNeeded()
+        } else {
+            cancelEyeBreakPlan(resetSession: true)
         }
 
         #if canImport(ActivityKit)
@@ -2023,6 +2109,48 @@ final class PomodoroManager: ObservableObject {
         }
         #endif
         syncPomodoroWidget()
+    }
+
+    /// Планирует короткий проверочный сценарий ухода за глазами, чтобы пользователь
+    /// успел заблокировать iPhone и увидеть уведомление / Dynamic Island.
+    func scheduleEyeBreakTest(after delay: TimeInterval = 10) {
+        let breakStart = Date.now.addingTimeInterval(max(delay, 2))
+        let breakEnd = breakStart.addingTimeInterval(eyeBreakDuration)
+        let mode: EyeBreakLiveActivityMode
+        #if os(iOS)
+        mode = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+            ? .cameraAvailable
+            : .pointOnly
+        #else
+        mode = .pointOnly
+        #endif
+
+        #if canImport(ActivityKit)
+        if #available(iOS 26.0, *) {
+            Task {
+                let scheduled = await EyeBreakLiveActivityManager.schedule(
+                    sessionID: UUID(),
+                    start: breakStart,
+                    end: breakEnd,
+                    mode: mode,
+                    languageCode: L10n.currentLang.rawValue,
+                    replacesExisting: true
+                )
+                if !scheduled {
+                    NotificationManager.shared.scheduleEyeBreak(
+                        at: breakStart,
+                        opensCamera: mode == .cameraAvailable
+                    )
+                }
+            }
+            return
+        }
+        #endif
+
+        NotificationManager.shared.scheduleEyeBreak(
+            at: breakStart,
+            opensCamera: mode == .cameraAvailable
+        )
     }
 
     @discardableResult
@@ -2057,7 +2185,10 @@ final class PomodoroManager: ObservableObject {
             NotificationCenter.default.post(
                 name: .focusWorkLogged,
                 object: nil,
-                userInfo: ["seconds": active]
+                userInfo: [
+                    "seconds": active,
+                    "eyeBreakHandled": eyeBreakScheduledForCurrentSession || eyeBreakWasPresentedForCurrentSession
+                ]
             )
         }
         return record
@@ -2120,6 +2251,92 @@ final class PomodoroManager: ObservableObject {
     private func cancelMovementNotification() {
         NotificationManager.shared.cancel(ids: [movementNotificationID])
         movementScheduledAt = nil
+    }
+
+    private func prepareEyeBreakIfNeeded() {
+        guard phase == .focus,
+              eyeBreakAutoSuggestEnabled,
+              !eyeBreakWasPresentedForCurrentSession,
+              let focusStart = startDate,
+              let focusEnd = endDate,
+              let plannedDuration = sessionTotalDuration else {
+            return
+        }
+
+        let threshold = TimeInterval(eyeBreakThresholdMinutes * 60)
+        guard plannedDuration >= threshold else { return }
+
+        let activeBeforeThisSegment = accumulatedSessionSeconds
+        let delay = max(threshold - activeBeforeThisSegment, 2)
+        let breakStart = focusStart.addingTimeInterval(delay)
+        guard breakStart <= focusEnd.addingTimeInterval(1) else { return }
+
+        let breakEnd = breakStart.addingTimeInterval(eyeBreakDuration)
+        let mode: EyeBreakLiveActivityMode
+        #if os(iOS)
+        mode = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+            ? .cameraAvailable
+            : .pointOnly
+        #else
+        mode = .pointOnly
+        #endif
+
+        eyeBreakSchedulingTask?.cancel()
+        NotificationManager.shared.cancel(ids: [eyeBreakNotificationID])
+
+        let planID = UUID()
+        eyeBreakPlanID = planID
+        plannedEyeBreakStartDate = breakStart
+        eyeBreakScheduledForCurrentSession = true
+
+        #if canImport(ActivityKit)
+        if #available(iOS 26.0, *) {
+            eyeBreakSchedulingTask = Task { [weak self] in
+                let scheduled = await EyeBreakLiveActivityManager.schedule(
+                    sessionID: planID,
+                    start: breakStart,
+                    end: breakEnd,
+                    mode: mode,
+                    languageCode: L10n.currentLang.rawValue
+                )
+                guard !Task.isCancelled,
+                      let self,
+                      self.eyeBreakPlanID == planID else { return }
+                if !scheduled {
+                    NotificationManager.shared.scheduleEyeBreak(
+                        at: breakStart,
+                        opensCamera: mode == .cameraAvailable
+                    )
+                }
+            }
+            return
+        }
+        #endif
+
+        NotificationManager.shared.scheduleEyeBreak(
+            at: breakStart,
+            opensCamera: mode == .cameraAvailable
+        )
+    }
+
+    private func cancelEyeBreakPlan(
+        resetSession: Bool,
+        endLiveActivity: Bool = true
+    ) {
+        eyeBreakSchedulingTask?.cancel()
+        eyeBreakSchedulingTask = nil
+        eyeBreakPlanID = nil
+        plannedEyeBreakStartDate = nil
+        NotificationManager.shared.cancel(ids: [eyeBreakNotificationID])
+        #if canImport(ActivityKit)
+        if endLiveActivity, #available(iOS 26.0, *) {
+            Task { await EyeBreakLiveActivityManager.endAll() }
+        }
+        #endif
+        if resetSession {
+            eyeBreakScheduledForCurrentSession = false
+            eyeBreakWasPresentedForCurrentSession = false
+        }
     }
 
     private func persistConfig() {
@@ -2200,6 +2417,123 @@ struct PomodoroAttributes: ActivityAttributes {
         var round: Int
     }
     var sessionId: UUID
+}
+
+@available(iOS 26.0, *)
+struct EyeBreakActivityAttributes: ActivityAttributes {
+    struct ContentState: Codable, Hashable {
+        var startDate: Date
+        var endDate: Date
+        var mode: EyeBreakLiveActivityMode
+        var languageCode: String
+    }
+
+    var sessionID: UUID
+}
+
+@available(iOS 26.0, *)
+enum EyeBreakLiveActivityManager {
+    @MainActor
+    static func schedule(
+        sessionID: UUID,
+        start: Date,
+        end: Date,
+        mode: EyeBreakLiveActivityMode,
+        languageCode: String,
+        replacesExisting: Bool = true
+    ) async -> Bool {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled,
+              end > start,
+              start > Date.now.addingTimeInterval(1) else { return false }
+
+        if replacesExisting {
+            await endAll()
+        }
+        guard !Task.isCancelled else { return false }
+
+        let attributes = EyeBreakActivityAttributes(sessionID: sessionID)
+        let state = EyeBreakActivityAttributes.ContentState(
+            startDate: start,
+            endDate: end,
+            mode: mode,
+            languageCode: languageCode
+        )
+        let content = ActivityContent(
+            state: state,
+            staleDate: end,
+            relevanceScore: 100
+        )
+
+        do {
+            _ = try Activity<EyeBreakActivityAttributes>.request(
+                attributes: attributes,
+                content: content,
+                pushType: nil,
+                style: .standard,
+                alertConfiguration: alertConfiguration(languageCode: languageCode, mode: mode),
+                start: start
+            )
+            return true
+        } catch {
+            print("👁️ Unable to schedule eye break Live Activity:", error)
+            return false
+        }
+    }
+
+    @MainActor
+    static func endAll() async {
+        for activity in Activity<EyeBreakActivityAttributes>.activities {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
+    }
+
+    @MainActor
+    static func removeExpired(at date: Date = .now) async {
+        for activity in Activity<EyeBreakActivityAttributes>.activities
+        where activity.content.state.endDate <= date {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
+    }
+
+    private static func alertConfiguration(
+        languageCode: String,
+        mode: EyeBreakLiveActivityMode
+    ) -> AlertConfiguration {
+        switch languageCode.lowercased() {
+        case "en":
+            return AlertConfiguration(
+                title: "A short break for your eyes",
+                body: mode == .cameraAvailable
+                    ? "Follow the point in Dynamic Island or open precise camera mode."
+                    : "Follow the point in Dynamic Island — no camera is needed.",
+                sound: .default
+            )
+        case "de":
+            return AlertConfiguration(
+                title: "Eine kurze Pause für die Augen",
+                body: mode == .cameraAvailable
+                    ? "Folge dem Punkt in der Dynamic Island oder öffne den präzisen Kameramodus."
+                    : "Folge dem Punkt in der Dynamic Island — ganz ohne Kamera.",
+                sound: .default
+            )
+        case "es":
+            return AlertConfiguration(
+                title: "Una pausa breve para la vista",
+                body: mode == .cameraAvailable
+                    ? "Sigue el punto en Dynamic Island o abre el modo preciso con cámara."
+                    : "Sigue el punto en Dynamic Island; no hace falta cámara.",
+                sound: .default
+            )
+        default:
+            return AlertConfiguration(
+                title: "Короткая пауза для глаз",
+                body: mode == .cameraAvailable
+                    ? "Следите за точкой в Dynamic Island или откройте точный режим с камерой."
+                    : "Следите за точкой в Dynamic Island — камера не нужна.",
+                sound: .default
+            )
+        }
+    }
 }
 
 @available(iOS 16.2, *)
@@ -2316,8 +2650,10 @@ struct ContentView: View {
     private var selectedTheme: AppTheme { AppTheme(rawValue: themeRaw) ?? AppTheme.defaultTheme }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var healthKit: HealthKitManager
+    @EnvironmentObject private var eye: EyeExerciseStore
 
     @State private var showEyes = false
+    @State private var showPointEyeExercise = false
     @StateObject private var store = TaskStore()
     @StateObject private var stats = StatsStore()
     @StateObject private var pomo = PomodoroManager()
@@ -2548,6 +2884,9 @@ struct ContentView: View {
                     await LiveActivityManager.endAllTasks()
                     await PomodoroLiveManager.endAll()
                     await GoalRoadmapLiveActivityManager.endAll()
+                    if #available(iOS 26.0, *) {
+                        await EyeBreakLiveActivityManager.endAll()
+                    }
                 }
             }
             #endif
@@ -2578,7 +2917,24 @@ struct ContentView: View {
             switchTab(to: .break)
 
         case "eye":
-            showEyes = true
+            if #available(iOS 26.0, *) {
+                Task { await EyeBreakLiveActivityManager.endAll() }
+            }
+            let mode = deepLinkQueryValue("mode", from: url)?.lowercased() ?? "camera"
+            #if os(iOS)
+            let cameraUnavailable = mode == "camera"
+                && AVCaptureDevice.authorizationStatus(for: .video) != .authorized
+                && deepLinkQueryValue("mode", from: url) != nil
+            #else
+            let cameraUnavailable = mode == "camera"
+            #endif
+            if mode == "point" || mode == "tracking" || cameraUnavailable {
+                showEyes = false
+                showPointEyeExercise = true
+            } else {
+                showPointEyeExercise = false
+                showEyes = true
+            }
 
         case "goals":
             switchTab(to: .today)
@@ -3003,6 +3359,10 @@ struct ContentView: View {
             watchDiscovery.activate()
             refreshGoalCareNotifications()
             pomo.stats = stats
+            pomo.configureEyeBreaks(eye.settings)
+            if #available(iOS 26.0, *) {
+                Task { await EyeBreakLiveActivityManager.removeExpired() }
+            }
             if taskCompletionObserver == nil {
                 taskCompletionObserver = NotificationCenter.default.addObserver(forName: .taskCompletionChanged, object: nil, queue: .main) { note in
                     guard let id = note.userInfo?["taskId"] as? UUID,
@@ -3023,6 +3383,16 @@ struct ContentView: View {
         }
         .fullScreenCover(isPresented: $showEyes) {
             EyeComfortCameraView()
+        }
+        .sheet(isPresented: $showPointEyeExercise) {
+            NavigationStack {
+                EyeExerciseGameView()
+                    .environmentObject(eye)
+                    .navigationTitle(L10n.tr("eye.home.trainer_title", lang))
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showVoiceAssistant) {
             AppVoiceAssistantSheet(assistant: voiceAssistant, lang: lang)
@@ -3059,6 +3429,9 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .suggestEyeExercise)) { _ in
             showEyes = true
+        }
+        .onChange(of: eye.settings) { _, settings in
+            pomo.configureEyeBreaks(settings)
         }
         .modifier(
             LippiCareLifecycleModifier(

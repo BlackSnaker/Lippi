@@ -8,6 +8,7 @@ struct LippiWidgets: WidgetBundle {
         PomodoroStatusWidget()
         AssistantLauncherWidget()
         LippiWidgetsLiveActivity()
+        EyeBreakLiveActivityWidget()
         GoalRoadmapLiveActivityWidget()
     }
 }

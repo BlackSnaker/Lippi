@@ -28,12 +28,14 @@ struct SettingsView: View {
     @AppStorage(PomodoroRingtone.storageKey) private var pomodoroRingtoneRaw: String = PomodoroRingtone.defaultRingtone.rawValue
     @AppStorage(HealthVoicePreferences.isEnabledKey) private var healthVoiceEnabled: Bool = HealthVoicePreferences.defaultEnabled
     @AppStorage(HealthVoicePreferences.autoSpeakKey) private var healthVoiceAutoSpeak: Bool = HealthVoicePreferences.defaultAutoSpeak
+    @AppStorage(HealthVoicePreferences.adaptiveEnabledKey) private var adaptiveVoiceEnabled: Bool = HealthVoicePreferences.defaultAdaptiveEnabled
     @AppStorage(HealthVoicePlaybackSpeed.storageKey) private var healthVoiceSpeedRaw: String = HealthVoicePlaybackSpeed.defaultSpeed.rawValue
     @AppStorage(GoalCareNotificationScheduler.enabledKey) private var goalCareNotificationsEnabled: Bool = true
     @AppStorage("goal.progress.userState") private var goalUserStateRaw: String = GoalUserState.calm.rawValue
     @State private var selectedScope: SettingsScope = .all
     @State private var confirmClear = false
     @State private var showsLippiOnboarding = false
+    @State private var eyeBreakTestScheduled = false
 
     // единая сетка для рядов (чтобы всё было ровно)
     private let rowHInset: CGFloat = 14
@@ -678,6 +680,9 @@ struct SettingsView: View {
                         await LiveActivityManager.endAllTasks()
                         await PomodoroLiveManager.endAll()
                         await GoalRoadmapLiveActivityManager.endAll()
+                        if #available(iOS 26.0, *) {
+                            await EyeBreakLiveActivityManager.endAll()
+                        }
                     }
                 }
 
@@ -956,6 +961,46 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(LippiButtonStyle(kind: .primary))
+
+            Button {
+                pomo.scheduleEyeBreakTest(after: 10)
+                withAnimation(reduceMotion ? nil : .snappy(duration: 0.35)) {
+                    eyeBreakTestScheduled = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 12) {
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
+                        eyeBreakTestScheduled = false
+                    }
+                }
+                #if os(iOS)
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                #endif
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: eyeBreakTestScheduled ? "checkmark.circle.fill" : "dynamic.island")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(eyeBreakTestScheduled ? Color(hex: 0x30D158) : Color(hex: 0x64D2FF))
+                        .frame(width: 28)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(s(eyeBreakTestScheduled ? "settings.eye.test_scheduled" : "settings.eye.test_lock_screen"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(DS.text(0.92))
+                            .multilineTextAlignment(.leading)
+
+                        Text(s("settings.eye.test_hint"))
+                            .font(.caption)
+                            .foregroundStyle(DS.text(0.62))
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 4)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(LippiButtonStyle(kind: .secondary))
+            .disabled(eyeBreakTestScheduled)
         }
     }
 
@@ -1029,6 +1074,15 @@ struct SettingsView: View {
                 title: s("settings.voice.auto_title"),
                 subtitle: s("settings.voice.auto_subtitle"),
                 isOn: $healthVoiceAutoSpeak
+            )
+            .disabled(!healthVoiceEnabled)
+            .opacity(healthVoiceEnabled ? 1 : 0.62)
+
+            toggleRow(
+                icon: "waveform.path.ecg",
+                title: s("settings.voice.adaptive_title"),
+                subtitle: s("settings.voice.adaptive_subtitle"),
+                isOn: $adaptiveVoiceEnabled
             )
             .disabled(!healthVoiceEnabled)
             .opacity(healthVoiceEnabled ? 1 : 0.62)

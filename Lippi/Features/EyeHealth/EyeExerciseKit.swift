@@ -139,6 +139,9 @@ final class EyeExerciseStore: ObservableObject {
         NotificationCenter.default.addObserver(forName: .focusWorkLogged, object: nil, queue: .main) { [weak self] note in
             guard let self else { return }
             guard self.settings.autoSuggestEnabled else { return }
+            // Новая системная пауза уже показана через Live Activity/уведомление.
+            // Не раскрываем приложение поверх пользователя повторно.
+            if note.userInfo?["eyeBreakHandled"] as? Bool == true { return }
             let secs = (note.userInfo?["seconds"] as? TimeInterval) ?? 0
             if secs >= Double(self.settings.suggestThresholdMinutes * 60) {
                 if let last = self.lastSuggestedAt,

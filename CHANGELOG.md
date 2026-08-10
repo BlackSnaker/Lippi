@@ -12,7 +12,10 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-August%205%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-August%2010%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Context-adaptive voice" src="https://img.shields.io/badge/Voice-Context%20adaptive-30D158?style=for-the-badge">
+    <img alt="Phoneme-aware prosody" src="https://img.shields.io/badge/Prosody-Phoneme%20aware-64D2FF?style=for-the-badge">
+    <img alt="Eye break Live Activity" src="https://img.shields.io/badge/Live%20Activity-Eye%20break-BF5AF2?style=for-the-badge">
     <img alt="Actionable roadmaps" src="https://img.shields.io/badge/Roadmaps-Actionable-30D158?style=for-the-badge">
     <img alt="Thermally adaptive Bonsai" src="https://img.shields.io/badge/Bonsai-Thermally%20adaptive-FF9F0A?style=for-the-badge">
     <img alt="Goal generation Liquid Glass" src="https://img.shields.io/badge/Generation-Liquid%20Glass-BF5AF2?style=for-the-badge">
@@ -31,7 +34,8 @@
     <img alt="Adaptive Pomodoro" src="https://img.shields.io/badge/Pomodoro-Adaptive-0A84FF?style=for-the-badge">
     <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=for-the-badge">
     <img alt="Complete app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=for-the-badge">
-    <img alt="Tests" src="https://img.shields.io/badge/Tests-131-30D158?style=for-the-badge">
+    <img alt="Tests" src="https://img.shields.io/badge/Tests-147-30D158?style=for-the-badge">
+    <img alt="Simulator verification" src="https://img.shields.io/badge/Tested-iPhone%2017%20·%20iOS%2026.1-0A84FF?style=for-the-badge">
     <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=for-the-badge">
     <img alt="Apple Watch companion" src="https://img.shields.io/badge/Apple%20Watch-Companion-30D158?style=for-the-badge">
     <img alt="Widgets redesigned" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=for-the-badge">
@@ -58,32 +62,79 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>A beginning you can act on</strong><br>
-      <sub>The first step is visible before opening the stage.</sub>
+      <strong>A voice that reads context</strong><br>
+      <sub>Confidence and personal baselines shape delivery.</sub>
       <br><br>
-      <strong>Начало, которое понятно</strong><br>
-      <sub>Первое действие видно прямо на карточке этапа.</sub>
+      <strong>Голос, который читает контекст</strong><br>
+      <sub>Манеру речи определяют baseline и уверенность.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>A route that knows its subject</strong><br>
-      <sub>Language stays language. Product stays product.</sub>
+      <strong>Meaning inside every phrase</strong><br>
+      <sub>Punctuation, vowels, attacks, and rhythm become audible.</sub>
       <br><br>
-      <strong>Маршрут знает свой предмет</strong><br>
-      <sub>Язык остаётся языком. Продукт — продуктом.</sub>
+      <strong>Смысл внутри каждой фразы</strong><br>
+      <sub>Знаки, гласные, атаки и ритм слышны в речи.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Intelligence that stays cooler</strong><br>
-      <sub>Bonsai adapts its workload as iPhone warms.</sub>
+      <strong>An intonation lab</strong><br>
+      <sub>Six styles, one phrase, maximum synthesis quality.</sub>
       <br><br>
-      <strong>Интеллект, который бережёт iPhone</strong><br>
-      <sub>Bonsai мягко снижает нагрузку при нагреве.</sub>
+      <strong>Лаборатория интонаций</strong><br>
+      <sub>Шесть стратегий, одна фраза, максимум качества.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Guidance without the frame</strong><br>
-      <sub>The live camera no longer draws over the face.</sub>
+      <strong>Eye care in Dynamic Island</strong><br>
+      <sub>A focused minute arrives without taking over the screen.</sub>
       <br><br>
-      <strong>Подсказки без рамки на лице</strong><br>
-      <sub>Живая камера стала спокойнее и чище.</sub>
+      <strong>Забота о глазах в Dynamic Island</strong><br>
+      <sub>Минута восстановления приходит без захвата экрана.</sub>
+    </td>
+  </tr>
+</table>
+
+### August 10, 2026 — A voice with presence. Care at the right moment. / Живой голос. Забота в нужный момент.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi now adapts the way it speaks to carefully interpreted physiological context, then renders each response with phrase-level melody and phonetic detail. Long focus sessions also receive a native, unobtrusive eye break through Live Activity and Dynamic Island.</strong></p>
+      <ul>
+        <li><strong>Context, never an emotion diagnosis:</strong> Lippi builds a soft state from permitted HealthKit and Apple Watch signals instead of declaring how a person feels. The available states are calm, neutral, focused, fatigued, elevated, and recovering.</li>
+        <li><strong>Personal baselines before universal thresholds:</strong> resting-heart-rate deviation, fresh heart rate, HRV, sleep, recent movement, and workouts are evaluated relative to the person's available history and the age of each sample.</li>
+        <li><strong>One high heart rate is not stress:</strong> recent steps and workout freshness are evaluated alongside heart-rate elevation, so ordinary exertion does not automatically trigger a protective voice style.</li>
+        <li><strong>Confidence is a safety boundary:</strong> weak, contradictory, or stale evidence returns neutral prosody. Confidence fades as context ages, and the user can disable adaptive delivery independently in Settings.</li>
+        <li><strong>No sudden personality switches:</strong> arousal, fatigue, recovery, and confidence are blended over time. State transitions require persistence unless unusually strong evidence justifies a faster change.</li>
+        <li><strong>A separate Voice Policy:</strong> physiological interpretation and speech behavior remain independent. Each strategy controls tempo, pauses, pitch, pitch range, intensity, dynamics, rhythm, emphasis, articulation, vowel duration, consonant attack, and response length.</li>
+        <li><strong>Phrase-aware melody:</strong> the expressive planner splits text at semantic boundaries. Statements resolve, questions rise, exclamations retain energy, continuations remain open, and ellipses settle reflectively.</li>
+        <li><strong>Phonetic detail reaches the PCM:</strong> Russian, English, German, and Spanish receive language-specific vowel and plosive maps. Local vowel timing, consonant attacks, syllabic microdynamics, emphasis, edge fades, low-energy cuts, and crossfades are applied to rendered audio—not just stored as profile metadata.</li>
+        <li><strong>Breathing without performance:</strong> a supported breath expression can appear once in an appropriately relaxed multi-clause response. Sparse placement prevents the effect from becoming repetitive or theatrical.</li>
+        <li><strong>Quality where it matters:</strong> the new Settings intonation lab compares all six strategies on the same phrase at 12 Supertonic generation steps. Normal conversation selects 7–10 steps by length to balance latency and fidelity.</li>
+        <li><strong>A native minute for the eyes:</strong> on iOS 26, long Pomodoro sessions schedule a Live Activity with a moving gaze path, countdown, completion action, Lock Screen layout, compact/expanded Dynamic Island presentations, and camera or camera-free deep links.</li>
+        <li><strong>Graceful fallback and no duplicate prompt:</strong> when a Live Activity cannot be scheduled, a local time-sensitive notification preserves the exercise. Once the system break has been handled, the older in-app suggestion is suppressed.</li>
+        <li><strong>Private by construction:</strong> health context remains on device and is not added to external AI prompts. Camera mode is offered only when permission is available; the point-only exercise needs no camera.</li>
+        <li><strong>Verification:</strong> the owner interactively tested the complete update in <strong>iPhone 17 Simulator on iOS 26.1</strong>. Expressive speech, phonetic timing, state estimation, activity-aware heart-rate handling, confidence fallback, stale context, smoothing, and localization tests pass. The generic iPhone build succeeds, and the repository contains <strong>147 tests</strong>.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Lippi теперь подстраивает манеру речи под осторожно интерпретированный физиологический контекст, а затем собирает каждый ответ с фразовой мелодикой и фонетическими деталями. Длинные фокус-сессии одновременно получили ненавязчивую системную паузу для глаз через Live Activity и Dynamic Island.</strong></p>
+      <ul>
+        <li><strong>Контекст, а не диагноз эмоции:</strong> Lippi строит мягкое состояние по разрешённым сигналам HealthKit и Apple Watch, но не заявляет, что именно чувствует человек. Доступны calm, neutral, focused, fatigued, elevated и recovering.</li>
+        <li><strong>Личный baseline раньше универсального порога:</strong> отклонение пульса покоя, свежий пульс, HRV, сон, недавнее движение и тренировки оцениваются относительно доступной истории человека и возраста каждого измерения.</li>
+        <li><strong>Один высокий пульс не равен стрессу:</strong> недавние шаги и свежесть тренировки рассматриваются вместе с ростом пульса, поэтому обычная нагрузка сама по себе не включает защитную манеру речи.</li>
+        <li><strong>Уверенность работает как предохранитель:</strong> слабые, противоречивые или устаревшие данные возвращают нейтральную просодию. Уверенность снижается с возрастом контекста, а адаптивную подачу можно отдельно выключить в настройках.</li>
+        <li><strong>Без резкой смены личности:</strong> возбуждение, усталость, восстановление и уверенность сглаживаются во времени. Для перехода между состояниями нужна устойчивость сигнала, если только его надёжность не стала особенно высокой.</li>
+        <li><strong>Voice Policy отделена от оценки:</strong> физиологическая интерпретация и речевое поведение не сцеплены намертво. Стратегии независимо управляют темпом, паузами, высотой и диапазоном тона, интенсивностью, динамикой, ритмом, акцентами, артикуляцией, длительностью гласных, атакой согласных и длиной ответа.</li>
+        <li><strong>Мелодика понимает фразу:</strong> выразительный планировщик делит текст по смысловым границам. Утверждения разрешаются вниз, вопросы поднимаются, восклицания сохраняют энергию, продолжения остаются открытыми, а многоточия завершаются задумчиво.</li>
+        <li><strong>Фонетические детали доходят до PCM:</strong> русский, английский, немецкий и испанский получают собственные карты гласных и взрывных согласных. Локальная длительность гласных, атаки согласных, слоговая микродинамика, акценты, затухания, тихие точки разреза и кроссфейды применяются к готовому звуку, а не остаются параметрами профиля.</li>
+        <li><strong>Дыхание без переигрывания:</strong> поддерживаемый моделью маркер дыхания может один раз появиться в уместном спокойном многосоставном ответе. Редкое использование не даёт эффекту стать повторяющимся или театральным.</li>
+        <li><strong>Качество там, где его сравнивают:</strong> новая лаборатория интонаций в настройках проигрывает все шесть стратегий на одной фразе с 12 шагами Supertonic. Обычный разговор выбирает 7–10 шагов по длине ответа, сохраняя баланс задержки и качества.</li>
+        <li><strong>Системная минута для глаз:</strong> на iOS 26 длинная Pomodoro-сессия планирует Live Activity с движущейся траекторией взгляда, таймером, завершением в одно касание, экраном блокировки, компактным и расширенным Dynamic Island, а также ссылками в камерный или бескамерный режим.</li>
+        <li><strong>Надёжный fallback без двойной подсказки:</strong> если Live Activity недоступна, упражнение сохраняет локальное Time Sensitive-уведомление. После уже показанной системной паузы прежнее предложение внутри приложения не открывается повторно.</li>
+        <li><strong>Приватность заложена в архитектуру:</strong> физиологический контекст остаётся на устройстве и не добавляется во внешние AI-запросы. Камерный режим предлагается только при доступном разрешении, а упражнение с точкой вообще не требует камеры.</li>
+        <li><strong>Проверка:</strong> владелец проекта интерактивно протестировал всё обновление в <strong>Simulator iPhone 17 с iOS 26.1</strong>. Проходят тесты выразительной речи, фонетического тайминга, оценки состояния, учёта активности при высоком пульсе, нейтрального fallback, устаревшего контекста, сглаживания и локализаций. Generic-сборка для iPhone успешна; в репозитории <strong>147 тестов</strong>.</li>
+      </ul>
     </td>
   </tr>
 </table>

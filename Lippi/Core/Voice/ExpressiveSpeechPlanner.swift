@@ -1,0 +1,634 @@
+import Foundation
+
+private func clamp(_ value: Float, lower: Float, upper: Float) -> Float {
+    min(max(value, lower), upper)
+}
+
+struct VoicePCM: Sendable {
+    var samples: [Float]
+    var sampleRate: Int
+}
+
+struct SpeechPitchContour: Equatable, Sendable {
+    var start: Float
+    var middle: Float
+    var end: Float
+
+    var average: Float {
+        start * 0.30 + middle * 0.40 + end * 0.30
+    }
+}
+
+struct ExpressiveSpeechSegment: Equatable, Sendable {
+    var text: String
+    var speedScale: Float
+    var pitch: SpeechPitchContour
+    var pauseAfter: TimeInterval
+    var intensityScale: Float
+    var dynamicRangeScale: Float
+    var articulationScale: Float
+    var vowelDurationScale: Float
+    var consonantAttackScale: Float
+    var syllableCount: Int
+    var vowelPositions: [Float]
+    var plosivePositions: [Float]
+    var emphasisPosition: Float?
+    var emphasisGain: Float
+    var usesExpressionTag: Bool
+}
+
+enum ExpressiveSpeechPlanner {
+    private enum Boundary {
+        case statement
+        case question
+        case exclamation
+        case continuation
+        case reflective
+    }
+
+    private struct Clause {
+        var text: String
+        var boundary: Boundary
+    }
+
+    private struct PhoneticMetrics {
+        var syllables: Int
+        var vowelRatio: Float
+        var consonantComplexity: Float
+        var plosiveRatio: Float
+        var vowelPositions: [Float]
+        var plosivePositions: [Float]
+    }
+
+    static func plan(
+        text: String,
+        language: AppLang,
+        prosody: VoiceProsodyProfile
+    ) -> [ExpressiveSpeechSegment] {
+        let clauses = clauses(from: text)
+        guard !clauses.isEmpty else { return [] }
+
+        return clauses.enumerated().map { index, clause in
+            let metrics = phoneticMetrics(clause.text, language: language)
+            let rhythmPattern: [Float] = [0.22, -0.34, 0.41, -0.16, 0.30, -0.27]
+            let rhythm = rhythmPattern[index % rhythmPattern.count]
+                * 0.055 * prosody.rhythmVariationScale
+
+            // Vowel-heavy phrases need a little more room, while dense
+            // consonant clusters are slowed just enough to preserve attacks.
+            let vowelTime = max(0, prosody.vowelDurationScale - 1)
+                * metrics.vowelRatio * 0.44
+            let articulationTime = max(0, prosody.articulationScale - 1)
+                * metrics.consonantComplexity * 0.24
+            let phoneticTempo = 1 - vowelTime - articulationTime
+            let speedScale = clamp(
+                prosody.tempoScale * (1 + rhythm) * phoneticTempo,
+                lower: 0.78,
+                upper: 1.18
+            )
+
+            let contour = pitchContour(
+                for: clause.boundary,
+                phraseIndex: index,
+                phraseCount: clauses.count,
+                prosody: prosody
+            )
+            let boundaryEnergy: Float
+            switch clause.boundary {
+            case .exclamation: boundaryEnergy = 0.045
+            case .question: boundaryEnergy = 0.018
+            case .continuation: boundaryEnergy = 0.008
+            case .statement, .reflective: boundaryEnergy = 0
+            }
+
+            let shouldBreathe = clauses.count > 1
+                && index == clauses.count / 2
+                && prosody.pauseScale >= 1.08
+            let spokenText = shouldBreathe
+                ? "<breath> " + clause.text
+                : clause.text
+
+            return ExpressiveSpeechSegment(
+                text: spokenText,
+                speedScale: speedScale,
+                pitch: contour,
+                pauseAfter: pauseDuration(
+                    for: clause.boundary,
+                    isLast: index == clauses.count - 1,
+                    scale: prosody.pauseScale
+                ),
+                intensityScale: clamp(
+                    prosody.intensityScale + boundaryEnergy,
+                    lower: 0.86,
+                    upper: 1.10
+                ),
+                dynamicRangeScale: clamp(
+                    prosody.dynamicRangeScale + boundaryEnergy * 0.65,
+                    lower: 0.74,
+                    upper: 1.12
+                ),
+                articulationScale: prosody.articulationScale,
+                vowelDurationScale: prosody.vowelDurationScale,
+                consonantAttackScale: prosody.consonantAttackScale
+                    * (1 + metrics.plosiveRatio * 0.035),
+                syllableCount: metrics.syllables,
+                vowelPositions: metrics.vowelPositions,
+                plosivePositions: metrics.plosivePositions,
+                emphasisPosition: emphasisPosition(in: clause.text),
+                emphasisGain: 0.045 * prosody.emphasisScale
+                    + boundaryEnergy * 0.55,
+                usesExpressionTag: shouldBreathe
+            )
+        }
+    }
+
+    private static func clauses(from text: String) -> [Clause] {
+        var result: [Clause] = []
+        var buffer = ""
+
+        func flush(_ boundary: Boundary) {
+            let value = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
+            buffer = ""
+            guard !value.isEmpty else { return }
+            result.append(Clause(text: value, boundary: boundary))
+        }
+
+        for character in text {
+            buffer.append(character)
+            switch character {
+            case "?": flush(.question)
+            case "!": flush(.exclamation)
+            case "…": flush(.reflective)
+            case ".": flush(.statement)
+            case ";", ":": flush(.continuation)
+            case "," where buffer.count >= 42:
+                flush(.continuation)
+            case " " where buffer.count >= 112:
+                buffer = buffer.trimmingCharacters(in: .whitespaces) + ","
+                flush(.continuation)
+            default:
+                break
+            }
+        }
+        flush(.statement)
+
+        // A one-word fragment generated in isolation sounds clipped. Attach it
+        // to its neighbour so the acoustic model retains co-articulation.
+        var merged: [Clause] = []
+        for clause in result {
+            let words = clause.text.split(whereSeparator: \.isWhitespace).count
+            if words <= 2, !merged.isEmpty,
+               merged[merged.count - 1].text.count + clause.text.count < 126 {
+                let previous = merged.removeLast()
+                merged.append(
+                    Clause(
+                        text: previous.text + " " + clause.text,
+                        boundary: clause.boundary
+                    )
+                )
+            } else {
+                merged.append(clause)
+            }
+        }
+
+        guard merged.count > 8 else { return merged }
+        var bounded = Array(merged.prefix(7))
+        let tail = merged.dropFirst(7).map(\.text).joined(separator: " ")
+        bounded.append(Clause(text: tail, boundary: merged.last?.boundary ?? .statement))
+        return bounded
+    }
+
+    private static func pitchContour(
+        for boundary: Boundary,
+        phraseIndex: Int,
+        phraseCount: Int,
+        prosody: VoiceProsodyProfile
+    ) -> SpeechPitchContour {
+        let shape: (Float, Float, Float)
+        switch boundary {
+        case .statement: shape = (0.34, 0.14, -0.62)
+        case .question: shape = (0.16, 0.48, 1.55)
+        case .exclamation: shape = (0.52, 0.92, 0.18)
+        case .continuation: shape = (0.20, 0.36, 0.38)
+        case .reflective: shape = (0.08, -0.18, -0.74)
+        }
+        let position = phraseCount > 1
+            ? Float(phraseIndex) / Float(phraseCount - 1)
+            : 0
+        let narrativeSlope = 0.10 - position * 0.20
+        let range = prosody.pitchRangeScale
+        return SpeechPitchContour(
+            start: prosody.pitchSemitones + shape.0 * range + narrativeSlope,
+            middle: prosody.pitchSemitones + shape.1 * range,
+            end: prosody.pitchSemitones + shape.2 * range - narrativeSlope * 0.35
+        )
+    }
+
+    private static func pauseDuration(
+        for boundary: Boundary,
+        isLast: Bool,
+        scale: Float
+    ) -> TimeInterval {
+        if isLast { return 0.035 }
+        let base: TimeInterval
+        switch boundary {
+        case .continuation: base = 0.105
+        case .statement: base = 0.235
+        case .question: base = 0.255
+        case .exclamation: base = 0.205
+        case .reflective: base = 0.310
+        }
+        return min(max(base * Double(scale), 0.075), 0.42)
+    }
+
+    private static func phoneticMetrics(
+        _ text: String,
+        language: AppLang
+    ) -> PhoneticMetrics {
+        let vowels: Set<Character>
+        let plosives: Set<Character>
+        switch language {
+        case .ru:
+            vowels = Set("аеёиоуыэюя")
+            plosives = Set("бпдтгкцч")
+        case .en:
+            vowels = Set("aeiouy")
+            plosives = Set("bpdtgkqcxj")
+        case .de:
+            vowels = Set("aeiouyäöü")
+            plosives = Set("bpdtgkqcz")
+        case .es:
+            vowels = Set("aeiouáéíóúü")
+            plosives = Set("bpdtgkqcx")
+        }
+
+        let letters = text.lowercased().filter(\.isLetter)
+        let letterArray = Array(letters)
+        let vowelCount = letterArray.filter { vowels.contains($0) }.count
+        let consonantCount = max(letters.count - vowelCount, 0)
+        let plosiveCount = letterArray.filter { plosives.contains($0) }.count
+        let total = max(letters.count, 1)
+        let denominator = Float(max(letterArray.count - 1, 1))
+        let vowelPositions = letterArray.indices.compactMap { index -> Float? in
+            vowels.contains(letterArray[index]) ? Float(index) / denominator : nil
+        }
+        let plosivePositions = letterArray.indices.compactMap { index -> Float? in
+            plosives.contains(letterArray[index]) ? Float(index) / denominator : nil
+        }
+        return PhoneticMetrics(
+            syllables: max(vowelCount, 1),
+            vowelRatio: Float(vowelCount) / Float(total),
+            consonantComplexity: min(Float(consonantCount) / Float(max(vowelCount, 1)), 2.4) / 2.4,
+            plosiveRatio: Float(plosiveCount) / Float(total),
+            vowelPositions: vowelPositions,
+            plosivePositions: plosivePositions
+        )
+    }
+
+    private static func emphasisPosition(in text: String) -> Float? {
+        let words = text.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+        guard words.count >= 3 else { return nil }
+
+        var bestWord: Substring?
+        var bestScore = Int.min
+        for word in words {
+            let raw = String(word)
+            let uppercase = raw.count > 1 && raw == raw.uppercased()
+            let score = raw.count + (raw.contains(where: \.isNumber) ? 4 : 0)
+                + (uppercase ? 3 : 0)
+            if score > bestScore {
+                bestScore = score
+                bestWord = word
+            }
+        }
+        guard let bestWord, let range = text.range(of: bestWord) else { return nil }
+        let start = text.distance(from: text.startIndex, to: range.lowerBound)
+        let length = text.distance(from: range.lowerBound, to: range.upperBound)
+        return clamp(
+            Float(start) + Float(length) * 0.5,
+            lower: 0,
+            upper: Float(max(text.count, 1))
+        ) / Float(max(text.count, 1))
+    }
+}
+
+enum ExpressiveAudioRenderer {
+    static func render(
+        _ audio: VoicePCM,
+        segment: ExpressiveSpeechSegment
+    ) -> VoicePCM {
+        var samples = trimSilence(audio.samples, sampleRate: audio.sampleRate)
+        guard samples.count > 32 else { return VoicePCM(samples: samples, sampleRate: audio.sampleRate) }
+
+        samples = applyVowelTiming(
+            samples,
+            positions: segment.vowelPositions,
+            durationScale: segment.vowelDurationScale
+        )
+
+        let boundaries = energyAwareBoundaries(samples, sampleRate: audio.sampleRate)
+        let first = Array(samples[..<boundaries.0])
+        let second = Array(samples[boundaries.0..<boundaries.1])
+        let third = Array(samples[boundaries.1...])
+        let parts = [first, second, third]
+        let pitches = [segment.pitch.start, segment.pitch.middle, segment.pitch.end]
+
+        samples = []
+        for (part, semitones) in zip(parts, pitches) where !part.isEmpty {
+            let pitchScale = pow(2, semitones / 12)
+            let shifted = resample(part, outputLengthScale: 1 / pitchScale)
+            appendCrossfaded(shifted, to: &samples, sampleRate: audio.sampleRate, milliseconds: 5)
+        }
+
+        applyArticulation(
+            to: &samples,
+            articulation: segment.articulationScale,
+            attack: segment.consonantAttackScale
+        )
+        applyLocalizedConsonantAttacks(
+            to: &samples,
+            positions: segment.plosivePositions,
+            attack: segment.consonantAttackScale,
+            sampleRate: audio.sampleRate
+        )
+        applyDynamics(to: &samples, segment: segment)
+        applyEdgeFades(to: &samples, sampleRate: audio.sampleRate)
+        return VoicePCM(samples: samples, sampleRate: audio.sampleRate)
+    }
+
+    static func compose(
+        _ rendered: [(audio: VoicePCM, pauseAfter: TimeInterval)]
+    ) -> VoicePCM? {
+        guard let first = rendered.first else { return nil }
+        let sampleRate = first.audio.sampleRate
+        var output: [Float] = []
+        for item in rendered {
+            guard item.audio.sampleRate == sampleRate else { continue }
+            if !output.isEmpty {
+                appendCrossfaded(
+                    item.audio.samples,
+                    to: &output,
+                    sampleRate: sampleRate,
+                    milliseconds: 7
+                )
+            } else {
+                output = item.audio.samples
+            }
+            let silenceCount = Int(item.pauseAfter * Double(sampleRate))
+            if silenceCount > 0 {
+                output.append(contentsOf: repeatElement(0, count: silenceCount))
+            }
+        }
+        return VoicePCM(samples: output, sampleRate: sampleRate)
+    }
+
+    static func wavData(_ audio: VoicePCM) -> Data {
+        var pcm = [Int16]()
+        pcm.reserveCapacity(audio.samples.count)
+        for sample in audio.samples {
+            let clamped = min(max(sample, -1), 1)
+            pcm.append(Int16(clamped * Float(Int16.max)))
+        }
+
+        let pcmByteCount = pcm.count * MemoryLayout<Int16>.size
+        var data = Data(capacity: 44 + pcmByteCount)
+        data.appendASCII("RIFF")
+        data.appendLittleEndian(UInt32(36 + pcmByteCount))
+        data.appendASCII("WAVE")
+        data.appendASCII("fmt ")
+        data.appendLittleEndian(UInt32(16))
+        data.appendLittleEndian(UInt16(1))
+        data.appendLittleEndian(UInt16(1))
+        data.appendLittleEndian(UInt32(audio.sampleRate))
+        data.appendLittleEndian(UInt32(audio.sampleRate * 2))
+        data.appendLittleEndian(UInt16(2))
+        data.appendLittleEndian(UInt16(16))
+        data.appendASCII("data")
+        data.appendLittleEndian(UInt32(pcmByteCount))
+        pcm.withUnsafeBytes { data.append(contentsOf: $0) }
+        return data
+    }
+
+    private static func energyAwareBoundaries(
+        _ samples: [Float],
+        sampleRate: Int
+    ) -> (Int, Int) {
+        let first = quietBoundary(in: samples, near: samples.count * 34 / 100, sampleRate: sampleRate)
+        let secondCandidate = quietBoundary(
+            in: samples,
+            near: samples.count * 69 / 100,
+            sampleRate: sampleRate
+        )
+        let second = max(secondCandidate, first + max(sampleRate / 20, 1))
+        return (
+            min(max(first, 1), samples.count - 2),
+            min(max(second, first + 1), samples.count - 1)
+        )
+    }
+
+    private static func quietBoundary(
+        in samples: [Float],
+        near target: Int,
+        sampleRate: Int
+    ) -> Int {
+        let radius = max(sampleRate / 80, 24)
+        let lower = max(target - radius, 1)
+        let upper = min(target + radius, samples.count - 2)
+        guard lower < upper else { return min(max(target, 1), samples.count - 2) }
+        var best = target
+        var bestEnergy = Float.greatestFiniteMagnitude
+        for index in lower...upper {
+            let energy = abs(samples[index])
+                + abs(samples[index] - samples[index - 1]) * 0.45
+            if energy < bestEnergy {
+                bestEnergy = energy
+                best = index
+            }
+        }
+        return best
+    }
+
+    private static func resample(
+        _ input: [Float],
+        outputLengthScale: Float
+    ) -> [Float] {
+        guard input.count > 1 else { return input }
+        let outputCount = max(2, Int((Float(input.count) * outputLengthScale).rounded()))
+        guard outputCount != input.count else { return input }
+        var output = [Float](repeating: 0, count: outputCount)
+        let step = Float(input.count - 1) / Float(outputCount - 1)
+        for index in output.indices {
+            let position = Float(index) * step
+            let lower = Int(position)
+            let upper = min(lower + 1, input.count - 1)
+            let fraction = position - Float(lower)
+            output[index] = input[lower] + (input[upper] - input[lower]) * fraction
+        }
+        return output
+    }
+
+    private static func applyVowelTiming(
+        _ input: [Float],
+        positions: [Float],
+        durationScale: Float
+    ) -> [Float] {
+        let delta = clamp(durationScale - 1, lower: -0.05, upper: 0.09)
+        guard abs(delta) > 0.002, !positions.isEmpty, input.count > 64 else {
+            return input
+        }
+
+        var output: [Float] = []
+        output.reserveCapacity(Int(Float(input.count) * (1 + max(delta, 0) * 0.65)))
+        var inputPosition: Float = 0
+        let end = Float(input.count - 1)
+        let maximumCount = Int(Float(input.count) * 1.12)
+        while inputPosition < end, output.count < maximumCount {
+            let lower = Int(inputPosition)
+            let upper = min(lower + 1, input.count - 1)
+            let fraction = inputPosition - Float(lower)
+            output.append(input[lower] + (input[upper] - input[lower]) * fraction)
+
+            let progress = inputPosition / end
+            var vowelWeight: Float = 0
+            for center in positions {
+                let distance = (progress - center) / 0.018
+                vowelWeight = max(vowelWeight, exp(-(distance * distance) * 0.5))
+            }
+            inputPosition += 1 / max(1 + delta * vowelWeight, 0.88)
+        }
+        if let last = input.last, output.last != last {
+            output.append(last)
+        }
+        return output
+    }
+
+    private static func trimSilence(_ input: [Float], sampleRate: Int) -> [Float] {
+        guard !input.isEmpty else { return [] }
+        let threshold: Float = 0.0018
+        let padding = max(Int(Float(sampleRate) * 0.018), 1)
+        let first = input.firstIndex { abs($0) >= threshold } ?? input.startIndex
+        let last = input.lastIndex { abs($0) >= threshold } ?? input.index(before: input.endIndex)
+        let lower = max(first - padding, input.startIndex)
+        let upper = min(last + padding, input.index(before: input.endIndex))
+        guard lower <= upper else { return input }
+        return Array(input[lower...upper])
+    }
+
+    private static func applyArticulation(
+        to samples: inout [Float],
+        articulation: Float,
+        attack: Float
+    ) {
+        guard samples.count > 1 else { return }
+        let sharpen = clamp((attack - 1) * 0.42, lower: -0.05, upper: 0.075)
+        let soften = clamp((1 - articulation) * 0.34, lower: 0, upper: 0.12)
+        var previousInput = samples[0]
+        var smoothed = samples[0]
+        for index in 1..<samples.count {
+            let input = samples[index]
+            let transient = input + (input - previousInput) * sharpen
+            smoothed = smoothed * 0.68 + transient * 0.32
+            samples[index] = transient * (1 - soften) + smoothed * soften
+            previousInput = input
+        }
+    }
+
+    private static func applyLocalizedConsonantAttacks(
+        to samples: inout [Float],
+        positions: [Float],
+        attack: Float,
+        sampleRate: Int
+    ) {
+        let strength = clamp((attack - 1) * 0.55, lower: -0.035, upper: 0.065)
+        guard abs(strength) > 0.002, !positions.isEmpty, !samples.isEmpty else { return }
+        let radius = max(sampleRate / 240, 24)
+        for position in positions {
+            let center = Int(position * Float(samples.count - 1))
+            let lower = max(center - radius, 0)
+            let upper = min(center + radius, samples.count - 1)
+            guard lower < upper else { continue }
+            for index in lower...upper {
+                let distance = abs(Float(index - center)) / Float(radius)
+                let gain = 1 + strength * max(1 - distance, 0)
+                samples[index] *= gain
+            }
+        }
+    }
+
+    private static func applyDynamics(
+        to samples: inout [Float],
+        segment: ExpressiveSpeechSegment
+    ) {
+        guard !samples.isEmpty else { return }
+        let count = Float(samples.count)
+        let syllables = Float(min(max(segment.syllableCount, 1), 36))
+        for index in samples.indices {
+            let progress = Float(index) / max(count - 1, 1)
+            let sign: Float = samples[index] < 0 ? -1 : 1
+            let magnitude = abs(samples[index])
+            let threshold: Float = 0.16
+            let shaped = magnitude > threshold
+                ? threshold + (magnitude - threshold) * segment.dynamicRangeScale
+                : magnitude
+            let syllableMotion = 1 + sin(progress * syllables * 2 * .pi) * 0.008
+            let emphasis: Float
+            if let center = segment.emphasisPosition {
+                let distance = (progress - center) / 0.105
+                emphasis = 1 + segment.emphasisGain * exp(-(distance * distance) * 0.5)
+            } else {
+                emphasis = 1
+            }
+            let value = sign * shaped * segment.intensityScale * syllableMotion * emphasis
+            samples[index] = value / (1 + max(abs(value) - 0.88, 0) * 1.6)
+        }
+    }
+
+    private static func applyEdgeFades(to samples: inout [Float], sampleRate: Int) {
+        let fade = min(max(sampleRate / 250, 24), samples.count / 3)
+        guard fade > 1 else { return }
+        for index in 0..<fade {
+            let gain = Float(index) / Float(fade - 1)
+            samples[index] *= gain
+            samples[samples.count - 1 - index] *= gain
+        }
+    }
+
+    private static func appendCrossfaded(
+        _ incoming: [Float],
+        to output: inout [Float],
+        sampleRate: Int,
+        milliseconds: Int
+    ) {
+        guard !incoming.isEmpty else { return }
+        guard !output.isEmpty else {
+            output = incoming
+            return
+        }
+        let desired = sampleRate * milliseconds / 1_000
+        let overlap = min(desired, output.count, incoming.count)
+        guard overlap > 1 else {
+            output.append(contentsOf: incoming)
+            return
+        }
+        let start = output.count - overlap
+        for index in 0..<overlap {
+            let mix = Float(index) / Float(overlap - 1)
+            output[start + index] = output[start + index] * (1 - mix)
+                + incoming[index] * mix
+        }
+        output.append(contentsOf: incoming.dropFirst(overlap))
+    }
+}
+
+private extension Data {
+    mutating func appendASCII(_ string: String) {
+        append(contentsOf: string.utf8)
+    }
+
+    mutating func appendLittleEndian<T: FixedWidthInteger>(_ value: T) {
+        var littleEndian = value.littleEndian
+        Swift.withUnsafeBytes(of: &littleEndian) {
+            append(contentsOf: $0)
+        }
+    }
+}

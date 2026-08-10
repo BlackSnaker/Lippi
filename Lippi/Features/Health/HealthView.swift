@@ -12,12 +12,14 @@ struct HealthView: View {
     @AppStorage(L10n.storageKey) private var langRaw: String = AppLang.fallback.rawValue
     @AppStorage(HealthVoicePreferences.isEnabledKey) private var voiceEnabled: Bool = HealthVoicePreferences.defaultEnabled
     @AppStorage(HealthVoicePreferences.autoSpeakKey) private var voiceAutoSpeak: Bool = HealthVoicePreferences.defaultAutoSpeak
+    @AppStorage(HealthVoicePreferences.adaptiveEnabledKey) private var adaptiveVoiceEnabled: Bool = HealthVoicePreferences.defaultAdaptiveEnabled
     @AppStorage(HealthVoicePlaybackSpeed.storageKey) private var voiceSpeedRaw: String = HealthVoicePlaybackSpeed.defaultSpeed.rawValue
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var healthKit: HealthKitManager
     @StateObject private var analytics = BreathingAnalyticsStore()
     @StateObject private var voiceAssistant = HealthVoiceAssistant()
+    @StateObject private var adaptiveVoice = AdaptiveVoiceCoordinator.shared
 
     @State private var selectedPreset: BreathingPreset = .balance
     @State private var isRunning = false
@@ -412,9 +414,11 @@ struct HealthView: View {
 
                     Spacer()
 
-                    Text(voiceSpeed.title(lang))
+                    Text(adaptiveVoiceStatus)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(DS.text(0.84))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -439,6 +443,24 @@ struct HealthView: View {
             return s("health.analytics.empty")
         }
         return formatSessionDate(last.startedAt)
+    }
+
+    private var adaptiveVoiceStatus: String {
+        let estimate = adaptiveVoice.currentEstimate
+        guard adaptiveVoiceEnabled,
+              estimate.confidence >= PhysiologicalStateEstimator.confidenceThreshold,
+              estimate.state != .neutral else {
+            return adaptiveVoiceEnabled
+                ? s("health.voice.adaptive.neutral")
+                : voiceSpeed.title(lang)
+        }
+        let state = s("health.voice.state.\(estimate.state.rawValue)")
+        return L10n.fmt(
+            "health.voice.adaptive.status",
+            lang,
+            state,
+            Int((estimate.confidence * 100).rounded())
+        )
     }
 
     private var recommendationLines: [String] {

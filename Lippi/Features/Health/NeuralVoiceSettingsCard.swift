@@ -6,6 +6,8 @@ struct NeuralVoiceSettingsCard: View {
     @AppStorage(NeuralVoiceConfiguration.enabledKey) private var isEnabled = true
     @AppStorage(LocalNeuralVoiceProfile.storageKey) private var profileRaw =
         LocalNeuralVoiceProfile.defaultProfile.rawValue
+    @AppStorage(HealthVoicePlaybackSpeed.storageKey) private var healthVoiceSpeedRaw =
+        HealthVoicePlaybackSpeed.defaultSpeed.rawValue
     @StateObject private var modelStore = LocalVoiceModelStore.shared
     @State private var previewTask: Task<Void, Never>?
     @State private var previewPlayer: AVAudioPlayer?
@@ -14,11 +16,15 @@ struct NeuralVoiceSettingsCard: View {
     @State private var previewErrorKey: String?
     @State private var previewRequestID = UUID()
     @State private var showsInstallationSuccess = false
+    @State private var selectedIntonation: PhysiologicalVoiceState = .neutral
 
     private var lang: AppLang { L10n.lang(from: langRaw) }
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
     private var selectedProfile: LocalNeuralVoiceProfile {
         LocalNeuralVoiceProfile(rawValue: profileRaw) ?? .defaultProfile
+    }
+    private var selectedBaseSpeed: HealthVoicePlaybackSpeed {
+        HealthVoicePlaybackSpeed(rawValue: healthVoiceSpeedRaw) ?? .defaultSpeed
     }
 
     var body: some View {
@@ -68,6 +74,10 @@ struct NeuralVoiceSettingsCard: View {
 
                     actionButtons
 
+                    if modelStore.isReady {
+                        intonationTester
+                    }
+
                     if isPlayingPreview {
                         previewStatus(
                             icon: "waveform",
@@ -99,6 +109,9 @@ struct NeuralVoiceSettingsCard: View {
         .onChange(of: profileRaw) { _, _ in
             stopPreview()
         }
+        .onChange(of: selectedIntonation) { _, _ in
+            stopPreview()
+        }
         .onDisappear {
             stopPreview()
         }
@@ -120,6 +133,88 @@ struct NeuralVoiceSettingsCard: View {
             }
             .pickerStyle(.segmented)
         }
+    }
+
+    private var intonationTester: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Label {
+                    Text(s("settings.neural_voice.intonation_title"))
+                        .font(.subheadline.weight(.semibold))
+                } icon: {
+                    Image(safeSystemName: "waveform.path", fallback: "waveform")
+                        .foregroundStyle(Color(hex: 0x5AC8FA))
+                }
+
+                Text(s("settings.neural_voice.intonation_subtitle"))
+                    .font(.caption)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(PhysiologicalVoiceState.allCases, id: \.self) { state in
+                        Button {
+                            selectedIntonation = state
+                            DS.hapticSoft()
+                        } label: {
+                            Text(intonationTitle(state))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(
+                                    selectedIntonation == state
+                                        ? Color.white
+                                        : DS.text(0.78)
+                                )
+                                .padding(.horizontal, 11)
+                                .padding(.vertical, 8)
+                                .background(
+                                    selectedIntonation == state
+                                        ? Color(hex: 0x0A84FF).opacity(0.82)
+                                        : DS.glassFill(0.10),
+                                    in: Capsule()
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(
+                                            selectedIntonation == state
+                                                ? Color(hex: 0x5AC8FA).opacity(0.72)
+                                                : DS.glassStroke(0.14),
+                                            lineWidth: 1
+                                        )
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(
+                            selectedIntonation == state ? .isSelected : []
+                        )
+                    }
+                }
+            }
+
+            primaryButton(
+                title: intonationPreviewButtonTitle,
+                icon: isGeneratingPreview || isPlayingPreview
+                    ? "waveform"
+                    : "play.circle.fill"
+            ) {
+                playIntonationPreview()
+            }
+            .disabled(isGeneratingPreview || isPlayingPreview)
+        }
+        .padding(14)
+        .background(
+            Color(hex: 0x0A84FF).opacity(0.08),
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color(hex: 0x5AC8FA).opacity(0.20), lineWidth: 1)
+        )
+    }
+
+    private func intonationTitle(_ state: PhysiologicalVoiceState) -> String {
+        s("settings.neural_voice.intonation.\(state.rawValue)")
     }
 
     private var modelState: some View {
@@ -249,6 +344,16 @@ struct NeuralVoiceSettingsCard: View {
             return s("settings.neural_voice.preview_playing")
         }
         return s("settings.neural_voice.preview")
+    }
+
+    private var intonationPreviewButtonTitle: String {
+        if isGeneratingPreview {
+            return s("settings.neural_voice.previewing")
+        }
+        if isPlayingPreview {
+            return s("settings.neural_voice.preview_playing")
+        }
+        return s("settings.neural_voice.intonation_play")
     }
 
     private var isInstallationActive: Bool {
@@ -549,12 +654,16 @@ struct NeuralVoiceSettingsCard: View {
         }
     }
 
-    private func playPreview() {
+    private func playPreview(
+        phraseKey: String = "settings.neural_voice.preview_phrase",
+        prosody: VoiceProsodyProfile = .neutral
+    ) {
         stopPreview()
         isGeneratingPreview = true
         previewErrorKey = nil
         let profile = selectedProfile
-        let phrase = s("settings.neural_voice.preview_phrase")
+        let phrase = s(phraseKey)
+        let speed = selectedBaseSpeed.neuralSpeed
         let requestID = UUID()
         previewRequestID = requestID
 
@@ -563,8 +672,10 @@ struct NeuralVoiceSettingsCard: View {
                 let audio = try await LocalNeuralVoiceProvider.shared.synthesize(
                     phrase,
                     language: lang,
-                    speed: 1,
-                    profile: profile
+                    speed: speed,
+                    profile: profile,
+                    prosody: prosody,
+                    quality: .maximum
                 )
                 guard !Task.isCancelled, previewRequestID == requestID else { return }
                 #if os(iOS)
@@ -611,6 +722,14 @@ struct NeuralVoiceSettingsCard: View {
                 previewErrorKey = "settings.neural_voice.preview_error"
             }
         }
+    }
+
+    private func playIntonationPreview() {
+        let decision = VoicePolicy.previewDecision(for: selectedIntonation)
+        playPreview(
+            phraseKey: "settings.neural_voice.intonation_phrase",
+            prosody: decision.prosody
+        )
     }
 
     private func stopPreview() {

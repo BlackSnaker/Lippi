@@ -2667,6 +2667,7 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
             scheduleAudioSessionDeactivation()
             return
         }
+        let adaptiveDecision = AdaptiveVoiceCoordinator.shared.decision()
 
         neuralSpeechTask = Task { [weak self] in
             do {
@@ -2674,7 +2675,8 @@ final class AppVoiceAssistantCenter: NSObject, ObservableObject {
                     message,
                     language: lang,
                     speed: HealthVoicePlaybackSpeed.balanced.neuralSpeed,
-                    profile: configuration.profile
+                    profile: configuration.profile,
+                    prosody: adaptiveDecision.prosody
                 )
                 guard !Task.isCancelled, let self, self.speechRequestID == requestID else { return }
                 self.playNeuralSpeech(audio, lang: lang)

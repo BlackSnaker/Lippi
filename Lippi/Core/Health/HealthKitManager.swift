@@ -37,6 +37,8 @@ struct HealthWellnessSnapshot: Hashable {
     var stepsToday: Double?
     var stepsLast90Minutes: Double?
     var lastMovementAt: Date?
+    var heartRate: Double?
+    var heartRateSampleDate: Date?
     var activeEnergyToday: Double?
     var exerciseMinutesToday: Double?
     var dietaryWaterTodayMilliliters: Double?
@@ -46,10 +48,13 @@ struct HealthWellnessSnapshot: Hashable {
     var baselineSleepHours: Double?
     var restingHeartRate: Double?
     var baselineRestingHeartRate: Double?
+    var restingHeartRateSampleDate: Date?
     var hrvSDNN: Double?
     var baselineHRVSDNN: Double?
+    var hrvSampleDate: Date?
     var respiratoryRate: Double?
     var workoutMinutesLast7Days: Double?
+    var lastWorkoutEndDate: Date?
     var mindfulMinutesLast7Days: Double?
     var hasAppleWatchData: Bool = false
     var latestAppleWatchSampleDate: Date?
@@ -58,6 +63,7 @@ struct HealthWellnessSnapshot: Hashable {
         [
             stepsToday,
             stepsLast90Minutes,
+            heartRate,
             activeEnergyToday,
             exerciseMinutesToday,
             recentSleepHours,
@@ -270,6 +276,7 @@ final class HealthKitManager: ObservableObject {
             let newSnapshot = try await fetchSnapshot()
             snapshot = newSnapshot
             recommendation = HealthWellnessRecommendationEngine.evaluate(newSnapshot)
+            AdaptiveVoiceCoordinator.shared.ingest(newSnapshot)
             lastUpdated = newSnapshot.generatedAt
             lastFailure = nil
             state = newSnapshot.hasRecentData ? .connected : .noRecentData
@@ -289,6 +296,7 @@ final class HealthKitManager: ObservableObject {
         UserDefaults.standard.set(false, forKey: Self.insightsEnabledKey)
         snapshot = nil
         recommendation = nil
+        AdaptiveVoiceCoordinator.shared.reset()
         lastUpdated = nil
         lastFailure = nil
         diagnosticReport = .initial
@@ -388,6 +396,7 @@ private extension HealthKitManager {
             .stepCount,
             .activeEnergyBurned,
             .appleExerciseTime,
+            .heartRate,
             .restingHeartRate,
             .heartRateVariabilitySDNN,
             .respiratoryRate,
@@ -489,6 +498,8 @@ private extension HealthKitManager {
         let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: reference) ?? reference.addingTimeInterval(-604_800)
         let twentyEightDaysAgo = calendar.date(byAdding: .day, value: -28, to: reference) ?? reference.addingTimeInterval(-2_419_200)
         let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: reference) ?? reference.addingTimeInterval(-172_800)
+        let fourHoursAgo = calendar.date(byAdding: .hour, value: -4, to: reference)
+            ?? reference.addingTimeInterval(-14_400)
         let recentSleepStart = calendar.date(byAdding: .hour, value: -36, to: reference) ?? reference.addingTimeInterval(-129_600)
         let ninetyMinutesAgo = calendar.date(byAdding: .minute, value: -90, to: reference)
             ?? reference.addingTimeInterval(-5_400)
@@ -525,6 +536,10 @@ private extension HealthKitManager {
             guard let type = HKObjectType.quantityType(forIdentifier: .dietaryEnergyConsumed) else { return [HKSample]() }
             return try await samples(type: type, start: nutritionLookback, end: reference, limit: 40)
         }
+        let heartRateSamplesQuery = await healthQuery {
+            guard let type = HKObjectType.quantityType(forIdentifier: .heartRate) else { return [HKSample]() }
+            return try await samples(type: type, start: fourHoursAgo, end: reference, limit: 1)
+        }
         let recentRHRQuery = await healthQuery {
             try await average(
                 .restingHeartRate,
@@ -541,6 +556,10 @@ private extension HealthKitManager {
                 end: reference
             )
         }
+        let recentRHRSamplesQuery = await healthQuery {
+            guard let type = HKObjectType.quantityType(forIdentifier: .restingHeartRate) else { return [HKSample]() }
+            return try await samples(type: type, start: twoDaysAgo, end: reference, limit: 1)
+        }
         let recentHRVQuery = await healthQuery {
             try await average(
                 .heartRateVariabilitySDNN,
@@ -556,6 +575,10 @@ private extension HealthKitManager {
                 start: twentyEightDaysAgo,
                 end: reference
             )
+        }
+        let recentHRVSamplesQuery = await healthQuery {
+            guard let type = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else { return [HKSample]() }
+            return try await samples(type: type, start: twoDaysAgo, end: reference, limit: 1)
         }
         let respiratoryRateQuery = await healthQuery {
             try await average(
@@ -592,10 +615,13 @@ private extension HealthKitManager {
             waterQuery.error,
             hydrationSamplesQuery.error,
             nutritionSamplesQuery.error,
+            heartRateSamplesQuery.error,
             recentRHRQuery.error,
             baselineRHRQuery.error,
+            recentRHRSamplesQuery.error,
             recentHRVQuery.error,
             baselineHRVQuery.error,
+            recentHRVSamplesQuery.error,
             respiratoryRateQuery.error,
             recentSleepQuery.error,
             baselineSleepQuery.error,
@@ -615,10 +641,16 @@ private extension HealthKitManager {
         let water = waterQuery.value ?? nil
         let hydrationSamples = hydrationSamplesQuery.value ?? []
         let nutritionSamples = nutritionSamplesQuery.value ?? []
+        let heartRateSamples = heartRateSamplesQuery.value ?? []
+        let heartRateUnit = HKUnit.count().unitDivided(by: .minute())
+        let latestHeartRateSample = heartRateSamples.compactMap { $0 as? HKQuantitySample }.first
+        let heartRate = latestHeartRateSample?.quantity.doubleValue(for: heartRateUnit)
         let recentRHR = recentRHRQuery.value ?? nil
         let baselineRHR = baselineRHRQuery.value ?? nil
+        let recentRHRSamples = recentRHRSamplesQuery.value ?? []
         let recentHRV = recentHRVQuery.value ?? nil
         let baselineHRV = baselineHRVQuery.value ?? nil
+        let recentHRVSamples = recentHRVSamplesQuery.value ?? []
         let respiratoryRate = respiratoryRateQuery.value ?? nil
         let recentSleepSamples = recentSleepQuery.value ?? []
         let baselineSleepSamples = baselineSleepQuery.value ?? []
@@ -636,6 +668,7 @@ private extension HealthKitManager {
         }
 
         let watchProbeTypes: [HKQuantityTypeIdentifier] = [
+            .heartRate,
             .restingHeartRate,
             .heartRateVariabilitySDNN,
             .respiratoryRate
@@ -661,6 +694,8 @@ private extension HealthKitManager {
                 in: movementSamples,
                 unit: .count()
             ),
+            heartRate: heartRate,
+            heartRateSampleDate: latestHeartRateSample?.endDate,
             activeEnergyToday: activeEnergy,
             exerciseMinutesToday: exercise,
             dietaryWaterTodayMilliliters: water,
@@ -676,10 +711,13 @@ private extension HealthKitManager {
             baselineSleepHours: baselineSleep,
             restingHeartRate: recentRHR,
             baselineRestingHeartRate: baselineRHR,
+            restingHeartRateSampleDate: recentRHRSamples.map(\.endDate).max(),
             hrvSDNN: recentHRV,
             baselineHRVSDNN: baselineHRV,
+            hrvSampleDate: recentHRVSamples.map(\.endDate).max(),
             respiratoryRate: respiratoryRate,
             workoutMinutesLast7Days: workouts.isEmpty ? nil : workoutMinutes,
+            lastWorkoutEndDate: workouts.map(\.endDate).max(),
             mindfulMinutesLast7Days: mindfulSamples.isEmpty ? nil : mindfulMinutes,
             hasAppleWatchData: !watchOnlySamples.isEmpty,
             latestAppleWatchSampleDate: watchOnlySamples.map(\.endDate).max()
@@ -870,6 +908,7 @@ private extension HealthKitManager {
 
         let identifiers: [HKObjectType] = [
             HKObjectType.quantityType(forIdentifier: .stepCount),
+            HKObjectType.quantityType(forIdentifier: .heartRate),
             HKObjectType.quantityType(forIdentifier: .restingHeartRate),
             HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN),
             HKObjectType.quantityType(forIdentifier: .dietaryWater),

@@ -19,10 +19,10 @@
 		18C0A1012F22000000000001 /* sherpa-onnx.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C0A1042F22000000000004 /* sherpa-onnx.xcframework */; };
 		18C0A1022F22000000000002 /* onnxruntime.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C0A1052F22000000000005 /* onnxruntime.xcframework */; };
 		18C0A1062F22000000000006 /* SWCompression in Frameworks */ = {isa = PBXBuildFile; productRef = 18C0A1082F22000000000008 /* SWCompression */; };
+		18CA01012F33000000000001 /* LippiWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 18CA01042F33000000000004 /* LippiWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		18DE6F4D2E6DB52200319865 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A862E64A9C400EA6B1D /* WidgetKit.framework */; };
 		18DE6F4E2E6DB52200319865 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 188D1A882E64A9C400EA6B1D /* SwiftUI.framework */; };
 		18DE6F5F2E6DB52400319865 /* OrganizerWidgetExt.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		18CA01012F33000000000001 /* LippiWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 18CA01042F33000000000004 /* LippiWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,19 +47,19 @@
 			remoteGlobalIDString = 188D1A832E64A9C400EA6B1D;
 			remoteInfo = LippiWidgetsExtension;
 		};
-		18DE6F5D2E6DB52400319865 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 188D1A4E2E6491BA00EA6B1D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 18DE6F4B2E6DB52200319865;
-			remoteInfo = OrganizerWidgetExtension;
-		};
 		18CA01022F33000000000002 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 188D1A4E2E6491BA00EA6B1D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 18CA010A2F3300000000000A;
 			remoteInfo = LippiWatch;
+		};
+		18DE6F5D2E6DB52400319865 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 188D1A4E2E6491BA00EA6B1D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 18DE6F4B2E6DB52200319865;
+			remoteInfo = OrganizerWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -113,8 +113,8 @@
 		18B0A1082F01000000000008 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		18C0A1042F22000000000004 /* sherpa-onnx.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "sherpa-onnx.xcframework"; path = "Vendor/SherpaOnnx/sherpa-onnx.xcframework"; sourceTree = SOURCE_ROOT; };
 		18C0A1052F22000000000005 /* onnxruntime.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = onnxruntime.xcframework; path = Vendor/SherpaOnnx/onnxruntime.xcframework; sourceTree = SOURCE_ROOT; };
-		18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OrganizerWidgetExt.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		18CA01042F33000000000004 /* LippiWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LippiWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OrganizerWidgetExt.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -168,17 +168,17 @@
 			path = LippiWidgets;
 			sourceTree = "<group>";
 		};
+		18CA01062F33000000000006 /* LippiWatch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LippiWatch;
+			sourceTree = "<group>";
+		};
 		18DE6F4F2E6DB52200319865 /* OrganizerWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				18DE6F622E6DB52400319865 /* Exceptions for "OrganizerWidget" folder in "OrganizerWidgetExtension" target */,
 			);
 			path = OrganizerWidget;
-			sourceTree = "<group>";
-		};
-		18CA01062F33000000000006 /* LippiWatch */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = LippiWatch;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -220,19 +220,19 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18CA01072F33000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		18DE6F492E6DB52200319865 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				18DE6F4E2E6DB52200319865 /* SwiftUI.framework in Frameworks */,
 				18DE6F4D2E6DB52200319865 /* WidgetKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		18CA01072F33000000000007 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -381,28 +381,6 @@
 			productReference = 188D1A842E64A9C400EA6B1D /* LippiWidgetsExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 18DE6F632E6DB52400319865 /* Build configuration list for PBXNativeTarget "OrganizerWidgetExtension" */;
-			buildPhases = (
-				18DE6F482E6DB52200319865 /* Sources */,
-				18DE6F492E6DB52200319865 /* Frameworks */,
-				18DE6F4A2E6DB52200319865 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				18DE6F4F2E6DB52200319865 /* OrganizerWidget */,
-			);
-			name = OrganizerWidgetExtension;
-			packageProductDependencies = (
-			);
-			productName = OrganizerWidgetExtension;
-			productReference = 18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		18CA010A2F3300000000000A /* LippiWatch */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 18CA010E2F3300000000000E /* Build configuration list for PBXNativeTarget "LippiWatch" */;
@@ -424,6 +402,28 @@
 			productName = LippiWatch;
 			productReference = 18CA01042F33000000000004 /* LippiWatch.app */;
 			productType = "com.apple.product-type.application";
+		};
+		18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 18DE6F632E6DB52400319865 /* Build configuration list for PBXNativeTarget "OrganizerWidgetExtension" */;
+			buildPhases = (
+				18DE6F482E6DB52200319865 /* Sources */,
+				18DE6F492E6DB52200319865 /* Frameworks */,
+				18DE6F4A2E6DB52200319865 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				18DE6F4F2E6DB52200319865 /* OrganizerWidget */,
+			);
+			name = OrganizerWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = OrganizerWidgetExtension;
+			productReference = 18DE6F4C2E6DB52200319865 /* OrganizerWidgetExt.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -449,10 +449,10 @@
 					188D1A832E64A9C400EA6B1D = {
 						CreatedOnToolsVersion = 16.4;
 					};
-					18DE6F4B2E6DB52200319865 = {
+					18CA010A2F3300000000000A = {
 						CreatedOnToolsVersion = 16.4;
 					};
-					18CA010A2F3300000000000A = {
+					18DE6F4B2E6DB52200319865 = {
 						CreatedOnToolsVersion = 16.4;
 					};
 				};
@@ -513,14 +513,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		18DE6F4A2E6DB52200319865 /* Resources */ = {
+		18CA01092F33000000000009 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		18CA01092F33000000000009 /* Resources */ = {
+		18DE6F4A2E6DB52200319865 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -559,18 +559,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18CA01082F33000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		18DE6F482E6DB52200319865 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				18861C3F2E76E7200008D8A3 /* WidgetBridge.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		18CA01082F33000000000008 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -592,15 +592,15 @@
 			target = 188D1A832E64A9C400EA6B1D /* LippiWidgetsExtension */;
 			targetProxy = 188D1A982E64A9C700EA6B1D /* PBXContainerItemProxy */;
 		};
-		18DE6F5E2E6DB52400319865 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */;
-			targetProxy = 18DE6F5D2E6DB52400319865 /* PBXContainerItemProxy */;
-		};
 		18CA010B2F3300000000000B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 18CA010A2F3300000000000A /* LippiWatch */;
 			targetProxy = 18CA01022F33000000000002 /* PBXContainerItemProxy */;
+		};
+		18DE6F5E2E6DB52400319865 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 18DE6F4B2E6DB52200319865 /* OrganizerWidgetExtension */;
+			targetProxy = 18DE6F5D2E6DB52400319865 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -939,62 +939,6 @@
 			};
 			name = Release;
 		};
-		18DE6F602E6DB52400319865 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = OrganizerWidget/OrganizerWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = APX26VC984;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = OrganizerWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = OrganizerWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.OrganizerWidgetExtension;
-				PRODUCT_NAME = OrganizerWidgetExt;
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		18DE6F612E6DB52400319865 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = OrganizerWidget/OrganizerWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = "";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = OrganizerWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = OrganizerWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.OrganizerWidgetExtension;
-				PRODUCT_NAME = OrganizerWidgetExt;
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		18CA010C2F3300000000000C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1056,6 +1000,62 @@
 			};
 			name = Release;
 		};
+		18DE6F602E6DB52400319865 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = OrganizerWidget/OrganizerWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = APX26VC984;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OrganizerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = OrganizerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.OrganizerWidgetExtension;
+				PRODUCT_NAME = OrganizerWidgetExt;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		18DE6F612E6DB52400319865 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = OrganizerWidget/OrganizerWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OrganizerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = OrganizerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Illumionix.Lippi.OrganizerWidgetExtension;
+				PRODUCT_NAME = OrganizerWidgetExt;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1104,20 +1104,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		18DE6F632E6DB52400319865 /* Build configuration list for PBXNativeTarget "OrganizerWidgetExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				18DE6F602E6DB52400319865 /* Debug */,
-				18DE6F612E6DB52400319865 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		18CA010E2F3300000000000E /* Build configuration list for PBXNativeTarget "LippiWatch" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				18CA010C2F3300000000000C /* Debug */,
 				18CA010D2F3300000000000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		18DE6F632E6DB52400319865 /* Build configuration list for PBXNativeTarget "OrganizerWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				18DE6F602E6DB52400319865 /* Debug */,
+				18DE6F612E6DB52400319865 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

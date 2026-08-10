@@ -4,8 +4,10 @@ import AVFoundation
 enum HealthVoicePreferences {
     static let isEnabledKey = "health.voice.enabled"
     static let autoSpeakKey = "health.voice.auto"
+    static let adaptiveEnabledKey = "health.voice.adaptive.enabled"
     static let defaultEnabled = true
     static let defaultAutoSpeak = false
+    static let defaultAdaptiveEnabled = true
 }
 
 enum HealthVoicePlaybackSpeed: String, CaseIterable, Identifiable, Codable {
@@ -26,6 +28,7 @@ enum HealthVoicePlaybackSpeed: String, CaseIterable, Identifiable, Codable {
 @MainActor
 final class HealthVoiceAssistant: NSObject, ObservableObject {
     @Published private(set) var isSpeaking: Bool = false
+    @Published private(set) var activeDecision: AdaptiveVoiceDecision?
 
     private var neuralPlayer: AVAudioPlayer?
     private var neuralSpeechTask: Task<Void, Never>?
@@ -43,6 +46,8 @@ final class HealthVoiceAssistant: NSObject, ObservableObject {
         let requestID = UUID()
         speechRequestID = requestID
         let configuration = NeuralVoiceConfiguration.stored
+        let decision = AdaptiveVoiceCoordinator.shared.decision()
+        activeDecision = decision
 
         guard configuration.isEnabled, configuration.supports(language) else {
             isSpeaking = false
@@ -61,7 +66,8 @@ final class HealthVoiceAssistant: NSObject, ObservableObject {
                     trimmed,
                     language: language,
                     speed: speed.neuralSpeed,
-                    profile: configuration.profile
+                    profile: configuration.profile,
+                    prosody: decision.prosody
                 )
                 guard !Task.isCancelled, let self, self.speechRequestID == requestID else { return }
                 self.playNeuralAudio(audio)
@@ -76,6 +82,7 @@ final class HealthVoiceAssistant: NSObject, ObservableObject {
         speechRequestID = UUID()
         stopCurrentPlayback()
         isSpeaking = false
+        activeDecision = nil
     }
 
     private func playNeuralAudio(_ audio: Data) {

@@ -1,5 +1,10 @@
 import Foundation
 
+enum NeuralVoiceSynthesisQuality: Sendable {
+    case conversational
+    case maximum
+}
+
 final class LocalNeuralVoiceProvider: @unchecked Sendable {
     static let shared = LocalNeuralVoiceProvider()
 
@@ -18,7 +23,9 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
         _ text: String,
         language: AppLang,
         speed: Float,
-        profile: LocalNeuralVoiceProfile
+        profile: LocalNeuralVoiceProfile,
+        prosody: VoiceProsodyProfile = .neutral,
+        quality: NeuralVoiceSynthesisQuality = .conversational
     ) async throws -> Data {
         guard NeuralVoiceConfiguration.stored.isEnabled else {
             throw NeuralVoiceProviderError.disabled
@@ -28,13 +35,14 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
         }
         try Self.checkPowerPolicy()
 
-        let preparedText = Self.preparedText(text, language: language)
+        let preparedText = Self.preparedText(text, language: language, prosody: prosody)
         guard !preparedText.isEmpty else {
             throw NeuralVoiceProviderError.generation
         }
 
+        let deadline = min(60, max(32, 24 + Double(preparedText.count) * 0.07))
         let cancellation = VoiceGenerationCancellation(
-            deadline: Date().addingTimeInterval(20)
+            deadline: Date().addingTimeInterval(deadline)
         )
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -53,15 +61,56 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
                         let startedAt = Date()
                         let runtime = try self.loadedRuntime()
                         defer { self.scheduleRuntimeUnload() }
-                        let data = try runtime.generate(
+                        let segments = ExpressiveSpeechPlanner.plan(
                             text: preparedText,
                             language: language,
-                            speed: Self.optimizedSpeed(speed, language: language),
-                            profile: profile,
-                            cancellation: cancellation
+                            prosody: prosody
                         )
+                        let qualitySteps = Self.qualitySteps(
+                            forCharacterCount: preparedText.count,
+                            quality: quality
+                        )
+                        guard !segments.isEmpty else {
+                            throw NeuralVoiceProviderError.generation
+                        }
+
+                        var rendered: [(audio: VoicePCM, pauseAfter: TimeInterval)] = []
+                        rendered.reserveCapacity(segments.count)
+                        for segment in segments {
+                            guard cancellation.shouldContinue() else {
+                                throw NeuralVoiceProviderError.cancelled
+                            }
+                            let pitchScale = pow(2, segment.pitch.average / 12)
+                            let generationSpeed = speed * segment.speedScale / pitchScale
+                            let raw = try runtime.generate(
+                                text: segment.text,
+                                language: language,
+                                speed: Self.optimizedSpeed(
+                                    generationSpeed,
+                                    language: language
+                                ),
+                                profile: profile,
+                                qualitySteps: qualitySteps,
+                                silenceScale: Self.silenceScale(
+                                    for: language,
+                                    prosody: prosody
+                                ),
+                                cancellation: cancellation
+                            )
+                            rendered.append(
+                                (
+                                    ExpressiveAudioRenderer.render(raw, segment: segment),
+                                    segment.pauseAfter
+                                )
+                            )
+                        }
+                        guard let composed = ExpressiveAudioRenderer.compose(rendered),
+                              !composed.samples.isEmpty else {
+                            throw NeuralVoiceProviderError.generation
+                        }
+                        let data = ExpressiveAudioRenderer.wavData(composed)
                         let duration = Date().timeIntervalSince(startedAt)
-                        if duration >= 12 {
+                        if duration >= 24 {
                             self.lastLongGenerationFinishedAt = Date()
                         }
                         continuation.resume(returning: data)
@@ -109,16 +158,21 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
 
     private func checkCooldown() throws {
         guard let lastLongGenerationFinishedAt else { return }
-        if Date().timeIntervalSince(lastLongGenerationFinishedAt) < 15 {
+        if Date().timeIntervalSince(lastLongGenerationFinishedAt) < 10 {
             throw NeuralVoiceProviderError.cooldown
         }
     }
 
-    private static func preparedText(_ text: String, language: AppLang) -> String {
+    private static func preparedText(
+        _ text: String,
+        language: AppLang,
+        prosody: VoiceProsodyProfile
+    ) -> String {
         let normalized = LocalVoiceTextNormalizer.normalize(text, language: language)
-        guard normalized.count > 480 else { return normalized }
+        let characterLimit = min(480, max(260, Int(480 * prosody.utteranceLengthScale)))
+        guard normalized.count > characterLimit else { return normalized }
 
-        let end = normalized.index(normalized.startIndex, offsetBy: 480)
+        let end = normalized.index(normalized.startIndex, offsetBy: characterLimit)
         let prefix = String(normalized[..<end])
         if let sentenceEnd = prefix.lastIndex(where: { ".!?…".contains($0) }),
            prefix.distance(from: sentenceEnd, to: prefix.endIndex) < 140 {
@@ -142,10 +196,27 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
         return min(max(safeSpeed - 0.04, 0.84), 1.04)
     }
 
+    static func qualitySteps(
+        forCharacterCount count: Int,
+        quality: NeuralVoiceSynthesisQuality = .conversational
+    ) -> Int32 {
+        if quality == .maximum { return 12 }
+        if count <= 180 { return 10 }
+        if count <= 320 { return 8 }
+        return 7
+    }
+
     static func silenceScale(for language: AppLang) -> Float {
         // Russian benefits from a slightly wider breathing space: suffixes
         // stay audible and comma-separated clauses no longer run together.
         language == .ru ? 0.28 : 0.22
+    }
+
+    static func silenceScale(
+        for language: AppLang,
+        prosody: VoiceProsodyProfile
+    ) -> Float {
+        min(max(silenceScale(for: language) * prosody.pauseScale, 0.16), 0.38)
     }
 
     private static func checkPowerPolicy() throws {
@@ -239,18 +310,20 @@ private final class SupertonicRuntime {
         language: AppLang,
         speed: Float,
         profile: LocalNeuralVoiceProfile,
+        qualitySteps: Int32,
+        silenceScale: Float,
         cancellation: VoiceGenerationCancellation
-    ) throws -> Data {
-        let extra = #"{"lang":"\#(language.rawValue)"}"#
+    ) throws -> VoicePCM {
+        let extra = #"{"lang":"\#(language.rawValue)","num_steps":\#(qualitySteps),"max_len":180,"silence_duration":0.12}"#
         var config = SherpaOnnxGenerationConfig(
-            silence_scale: LocalNeuralVoiceProvider.silenceScale(for: language),
+            silence_scale: silenceScale,
             speed: speed,
             sid: Int32(profile.speakerID),
             reference_audio: nil,
             reference_audio_len: 0,
             reference_sample_rate: 16_000,
             reference_text: Self.cString(""),
-            num_steps: 5,
+            num_steps: qualitySteps,
             extra: Self.cString(extra)
         )
         let retainedCancellation = Unmanaged.passRetained(cancellation)
@@ -293,8 +366,8 @@ private final class SupertonicRuntime {
         guard count > 0, let samples = audio.pointee.samples else {
             throw NeuralVoiceProviderError.generation
         }
-        return Self.wavData(
-            samples: UnsafeBufferPointer(start: samples, count: count),
+        return VoicePCM(
+            samples: Array(UnsafeBufferPointer(start: samples, count: count)),
             sampleRate: Int(audio.pointee.sample_rate)
         )
     }
@@ -352,46 +425,4 @@ private final class SupertonicRuntime {
         )
     }
 
-    private static func wavData(
-        samples: UnsafeBufferPointer<Float>,
-        sampleRate: Int
-    ) -> Data {
-        var pcm = [Int16]()
-        pcm.reserveCapacity(samples.count)
-        for sample in samples {
-            let clamped = min(max(sample, -1), 1)
-            pcm.append(Int16(clamped * Float(Int16.max)))
-        }
-
-        let pcmByteCount = pcm.count * MemoryLayout<Int16>.size
-        var data = Data(capacity: 44 + pcmByteCount)
-        data.appendASCII("RIFF")
-        data.appendLittleEndian(UInt32(36 + pcmByteCount))
-        data.appendASCII("WAVE")
-        data.appendASCII("fmt ")
-        data.appendLittleEndian(UInt32(16))
-        data.appendLittleEndian(UInt16(1))
-        data.appendLittleEndian(UInt16(1))
-        data.appendLittleEndian(UInt32(sampleRate))
-        data.appendLittleEndian(UInt32(sampleRate * 2))
-        data.appendLittleEndian(UInt16(2))
-        data.appendLittleEndian(UInt16(16))
-        data.appendASCII("data")
-        data.appendLittleEndian(UInt32(pcmByteCount))
-        pcm.withUnsafeBytes { data.append(contentsOf: $0) }
-        return data
-    }
-}
-
-private extension Data {
-    mutating func appendASCII(_ string: String) {
-        append(contentsOf: string.utf8)
-    }
-
-    mutating func appendLittleEndian<T: FixedWidthInteger>(_ value: T) {
-        var littleEndian = value.littleEndian
-        Swift.withUnsafeBytes(of: &littleEndian) {
-            append(contentsOf: $0)
-        }
-    }
 }
