@@ -90,7 +90,7 @@ enum LocalVoiceTextNormalizer {
                 options: .regularExpression
             )
             .replacingOccurrences(
-                of: #"[^\p{L}\p{N}\s,.!?;:…'\-]"#,
+                of: #"[^\p{L}\p{M}\p{N}\s,.!?;:…'\-]"#,
                 with: " ",
                 options: .regularExpression
             )
@@ -707,6 +707,9 @@ enum LocalVoiceTextNormalizer {
                 ("iPhone", "айфон"), ("iOS", "ай о эс"),
                 ("watchOS", "вотч о эс"), ("macOS", "мак о эс"),
                 ("Lippi", "Липпи"), ("Bonsai", "Бонсай"),
+                ("Supertonic", "Супертоник"), ("TrueDepth", "Тру Дэпт"),
+                ("Vision", "Вижен"), ("Foundation Models", "Фаундейшн Моделс"),
+                ("Swift", "Свифт"),
                 ("Pomodoro", "Помодоро"), ("AI", "искусственный интеллект"),
                 ("ИИ", "искусственный интеллект"), ("HRV", "вариабельность сердечного ритма"),
                 ("SpO2", "сатурация кислорода"), ("VO2 max", "максимальное потребление кислорода"),

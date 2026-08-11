@@ -3384,15 +3384,8 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showEyes) {
             EyeComfortCameraView()
         }
-        .sheet(isPresented: $showPointEyeExercise) {
-            NavigationStack {
-                EyeExerciseGameView()
-                    .environmentObject(eye)
-                    .navigationTitle(L10n.tr("eye.home.trainer_title", lang))
-                    .navigationBarTitleDisplayMode(.inline)
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+        .fullScreenCover(isPresented: $showPointEyeExercise) {
+            CameraFreeEyeExerciseView(autoStart: true)
         }
         .fullScreenCover(isPresented: $showVoiceAssistant) {
             AppVoiceAssistantSheet(assistant: voiceAssistant, lang: lang)

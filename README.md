@@ -37,6 +37,7 @@
   <img alt="Local voices" src="https://img.shields.io/badge/Voice-F2%20·%20M3-BF5AF2?style=flat-square">
   <img alt="Adaptive voice" src="https://img.shields.io/badge/Voice-Context%20adaptive-30D158?style=flat-square">
   <img alt="Expressive prosody" src="https://img.shields.io/badge/Prosody-Phoneme%20aware-64D2FF?style=flat-square">
+  <img alt="Stress-aware pronunciation" src="https://img.shields.io/badge/Pronunciation-Stress%20aware-BF5AF2?style=flat-square">
   <img alt="Context-aware assistant" src="https://img.shields.io/badge/Assistant-Conversational-0A84FF?style=flat-square">
   <img alt="Adaptive calendar" src="https://img.shields.io/badge/Calendar-Adaptive-64D2FF?style=flat-square">
   <img alt="Interactive day summaries" src="https://img.shields.io/badge/Calendar-Day%20popover-0A84FF?style=flat-square">
@@ -52,7 +53,9 @@
   <img alt="Lippi app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=flat-square">
   <img alt="Widgets" src="https://img.shields.io/badge/WidgetKit-Redesigned-BF5AF2?style=flat-square">
   <img alt="Eye break Live Activity" src="https://img.shields.io/badge/Live%20Activity-Eye%20break-30D158?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-147-30D158?style=flat-square">
+  <img alt="System-timed Live Activity motion" src="https://img.shields.io/badge/Live%20Activity-System%20timed-64D2FF?style=flat-square">
+  <img alt="Camera-free eye routine" src="https://img.shields.io/badge/Eye%20Care-Camera%20free-30D158?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-162-30D158?style=flat-square">
   <img alt="Simulator verification" src="https://img.shields.io/badge/Tested-iPhone%2017%20·%20iOS%2026.1-0A84FF?style=flat-square">
   <img alt="Languages" src="https://img.shields.io/badge/Languages-RU%20·%20EN%20·%20DE%20·%20ES-FF9F0A?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-Proprietary-5E5CE6?style=flat-square">
@@ -105,8 +108,8 @@ Lippi объединяет планирование, фокус и восста�
 | **Задачи и Pomodoro** | Персональный ритм фокуса и отдыха учитывает историю сессий, ближайший шаг умной цели, отмеченное состояние и доступные сигналы восстановления. |
 | **Здоровье** | Разрешённые показатели активности, сна, восстановления, воды и питания из HealthKit превращаются в осторожные и объяснимые рекомендации. |
 | **Apple Watch** | Отдельное приложение показывает текущую рекомендацию, фокус, шаг к цели и принимает быстрые отметки воды, еды, движения и отдыха. |
-| **Восстановление** | Дыхательные практики и упражнения для глаз; iOS 26 заранее выводит короткую паузу в Live Activity и Dynamic Island, а совместимый iPhone может локально уточнять дистанцию через TrueDepth — без Face ID, распознавания личности, сохранения кадров или карт глубины. |
-| **Голосовой помощник** | Составные просьбы, даты и продолжения разговора; локальные голоса F2 и M3 меняют темп, паузы, мелодику, динамику и артикуляцию по осторожно оценённому физиологическому контексту, а при недостатке данных остаются нейтральными. |
+| **Восстановление** | Дыхательные практики и минутное упражнение для глаз из шести мягких фаз. При недоступной камере Lippi сразу переходит к полностью бескамерному сценарию, а на iOS 26 системный световой бегунок продолжает двигаться в Live Activity и Dynamic Island без фоновой работы приложения. |
+| **Голосовой помощник** | Составные просьбы, даты и продолжения разговора; локальные голоса F2 и M3 получают точные ударения, контекстное разрешение омографов и непрерывную мелодику без внутренних аудиосклеек, сохраняя адаптацию к осторожно оценённому физиологическому контексту. |
 | **Знакомство с Lippi** | Четыре интерактивных шага, осмысленный выбор темпа и видимая автоматическая подготовка локальной модели уже при первом запуске. |
 | **Виджеты** | Единый новый дизайн задач, плана дня, Pomodoro и помощника на Home Screen, Lock Screen, в Live Activities и Dynamic Island. |
 
@@ -121,6 +124,48 @@ Lippi объединяет планирование, фокус и восста�
 [Политика конфиденциальности Lippi →](https://lippi.lenuma.ru/privacy)
 
 ## Последнее обновление · Latest release
+
+### 11 августа 2026 — Каждое слово — на своём месте. Забота — без условий.
+
+Lippi стала звучать цельнее и заботиться спокойнее. Русская речь теперь доходит до локальной модели с явными ударениями и контекстом сложных слов, а мелодика проходит через фразу непрерывно — без внутренних разрезов, которые могли звучать как повтор слога или заикание. Упражнение для глаз больше не зависит от камеры, а световой ориентир в Dynamic Island действительно движется средствами самой системы.
+
+<table>
+  <tr>
+    <td width="25%" align="center" valign="top">
+      <strong>Á Ударение знает слово</strong><br><br>
+      Частые формы, даты, команды и орфоэпические ловушки получают проверяемый акцент.<br><br>
+      <sub>The right stress, at the right place.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>〰 Фраза звучит цельно</strong><br><br>
+      Высота тона меняется одной плавной траекторией, не разрезая фонемы на части.<br><br>
+      <sub>One phrase. One continuous motion.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>◉ Минута без камеры</strong><br><br>
+      Шесть мягких фаз работают без разрешения, оценки результата и касаний экрана.<br><br>
+      <sub>Private care, always available.</sub>
+    </td>
+    <td width="25%" align="center" valign="top">
+      <strong>→ Свет действительно движется</strong><br><br>
+      Live Activity использует системное время и остаётся живой, когда приложение спит.<br><br>
+      <sub>Motion rendered by iOS.</sub>
+    </td>
+  </tr>
+</table>
+
+- **Точные ударения доходят до синтеза.** Отдельный слой произношения готовит текст именно для локальной character-level модели: ставит явный акут, сохраняет `ё` и `й` через поддерживаемые комбинируемые знаки и не меняет читаемый текст интерфейса.
+- **Словарь осторожный, а не самоуверенный.** Проверенные формы покрывают действия помощника, календарь, числа, единицы, здоровье, цели и частые орфоэпические ловушки. Незнакомое слово остаётся без догадки, если Lippi не может поставить ударение надёжно.
+- **Омографы понимают ближайший смысл.** `за́мок / замо́к`, `пла́чу / плачу́` и `му́ка / мука́` выбираются по словам рядом. Уже заданное автором ударение сохраняется и не дублируется.
+- **Вопросы больше не звучат одинаково.** Вопрос «да или нет» получает сдержанный подъём, а открытые вопросы на русском, английском, немецком и испанском естественно разрешаются к завершению фразы.
+- **Без внутренних швов и заиканий.** Прежние три независимых участка pitch-shift заменены одной непрерывной временной деформацией с плавной интерполяцией. Коартикуляция сохраняется на всей фразе, тихие атаки и окончания не обрезаются, а DC-смещение удаляется до обработки.
+- **Ударная гласная получает реальное время.** Явный акцент участвует в локальной длительности и микродинамике готового PCM. Смысловой акцент при этом избегает служебных слов и учитывает отрицание, финальную позицию и слова-подсказки.
+- **Качество повышено во всём разговоре.** Короткие ответы синтезируются с 12 шагами Supertonic, средние — с 10, длинные — с 9. Максимальный preview по-прежнему использует 12 шагов.
+- **Голосовые команды сохраняют слова целиком.** Русская `й` больше не теряется при нормализации, время вида `15:30` полностью отделяется от названия задачи, а короткий предлог `с` остаётся частью фразы — например, «встреча с командой».
+- **Бескамерный режим — полноценный сценарий.** Если доступ запрещён, камера отсутствует или запуск захвата завершился ошибкой, Lippi предлагает минуту из расслабления взгляда, горизонтального и вертикального движения, круга, смены фокуса и медленных морганий. Есть пауза, продолжение, завершение и спокойное напоминание о безопасности.
+- **Dynamic Island обновляется самой iOS.** Произвольный `TimelineView` внутри Live Activity заменён последовательными date-relative `ProgressView`. Светлый край проходит шесть дорожек с чередованием направления, а общий прогресс остаётся живым в компактном режиме, расширенном Dynamic Island и на экране блокировки.
+- **Приватность не зависит от разрешения.** Бескамерная практика не создаёт кадры и не просит доступ к камере. Камерный Vision/TrueDepth-сценарий остаётся отдельным и доступен только при разрешении пользователя.
+- **Проверено как продукт.** Финальная сборка успешна на **Simulator: iPhone 17, iOS 26.1**. Движение системного бегунка подтверждено последовательными кадрами; проходят тесты ударений, омографов, непрерывной мелодики, всех фаз бескамерного упражнения и четырёх локализаций. В репозитории **162 unit-теста** и отдельный UI-сценарий.
 
 ### 10 августа 2026 — Голос, который слышит контекст. Забота, которая приходит вовремя.
 
@@ -591,10 +636,10 @@ Lippi теперь замечает не только выполненные з�
 | Платформа | iOS 18.5+, Swift 5 |
 | Здоровье | HealthKit, фоновые observer queries, активность, сон, восстановление, вода и питание |
 | Apple Watch | watchOS-приложение, WatchConnectivity, заменяемый контекст и очередь действий |
-| Забота о глазах | AVFoundation, Vision, локальный анализ ориентиров лица, моргания, усталости и покраснения |
-| Виджеты | WidgetKit, Home Screen, Lock Screen, Live Activities и Dynamic Island |
+| Забота о глазах | AVFoundation, Vision, приватный TrueDepth-сигнал и полностью бескамерная шестиступенчатая практика |
+| Виджеты | WidgetKit, Home Screen, Lock Screen, Live Activities, Dynamic Island и системный date-relative progress |
 | Интеллект | PrismML Bonsai 4B 1-bit, thermal-aware лимиты, восстановление JSON, Foundation Models fallback и локальное дополнение |
-| Голос | Speech, AVFoundation, Supertonic 3 INT8, sherpa-onnx, ONNX Runtime и только F2/M3 |
+| Голос | Speech, AVFoundation, Supertonic 3 INT8, sherpa-onnx, ONNX Runtime, stress-aware Unicode и непрерывный PCM-контур |
 | Качество | Swift Testing, UI Tests, device crash diagnostics |
 
 ## Архитектура · Architecture
@@ -647,6 +692,18 @@ The product is designed around four promises:
 - **Responsive interaction** that preserves visual quality while throttling continuous motion when resources are constrained.
 
 ### Latest release
+
+The August 11 release makes Lippi sound continuous, deliberate, and ready whenever care is needed. Russian speech now reaches the local character-level model with explicit lexical stress while the visible response remains clean. A conservative pronunciation layer covers assistant actions, dates, numbers, health and goal vocabulary, and common orthoepic traps; unknown words are left untouched instead of receiving a confident guess. Nearby meaning resolves homographs such as `за́мок / замо́к`, `пла́чу / плачу́`, and `му́ка / мука́`, while author-provided stress is preserved.
+
+The audio path no longer divides a phrase into three independently pitch-shifted pieces. One smooth cumulative warp carries the contour across the complete utterance with cubic sampling, DC-offset removal, safer silence trimming, stress-aware vowel timing, and restrained lexical microdynamics. Co-articulation stays intact, quiet consonant attacks and releases survive, and the internal seams that could resemble a repeated syllable or stutter are gone. Open questions now resolve differently from yes-or-no questions in Russian, English, German, and Spanish. Conversational synthesis uses 12 quality steps for short responses, 10 for medium responses, and 9 for long responses.
+
+Voice commands now preserve complete Russian wording as well: `й` survives matching normalization, a spoken time such as `15:30` is removed cleanly from the task title, and a one-letter preposition is never mistaken for a longer command stem.
+
+Eye care is now fully useful without camera access. A one-minute, hands-free routine moves through six calm phases—settling the gaze, horizontal movement, vertical movement, a slow circle, focus change, and complete blinks—with pause, resume, completion, safety guidance, Reduce Motion support, and complete Russian, English, German, and Spanish copy. Camera denial, unavailable hardware, and capture failure all lead to this private fallback without creating a frame.
+
+The moving light in Live Activity is system-driven rather than extension-driven. Date-relative progress tracks replace `TimelineView`, which Live Activities don’t advance while the widget extension is suspended. The illuminated edge now travels through six alternating rows on the Lock Screen and in expanded Dynamic Island; compact presentation carries live progress as well. Sequential Simulator frames confirm movement while the app is inactive.
+
+The complete update builds successfully for **iPhone 17 Simulator running iOS 26.1**. Targeted pronunciation, homograph, phonetic timing, continuous-contour, camera-free routine, localization, and Live Activity checks pass. The repository now contains **162 unit tests** plus a dedicated UI scenario.
 
 The August 10 release gives Lippi a voice that responds to context without pretending to diagnose emotion. With permission, the on-device estimator compares fresh heart rate, resting-heart-rate deviation, HRV, sleep, movement, and recent workouts with the person's available baseline. A single elevated reading is never enough: signal freshness, activity, evidence weight, confidence fallback, and temporal smoothing decide whether adaptation is appropriate. When evidence is weak or stale, speech remains neutral.
 

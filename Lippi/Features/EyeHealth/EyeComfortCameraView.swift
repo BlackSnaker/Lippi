@@ -808,6 +808,11 @@ struct EyeComfortCameraView: View {
         case summary
     }
 
+    private struct ExerciseLoopID: Hashable {
+        let stage: Stage
+        let showsCameraFreeRoutine: Bool
+    }
+
     private enum LiveToastTone: Equatable {
         case info
         case success
@@ -854,6 +859,7 @@ struct EyeComfortCameraView: View {
     @State private var analysisInput: EyeHealthAnalysisInput?
     @State private var liveToast: LiveToast?
     @State private var toastDismissTask: Task<Void, Never>?
+    @State private var showCameraFreeRoutine = false
 
     private let targetPoints: [CGPoint] = [
         CGPoint(x: 0.50, y: 0.50),
@@ -869,36 +875,45 @@ struct EyeComfortCameraView: View {
     private func s(_ key: String) -> String { L10n.tr(key, lang) }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppBackdrop(renderMode: .force)
+        Group {
+            if showCameraFreeRoutine {
+                CameraFreeEyeExerciseView(autoStart: true) {
+                    dismiss()
+                }
+            } else {
+                NavigationStack {
+                    ZStack {
+                        AppBackdrop(renderMode: .force)
 
-                Group {
-                    switch stage {
-                    case .welcome:
-                        welcomeView
-                    case .calibrating, .blinking, .following:
-                        liveSessionView
-                    case .summary:
-                        summaryView
+                        Group {
+                            switch stage {
+                            case .welcome:
+                                welcomeView
+                            case .calibrating, .blinking, .following:
+                                liveSessionView
+                            case .summary:
+                                summaryView
+                            }
+                        }
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.985)))
+                    }
+                    .navigationTitle(s("eye.camera.nav_title"))
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        if !isLiveStage {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button(s("eye.camera.close")) { dismiss() }
+                            }
+                        }
                     }
                 }
-                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.985)))
-            }
-            .navigationTitle(s("eye.camera.nav_title"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if !isLiveStage {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button(s("eye.camera.close")) { dismiss() }
-                    }
-                }
+                .toolbar(isLiveStage ? .hidden : .visible, for: .navigationBar)
+                .statusBarHidden(isLiveStage)
             }
         }
-        .toolbar(isLiveStage ? .hidden : .visible, for: .navigationBar)
-        .statusBarHidden(isLiveStage)
-        .task(id: stage) {
-            guard stage == .calibrating || stage == .blinking || stage == .following else { return }
+        .task(id: ExerciseLoopID(stage: stage, showsCameraFreeRoutine: showCameraFreeRoutine)) {
+            guard !showCameraFreeRoutine,
+                  stage == .calibrating || stage == .blinking || stage == .following else { return }
             while !Task.isCancelled {
                 await MainActor.run { advanceExercise() }
                 try? await Task.sleep(nanoseconds: 100_000_000)
@@ -909,6 +924,18 @@ struct EyeComfortCameraView: View {
                 if stage != .welcome && stage != .summary { analyzer.resumeIfPossible() }
             } else {
                 analyzer.stop()
+            }
+        }
+        .onChange(of: analyzer.accessState) { _, accessState in
+            guard stage != .welcome else { return }
+            switch accessState {
+            case .denied, .unavailable, .failed:
+                analyzer.stop()
+                withAnimation(reduceMotion ? nil : DS.motionState) {
+                    showCameraFreeRoutine = true
+                }
+            case .idle, .requesting, .authorized:
+                break
             }
         }
         .onChange(of: stage) { _, newStage in
@@ -1001,6 +1028,17 @@ struct EyeComfortCameraView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(LippiButtonStyle(kind: .primary, allowsMultiline: true, forceSystemGlass: true))
+
+                Button {
+                    analyzer.stop()
+                    withAnimation(reduceMotion ? nil : DS.motionState) {
+                        showCameraFreeRoutine = true
+                    }
+                } label: {
+                    Label(s("eye.camera.start_without_camera"), systemImage: "camera.fill.badge.xmark")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(LippiButtonStyle(kind: .secondary, allowsMultiline: true, forceSystemGlass: true))
             }
         }
     }
@@ -1459,6 +1497,13 @@ struct EyeComfortCameraView: View {
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
+            Button {
+                analyzer.stop()
+                showCameraFreeRoutine = true
+            } label: {
+                Label(s("eye.camera.continue_without_camera"), systemImage: "eye.fill")
+            }
+            .buttonStyle(LippiButtonStyle(kind: .primary, compact: true, forceSystemGlass: true))
             if analyzer.accessState == .denied {
                 Button(s("eye.camera.open_settings")) { openSettings() }
                     .buttonStyle(LippiButtonStyle(kind: .secondary, compact: true, forceSystemGlass: true))
@@ -1540,8 +1585,11 @@ struct EyeComfortCameraView: View {
                 )
 
                 if stage == .calibrating && analyzer.accessState == .denied {
-                    Button(s("eye.camera.open_settings")) { openSettings() }
-                        .buttonStyle(LippiButtonStyle(kind: .primary, compact: true, forceSystemGlass: true))
+                    Button(s("eye.camera.continue_without_camera")) {
+                        analyzer.stop()
+                        showCameraFreeRoutine = true
+                    }
+                    .buttonStyle(LippiButtonStyle(kind: .primary, compact: true, forceSystemGlass: true))
                 }
             }
         }

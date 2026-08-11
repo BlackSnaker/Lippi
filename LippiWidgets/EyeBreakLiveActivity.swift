@@ -37,26 +37,15 @@ struct EyeBreakLiveActivityWidget: Widget {
                 }
 
                 DynamicIslandExpandedRegion(.center) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(EyeBreakCopy.title(context.state.languageCode))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                        Text(EyeBreakCopy.islandSubtitle(context.state))
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.62))
-                            .lineLimit(1)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    EyeBreakPhaseHeader(state: context.state)
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(spacing: 9) {
-                        EyeGazePath(
-                            startDate: context.state.startDate,
-                            endDate: context.state.endDate,
-                            compact: true
-                        )
+                        EyeGazePath(state: context.state, compact: true)
                         .frame(height: 54)
+
+                        EyeBreakPhaseProgress(state: context.state)
 
                         HStack(spacing: 8) {
                             Link(destination: EyeBreakLink.forMode(context.state.mode)) {
@@ -94,14 +83,7 @@ struct EyeBreakLiveActivityWidget: Widget {
                     }
                 }
             } compactLeading: {
-                ZStack {
-                    Image(systemName: "eye.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(EyeBreakPalette.cyan)
-                    Circle()
-                        .fill(EyeBreakPalette.mint)
-                        .frame(width: 4, height: 4)
-                }
+                EyeBreakCompactPhase(state: context.state)
             } compactTrailing: {
                 EyeBreakCountdown(state: context.state, font: .caption2)
                     .frame(maxWidth: 45)
@@ -126,22 +108,19 @@ private struct EyeBreakLockScreenView: View {
                     Text(EyeBreakCopy.title(state.languageCode))
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(.white)
-                    Text(EyeBreakCopy.lockScreenSubtitle(state))
+                    EyeBreakLockScreenInstruction(state: state)
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.white.opacity(0.62))
-                        .lineLimit(2)
                 }
 
                 Spacer(minLength: 8)
                 EyeBreakCountdown(state: state, font: .title3)
             }
 
-            EyeGazePath(
-                startDate: state.startDate,
-                endDate: state.endDate,
-                compact: false
-            )
+            EyeGazePath(state: state, compact: false)
             .frame(height: 48)
+
+            EyeBreakPhaseProgress(state: state)
 
             HStack(spacing: 8) {
                 Label(
@@ -257,84 +236,185 @@ private struct EyeBreakOrb: View {
     }
 }
 
+private struct EyeBreakPhaseHeader: View {
+    let state: EyeBreakActivityAttributes.ContentState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(EyeBreakCopy.movingLightTitle(state.languageCode))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+            Text(EyeBreakCopy.movingLightInstruction(state.languageCode))
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.white.opacity(0.62))
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct EyeBreakLockScreenInstruction: View {
+    let state: EyeBreakActivityAttributes.ContentState
+
+    var body: some View {
+        Text(EyeBreakCopy.movingLightInstruction(state.languageCode))
+            .lineLimit(2)
+    }
+}
+
+private struct EyeBreakCompactPhase: View {
+    let state: EyeBreakActivityAttributes.ContentState
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Image(systemName: "eye.fill")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(EyeBreakPalette.cyan)
+
+            ProgressView(
+                timerInterval: state.startDate...state.endDate,
+                countsDown: false
+            ) {
+                EmptyView()
+            } currentValueLabel: {
+                EmptyView()
+            }
+            .tint(EyeBreakPalette.mint)
+            .frame(width: 17)
+            .scaleEffect(y: 1.6)
+        }
+        .accessibilityLabel(EyeBreakCopy.movingLightTitle(state.languageCode))
+    }
+}
+
+private struct EyeBreakPhaseProgress: View {
+    let state: EyeBreakActivityAttributes.ContentState
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(EyeBreakPhase.allCases.indices, id: \.self) { index in
+                ProgressView(
+                    timerInterval: EyeBreakRoutine.dateInterval(
+                        forPhaseAt: index,
+                        state: state
+                    ),
+                    countsDown: false
+                ) {
+                    EmptyView()
+                } currentValueLabel: {
+                    EmptyView()
+                }
+                .tint(EyeBreakPalette.mint)
+                .scaleEffect(y: 0.72)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(EyeBreakCopy.liveProgress(state.languageCode))
+    }
+}
+
 private struct EyeGazePath: View {
-    let startDate: Date
-    let endDate: Date
+    let state: EyeBreakActivityAttributes.ContentState
     let compact: Bool
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { timeline in
-            GeometryReader { proxy in
-                let inset: CGFloat = compact ? 16 : 20
-                let dotSize: CGFloat = compact ? 14 : 16
-                let availableWidth = max(proxy.size.width - inset * 2, 1)
-                let elapsed = max(timeline.date.timeIntervalSince(startDate), 0)
-                let cycleDuration = 6.0
-                let cycle = elapsed.truncatingRemainder(dividingBy: cycleDuration) / cycleDuration
-                let horizontal = CGFloat(cycle < 0.5 ? cycle * 2 : (1 - cycle) * 2)
-                let wave = CGFloat(sin(cycle * .pi * 2))
-                let x = inset + availableWidth * horizontal
-                let y = proxy.size.height * (0.50 + wave * 0.22)
-                let pulse = 1 + CGFloat((sin(elapsed * 3.2) + 1) * 0.06)
-
-                ZStack {
+        // Live Activities don't advance TimelineView schedules while the widget
+        // extension is suspended. Date-relative progress stays live because the
+        // system renders it from the interval without waking the extension.
+        ZStack {
+            RoundedRectangle(cornerRadius: compact ? 18 : 24, style: .continuous)
+                .fill(.white.opacity(0.055))
+                .overlay {
                     RoundedRectangle(cornerRadius: compact ? 18 : 24, style: .continuous)
-                        .fill(.white.opacity(0.055))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: compact ? 18 : 24, style: .continuous)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [
-                                            EyeBreakPalette.cyan.opacity(0.46),
-                                            .white.opacity(0.12),
-                                            EyeBreakPalette.violet.opacity(0.38)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        }
-
-                    Path { path in
-                        path.move(to: CGPoint(x: inset, y: proxy.size.height * 0.5))
-                        path.addCurve(
-                            to: CGPoint(x: proxy.size.width - inset, y: proxy.size.height * 0.5),
-                            control1: CGPoint(x: proxy.size.width * 0.30, y: proxy.size.height * 0.18),
-                            control2: CGPoint(x: proxy.size.width * 0.70, y: proxy.size.height * 0.82)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    EyeBreakPalette.cyan.opacity(0.46),
+                                    .white.opacity(0.12),
+                                    EyeBreakPalette.violet.opacity(0.38)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
                         )
+                }
+
+            VStack(spacing: compact ? 3.2 : 2.6) {
+                ForEach(EyeBreakPhase.allCases.indices, id: \.self) { index in
+                    ProgressView(
+                        timerInterval: EyeBreakRoutine.dateInterval(
+                            forPhaseAt: index,
+                            state: state
+                        ),
+                        countsDown: false
+                    ) {
+                        EmptyView()
+                    } currentValueLabel: {
+                        EmptyView()
                     }
-                    .stroke(
+                    .tint(
                         LinearGradient(
                             colors: [
-                                EyeBreakPalette.blue.opacity(0.12),
-                                EyeBreakPalette.cyan.opacity(0.42),
-                                EyeBreakPalette.violet.opacity(0.16)
+                                EyeBreakPalette.blue.opacity(0.34),
+                                EyeBreakPalette.cyan,
+                                .white
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
-                        ),
-                        style: StrokeStyle(lineWidth: 1, lineCap: .round)
-                    )
-
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [.white, EyeBreakPalette.cyan, EyeBreakPalette.blue],
-                                center: .topLeading,
-                                startRadius: 0,
-                                endRadius: dotSize
-                            )
                         )
-                        .frame(width: dotSize, height: dotSize)
-                        .scaleEffect(pulse)
-                        .overlay(Circle().stroke(.white.opacity(0.86), lineWidth: 1))
-                        .shadow(color: EyeBreakPalette.cyan.opacity(0.98), radius: compact ? 8 : 11)
-                        .position(x: x, y: y)
+                    )
+                    .scaleEffect(y: compact ? 1.9 : 1.75)
+                    .rotationEffect(.degrees(index.isMultiple(of: 2) ? 0 : 180))
+                    .shadow(
+                        color: EyeBreakPalette.cyan.opacity(0.78),
+                        radius: compact ? 4 : 5
+                    )
                 }
             }
+            .padding(.horizontal, compact ? 16 : 20)
+            .padding(.vertical, compact ? 7 : 6)
         }
-        .accessibilityLabel("Follow the moving light with your eyes")
+        .accessibilityLabel(EyeBreakCopy.followAccessibility(state.languageCode))
+    }
+}
+
+private enum EyeBreakPhase: String, CaseIterable {
+    case settle
+    case horizontal
+    case vertical
+    case circle
+    case focus
+    case blink
+
+    var weight: Double {
+        switch self {
+        case .settle: 0.10
+        case .horizontal: 0.20
+        case .vertical: 0.17
+        case .circle: 0.20
+        case .focus: 0.20
+        case .blink: 0.13
+        }
+    }
+
+}
+
+private enum EyeBreakRoutine {
+    static func dateInterval(
+        forPhaseAt proposedIndex: Int,
+        state: EyeBreakActivityAttributes.ContentState
+    ) -> ClosedRange<Date> {
+        let duration = max(state.endDate.timeIntervalSince(state.startDate), 1)
+        let phases = EyeBreakPhase.allCases
+        let index = min(max(proposedIndex, 0), max(phases.count - 1, 0))
+        let lowerProgress = phases.prefix(index).reduce(0) { $0 + $1.weight }
+        let upperProgress = index == phases.count - 1
+            ? 1
+            : min(lowerProgress + phases[index].weight, 1)
+        let start = state.startDate.addingTimeInterval(duration * lowerProgress)
+        let end = state.startDate.addingTimeInterval(duration * upperProgress)
+        return start...max(end, start.addingTimeInterval(0.001))
     }
 }
 
@@ -372,6 +452,133 @@ private enum EyeBreakCopy {
         case "de": "Folge dem Punkt ganz sanft"
         case "es": "Sigue el punto suavemente"
         default: "Мягко следите за точкой"
+        }
+    }
+
+    static func movingLightTitle(_ language: String) -> String {
+        switch language.lowercased() {
+        case "en": "Follow the moving light"
+        case "de": "Folge dem bewegten Licht"
+        case "es": "Sigue la luz en movimiento"
+        default: "Следите за движущимся светом"
+        }
+    }
+
+    static func movingLightInstruction(_ language: String) -> String {
+        switch language.lowercased() {
+        case "en": "Guide your eyes along the bright end of the track"
+        case "de": "Folge mit den Augen dem hellen Ende der Spur"
+        case "es": "Sigue con la mirada el extremo luminoso de la pista"
+        default: "Ведите взгляд за светлым краем дорожки"
+        }
+    }
+
+    static func liveProgress(_ language: String) -> String {
+        switch language.lowercased() {
+        case "en": "Progress of the one-minute eye exercise"
+        case "de": "Fortschritt der einminütigen Augenübung"
+        case "es": "Progreso del ejercicio visual de un minuto"
+        default: "Ход минутного упражнения для глаз"
+        }
+    }
+
+    static func phaseTitle(_ phase: EyeBreakPhase, language: String) -> String {
+        switch language.lowercased() {
+        case "en":
+            switch phase {
+            case .settle: "Settle your gaze"
+            case .horizontal: "Left and right"
+            case .vertical: "Up and down"
+            case .circle: "Slow circle"
+            case .focus: "Change focus"
+            case .blink: "Slow blinks"
+            }
+        case "de":
+            switch phase {
+            case .settle: "Blick entspannen"
+            case .horizontal: "Links und rechts"
+            case .vertical: "Oben und unten"
+            case .circle: "Langsamer Kreis"
+            case .focus: "Fokus wechseln"
+            case .blink: "Langsam blinzeln"
+            }
+        case "es":
+            switch phase {
+            case .settle: "Relaja la mirada"
+            case .horizontal: "Izquierda y derecha"
+            case .vertical: "Arriba y abajo"
+            case .circle: "Círculo lento"
+            case .focus: "Cambia el enfoque"
+            case .blink: "Parpadea despacio"
+            }
+        default:
+            switch phase {
+            case .settle: "Расслабьте взгляд"
+            case .horizontal: "Влево и вправо"
+            case .vertical: "Вверх и вниз"
+            case .circle: "Медленный круг"
+            case .focus: "Смена фокуса"
+            case .blink: "Медленно моргайте"
+            }
+        }
+    }
+
+    static func phaseInstruction(_ phase: EyeBreakPhase, language: String) -> String {
+        switch language.lowercased() {
+        case "en":
+            switch phase {
+            case .settle: "Relax your shoulders and breathe out"
+            case .horizontal: "Follow the light without turning your head"
+            case .vertical: "Move only your eyes, gently"
+            case .circle: "Trace the circle without rushing"
+            case .focus: "Look beyond the screen, then back to the point"
+            case .blink: "Blink fully and slowly"
+            }
+        case "de":
+            switch phase {
+            case .settle: "Schultern lockern und ausatmen"
+            case .horizontal: "Dem Licht folgen, ohne den Kopf zu drehen"
+            case .vertical: "Nur die Augen sanft bewegen"
+            case .circle: "Den Kreis langsam nachzeichnen"
+            case .focus: "Über den Bildschirm hinaus und zurück blicken"
+            case .blink: "Vollständig und langsam blinzeln"
+            }
+        case "es":
+            switch phase {
+            case .settle: "Relaja los hombros y exhala"
+            case .horizontal: "Sigue la luz sin girar la cabeza"
+            case .vertical: "Mueve solo los ojos, con suavidad"
+            case .circle: "Recorre el círculo sin prisa"
+            case .focus: "Mira más allá de la pantalla y vuelve al punto"
+            case .blink: "Parpadea por completo y despacio"
+            }
+        default:
+            switch phase {
+            case .settle: "Расслабьте плечи и спокойно выдохните"
+            case .horizontal: "Следите за светом, не поворачивая голову"
+            case .vertical: "Мягко двигайте только глазами"
+            case .circle: "Опишите круг взглядом, не торопясь"
+            case .focus: "Посмотрите за экран, затем снова на точку"
+            case .blink: "Моргайте полностью и медленно"
+            }
+        }
+    }
+
+    static func phaseProgress(_ current: Int, total: Int, language: String) -> String {
+        switch language.lowercased() {
+        case "en": "Step \(current) of \(total)"
+        case "de": "Schritt \(current) von \(total)"
+        case "es": "Paso \(current) de \(total)"
+        default: "Этап \(current) из \(total)"
+        }
+    }
+
+    static func followAccessibility(_ language: String) -> String {
+        switch language.lowercased() {
+        case "en": "Follow the guided eye exercise"
+        case "de": "Der geführten Augenübung folgen"
+        case "es": "Sigue el ejercicio visual guiado"
+        default: "Следуйте подсказкам упражнения для глаз"
         }
     }
 

@@ -170,18 +170,24 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
     ) -> String {
         let normalized = LocalVoiceTextNormalizer.normalize(text, language: language)
         let characterLimit = min(480, max(260, Int(480 * prosody.utteranceLengthScale)))
-        guard normalized.count > characterLimit else { return normalized }
+        let bounded: String
+        if normalized.count <= characterLimit {
+            bounded = normalized
+        } else {
+            let end = normalized.index(normalized.startIndex, offsetBy: characterLimit)
+            let prefix = String(normalized[..<end])
+            if let sentenceEnd = prefix.lastIndex(where: { ".!?…".contains($0) }),
+               prefix.distance(from: sentenceEnd, to: prefix.endIndex) < 140 {
+                bounded = String(prefix[...sentenceEnd])
+            } else if let wordEnd = prefix.lastIndex(where: \.isWhitespace) {
+                bounded = String(prefix[..<wordEnd])
+                    .trimmingCharacters(in: .whitespaces) + "…"
+            } else {
+                bounded = prefix + "…"
+            }
+        }
 
-        let end = normalized.index(normalized.startIndex, offsetBy: characterLimit)
-        let prefix = String(normalized[..<end])
-        if let sentenceEnd = prefix.lastIndex(where: { ".!?…".contains($0) }),
-           prefix.distance(from: sentenceEnd, to: prefix.endIndex) < 140 {
-            return String(prefix[...sentenceEnd])
-        }
-        if let wordEnd = prefix.lastIndex(where: \.isWhitespace) {
-            return String(prefix[..<wordEnd]).trimmingCharacters(in: .whitespaces) + "…"
-        }
-        return prefix + "…"
+        return LocalVoicePronunciation.modelInput(bounded, language: language)
     }
 
     static func optimizedSpeed(
@@ -201,9 +207,9 @@ final class LocalNeuralVoiceProvider: @unchecked Sendable {
         quality: NeuralVoiceSynthesisQuality = .conversational
     ) -> Int32 {
         if quality == .maximum { return 12 }
-        if count <= 180 { return 10 }
-        if count <= 320 { return 8 }
-        return 7
+        if count <= 180 { return 12 }
+        if count <= 320 { return 10 }
+        return 9
     }
 
     static func silenceScale(for language: AppLang) -> Float {

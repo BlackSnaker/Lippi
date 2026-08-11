@@ -85,6 +85,7 @@ enum AppVoiceTemporalParser {
 
         let patterns = [
             #"\b(?:на|к|в|at|um|a\s+las|a\s+la)?\s*\d{1,2}(?::|\.)\d{2}\b"#,
+            #"\b(?:в|к|at|um|a\s+las|a\s+la)\s+\d{1,2}\s+\d{2}\b"#,
             #"\b(?:в|к|at|um|a\s+las|a\s+la)\s+\d{1,2}(?:\s*(?:час(?:а|ов)?|ч|uhr|o'clock))?(?:\s*(?:утра|дня|вечера|ночи|am|pm))?\b"#,
             #"\b\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?\b"#,
             #"\b(?:на|к|в|at|um|a)\s*$"#
@@ -238,7 +239,10 @@ enum AppVoiceTemporalParser {
     private static func normalize(_ text: String) -> String {
         text
             .lowercased()
+            .precomposedStringWithCanonicalMapping
+            .replacingOccurrences(of: "й", with: "\u{F0000}")
             .folding(options: .diacriticInsensitive, locale: .current)
+            .replacingOccurrences(of: "\u{F0000}", with: "й")
             .replacingOccurrences(of: #"[^\p{L}\p{N}\s:./'-]"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)

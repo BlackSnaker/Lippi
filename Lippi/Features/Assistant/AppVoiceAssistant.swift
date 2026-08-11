@@ -401,7 +401,10 @@ enum AppVoiceCommandParser {
     private static func normalize(_ text: String) -> String {
         text
             .lowercased()
+            .precomposedStringWithCanonicalMapping
+            .replacingOccurrences(of: "й", with: "\u{F0000}")
             .folding(options: .diacriticInsensitive, locale: .current)
+            .replacingOccurrences(of: "\u{F0000}", with: "й")
             .replacingOccurrences(of: "[^\\p{L}\\p{N}\\s:]", with: " ", options: .regularExpression)
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -740,8 +743,8 @@ enum AppVoiceCommandParser {
                     let source = sourceTokens[start + offset]
                     let target = keywordTokens[offset]
                     return source == target
-                        || source.hasPrefix(target)
-                        || target.hasPrefix(source)
+                        || (target.count >= 3 && source.hasPrefix(target))
+                        || (source.count >= 3 && target.hasPrefix(source))
                 }
                 guard matches else { continue }
 
@@ -2233,7 +2236,10 @@ private final class AppEmbeddedAIInterpreter {
     private static func normalize(_ text: String) -> String {
         text
             .lowercased()
+            .precomposedStringWithCanonicalMapping
+            .replacingOccurrences(of: "й", with: "\u{F0000}")
             .folding(options: .diacriticInsensitive, locale: .current)
+            .replacingOccurrences(of: "\u{F0000}", with: "й")
             .replacingOccurrences(of: "[^\\p{L}\\p{N}\\s:]", with: " ", options: .regularExpression)
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)

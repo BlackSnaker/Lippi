@@ -12,7 +12,11 @@
 
 <div align="center">
   <p>
-    <img alt="Latest update" src="https://img.shields.io/badge/Latest-August%2010%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Latest update" src="https://img.shields.io/badge/Latest-August%2011%2C%202026-0A84FF?style=for-the-badge">
+    <img alt="Stress-aware pronunciation" src="https://img.shields.io/badge/Pronunciation-Stress%20aware-BF5AF2?style=for-the-badge">
+    <img alt="Continuous speech contour" src="https://img.shields.io/badge/Speech-Continuous%20contour-64D2FF?style=for-the-badge">
+    <img alt="Camera-free eye care" src="https://img.shields.io/badge/Eye%20Care-Camera%20free-30D158?style=for-the-badge">
+    <img alt="System-timed Live Activity" src="https://img.shields.io/badge/Live%20Activity-System%20timed-0A84FF?style=for-the-badge">
     <img alt="Context-adaptive voice" src="https://img.shields.io/badge/Voice-Context%20adaptive-30D158?style=for-the-badge">
     <img alt="Phoneme-aware prosody" src="https://img.shields.io/badge/Prosody-Phoneme%20aware-64D2FF?style=for-the-badge">
     <img alt="Eye break Live Activity" src="https://img.shields.io/badge/Live%20Activity-Eye%20break-BF5AF2?style=for-the-badge">
@@ -34,7 +38,7 @@
     <img alt="Adaptive Pomodoro" src="https://img.shields.io/badge/Pomodoro-Adaptive-0A84FF?style=for-the-badge">
     <img alt="Bonsai eye comfort" src="https://img.shields.io/badge/Eye%20Comfort-Bonsai-64D2FF?style=for-the-badge">
     <img alt="Complete app icon" src="https://img.shields.io/badge/App%20Icon-Complete-2466E8?style=for-the-badge">
-    <img alt="Tests" src="https://img.shields.io/badge/Tests-147-30D158?style=for-the-badge">
+    <img alt="Tests" src="https://img.shields.io/badge/Tests-162-30D158?style=for-the-badge">
     <img alt="Simulator verification" src="https://img.shields.io/badge/Tested-iPhone%2017%20·%20iOS%2026.1-0A84FF?style=for-the-badge">
     <img alt="Care rhythm" src="https://img.shields.io/badge/Care-Context%20aware-54D79A?style=for-the-badge">
     <img alt="Apple Watch companion" src="https://img.shields.io/badge/Apple%20Watch-Companion-30D158?style=for-the-badge">
@@ -62,32 +66,75 @@
 <table>
   <tr>
     <td width="25%" align="center" valign="top">
-      <strong>A voice that reads context</strong><br>
-      <sub>Confidence and personal baselines shape delivery.</sub>
+      <strong>Stress in the right place</strong><br>
+      <sub>Words, dates, and homographs keep their meaning.</sub>
       <br><br>
-      <strong>Голос, который читает контекст</strong><br>
-      <sub>Манеру речи определяют baseline и уверенность.</sub>
+      <strong>Ударение на своём месте</strong><br>
+      <sub>Слова, даты и омографы сохраняют смысл.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Meaning inside every phrase</strong><br>
-      <sub>Punctuation, vowels, attacks, and rhythm become audible.</sub>
+      <strong>One continuous phrase</strong><br>
+      <sub>No internal pitch seams or repeated syllables.</sub>
       <br><br>
-      <strong>Смысл внутри каждой фразы</strong><br>
-      <sub>Знаки, гласные, атаки и ритм слышны в речи.</sub>
+      <strong>Одна цельная фраза</strong><br>
+      <sub>Без внутренних швов и повторов слога.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>An intonation lab</strong><br>
-      <sub>Six styles, one phrase, maximum synthesis quality.</sub>
+      <strong>Eye care without a camera</strong><br>
+      <sub>Six gentle phases remain available to everyone.</sub>
       <br><br>
-      <strong>Лаборатория интонаций</strong><br>
-      <sub>Шесть стратегий, одна фраза, максимум качества.</sub>
+      <strong>Забота без камеры</strong><br>
+      <sub>Шесть мягких фаз доступны каждому.</sub>
     </td>
     <td width="25%" align="center" valign="top">
-      <strong>Eye care in Dynamic Island</strong><br>
-      <sub>A focused minute arrives without taking over the screen.</sub>
+      <strong>A light that truly moves</strong><br>
+      <sub>iOS keeps Live Activity progress alive.</sub>
       <br><br>
-      <strong>Забота о глазах в Dynamic Island</strong><br>
-      <sub>Минута восстановления приходит без захвата экрана.</sub>
+      <strong>Свет, который движется</strong><br>
+      <sub>iOS поддерживает живой прогресс Live Activity.</sub>
+    </td>
+  </tr>
+</table>
+
+### August 11, 2026 — Every word in place. Care without conditions. / Каждое слово на своём месте. Забота без условий.
+
+<table>
+  <tr>
+    <td width="50%" align="left" valign="top">
+      <h3>English</h3>
+      <p><strong>Lippi now speaks as one continuous thought, places Russian stress deliberately, and keeps eye care available even when the camera is not.</strong></p>
+      <ul>
+        <li><strong>A dedicated pronunciation layer:</strong> display text stays readable while model input receives canonical Unicode decomposition and explicit lexical stress understood by the local character-level TTS.</li>
+        <li><strong>Conservative lexical confidence:</strong> verified vocabulary covers Lippi actions, Calendar, numbers, measurements, health, goals, and frequent Russian orthoepic traps. Unknown words are left untouched rather than guessed.</li>
+        <li><strong>Meaning resolves homographs:</strong> nearby cues choose the correct reading for <code>за́мок / замо́к</code>, <code>пла́чу / плачу́</code>, and <code>му́ка / мука́</code>. Explicit author stress is never duplicated.</li>
+        <li><strong>Stress reaches the waveform:</strong> stressed vowels receive local timing and restrained microdynamic emphasis. Russian <code>ё</code> remains stressed and <code>й</code> remains a consonant in syllable analysis.</li>
+        <li><strong>Questions keep their intent:</strong> yes-or-no questions retain a measured rise, while open questions resolve naturally in Russian, English, German, and Spanish.</li>
+        <li><strong>No internal audio seams:</strong> three separately resampled pitch regions have been replaced by one smooth cumulative contour with cubic sampling. Co-articulation survives across the utterance instead of restarting at arbitrary thirds.</li>
+        <li><strong>Quieter edges survive:</strong> DC offset is removed before rendering, silence trimming keeps wider consonant padding, and non-periodic syllabic motion avoids a robotic metronome effect.</li>
+        <li><strong>Higher everyday fidelity:</strong> normal synthesis now uses 12 Supertonic steps for short responses, 10 for medium responses, and 9 for long responses.</li>
+        <li><strong>Commands preserve the person’s wording:</strong> Russian <code>й</code> survives matching normalization, a time such as <code>15:30</code> is removed completely from the saved title, and one-letter prepositions are no longer mistaken for longer command stems.</li>
+        <li><strong>A complete camera-free minute:</strong> denial, unavailable hardware, or capture failure opens a hands-free routine with settling, horizontal and vertical gaze, a slow circle, focus change, and complete blinks. Pause, resume, completion, safety copy, Reduce Motion, and four languages are included.</li>
+        <li><strong>Live Activity motion rendered by iOS:</strong> system date-relative progress replaces <code>TimelineView</code>. Six alternating illuminated tracks now move on the Lock Screen and in expanded Dynamic Island; compact presentation keeps live progress too.</li>
+        <li><strong>Verification:</strong> the final app builds for <strong>iPhone 17 Simulator on iOS 26.1</strong>. Sequential screenshots confirm system-timed motion, targeted voice and eye-routine tests pass, and the repository contains <strong>162 unit tests</strong> plus one UI scenario.</li>
+      </ul>
+    </td>
+    <td width="50%" align="left" valign="top">
+      <h3>Русский</h3>
+      <p><strong>Lippi теперь говорит одной цельной мыслью, осознанно ставит русские ударения и сохраняет заботу о глазах доступной даже без камеры.</strong></p>
+      <ul>
+        <li><strong>Отдельный слой произношения:</strong> текст интерфейса остаётся чистым, а локальная character-level TTS получает каноническую Unicode-форму и явные ударения.</li>
+        <li><strong>Осторожная уверенность словаря:</strong> проверенная лексика покрывает действия Lippi, календарь, числа, единицы, здоровье, цели и частые орфоэпические ловушки. Незнакомые слова не получают случайную догадку.</li>
+        <li><strong>Омограф выбирается по смыслу:</strong> ближайшие слова различают <code>за́мок / замо́к</code>, <code>пла́чу / плачу́</code> и <code>му́ка / мука́</code>. Авторское ударение сохраняется без дублирования.</li>
+        <li><strong>Ударение доходит до звука:</strong> ударная гласная получает локальное время и сдержанный микродинамический акцент. Русская <code>ё</code> остаётся ударной, а <code>й</code> — согласной при подсчёте слогов.</li>
+        <li><strong>Вопрос сохраняет намерение:</strong> вопрос «да или нет» получает спокойный подъём, а открытый вопрос естественно разрешается на русском, английском, немецком и испанском.</li>
+        <li><strong>Без внутренних аудиошвов:</strong> три независимо ресемплированных участка заменены одной плавной накопительной траекторией с кубической интерполяцией. Коартикуляция больше не перезапускается на условных третях фразы.</li>
+        <li><strong>Тихие края остаются слышны:</strong> перед рендерингом удаляется DC-смещение, тишина обрезается с запасом для согласных, а непериодическое слоговое движение убирает эффект метронома.</li>
+        <li><strong>Выше качество обычной речи:</strong> короткие ответы используют 12 шагов Supertonic, средние — 10, длинные — 9.</li>
+        <li><strong>Команды сохраняют слова пользователя:</strong> русская <code>й</code> не теряется при нормализации, время вида <code>15:30</code> полностью отделяется от сохранённого названия, а короткие предлоги больше не принимаются за длинные основы команд.</li>
+        <li><strong>Полноценная минута без камеры:</strong> отказ в разрешении, отсутствие камеры или ошибка запуска открывают практику из расслабления, горизонтали, вертикали, круга, смены фокуса и морганий. Добавлены пауза, продолжение, завершение, безопасность, Reduce Motion и четыре языка.</li>
+        <li><strong>Движение Live Activity от самой iOS:</strong> системный date-relative progress заменил <code>TimelineView</code>. Шесть световых дорожек с чередованием направления движутся на экране блокировки и в расширенном Dynamic Island; компактный режим тоже показывает живой прогресс.</li>
+        <li><strong>Проверка:</strong> финальное приложение собирается для <strong>Simulator iPhone 17 с iOS 26.1</strong>. Последовательные кадры подтверждают системное движение, целевые тесты голоса и бескамерного упражнения проходят; в репозитории <strong>162 unit-теста</strong> и один UI-сценарий.</li>
+      </ul>
     </td>
   </tr>
 </table>

@@ -190,6 +190,85 @@ struct NeuralVoiceConfigurationTests {
         )
     }
 
+    @Test("Russian model input carries explicit stress and supported combining marks")
+    func preparesRussianModelInput() {
+        let normalized = LocalVoiceTextNormalizer.normalize(
+            "Lippi ещё раз проверит следующий шаг.",
+            language: .ru
+        )
+        let modelInput = LocalVoicePronunciation.modelInput(
+            normalized,
+            language: .ru
+        )
+
+        #expect(modelInput.contains("Ли\u{301}ппи"))
+        #expect(modelInput.contains("е\u{308}"))
+        #expect(modelInput.contains("и\u{306}"))
+        #expect(modelInput.unicodeScalars.contains { $0.value == 0x0301 })
+        #expect(!modelInput.unicodeScalars.contains("ё"))
+        #expect(!modelInput.unicodeScalars.contains("й"))
+    }
+
+    @Test("Russian orthoepic traps receive deterministic stress")
+    func stressesRussianOrthoepicTraps() {
+        let modelInput = LocalVoicePronunciation.modelInput(
+            "Каталог, договор и жалюзи готовы.",
+            language: .ru
+        ).lowercased()
+
+        #expect(modelInput.contains("катало\u{301}г"))
+        #expect(modelInput.contains("догово\u{301}р"))
+        #expect(modelInput.contains("жалюзи\u{301}"))
+        #expect(modelInput.contains("гото\u{301}вы"))
+    }
+
+    @Test("Russian homographs use nearby meaning cues")
+    func resolvesRussianHomographs() {
+        let doorLock = LocalVoicePronunciation.modelInput(
+            "Открой замок двери.",
+            language: .ru
+        ).lowercased()
+        let oldCastle = LocalVoicePronunciation.modelInput(
+            "Открой старинный замок.",
+            language: .ru
+        ).lowercased()
+        let payment = LocalVoicePronunciation.modelInput(
+            "Я плачу картой за покупку.",
+            language: .ru
+        ).lowercased()
+        let tears = LocalVoicePronunciation.modelInput(
+            "Я плачу от грусти и боли.",
+            language: .ru
+        ).lowercased()
+
+        #expect(doorLock.contains("замо\u{301}к"))
+        #expect(oldCastle.contains("за\u{301}мок"))
+        #expect(payment.contains("плачу\u{301}"))
+        #expect(tears.contains("пла\u{301}чу"))
+    }
+
+    @Test("Calendar vocabulary uses verified lexical stress")
+    func stressesRussianCalendarVocabulary() {
+        let modelInput = LocalVoicePronunciation.modelInput(
+            "Послезавтра будет встреча.",
+            language: .ru
+        ).lowercased()
+
+        #expect(modelInput.contains("послеза\u{301}втра"))
+    }
+
+    @Test("An explicit author stress is preserved without duplication")
+    func preservesExplicitStress() {
+        let modelInput = LocalVoicePronunciation.modelInput(
+            "Проверь катало\u{301}г.",
+            language: .ru
+        )
+
+        #expect(
+            modelInput.unicodeScalars.filter { $0.value == 0x0301 }.count == 1
+        )
+    }
+
     @Test("Russian speech adds measured pauses and a final boundary")
     func preparesRussianPausesAndEndings() {
         let spoken = LocalVoiceTextNormalizer.normalize(
